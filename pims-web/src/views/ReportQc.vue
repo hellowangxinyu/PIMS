@@ -77,6 +77,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import api from '../api'
 import SvgLineChart from '../components/charts/SvgLineChart.vue'
@@ -90,8 +91,7 @@ const data = reactive({})
 const statusFilter = ref('ALL')
 const searchText = ref('')
 
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { maximumFractionDigits: 1 }) }
-
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 const monthlyCounts = computed(() => (data.monthlyTrend?.labels || []).map((lb, i) => ({ name: lb.slice(5) + '月', value: data.monthlyTrend.total[i] })))
 const totalCount = computed(() => (data.monthlyTrend?.total || []).reduce((a, b) => a + b, 0))
 const rejectCount = computed(() => ((data.resultDist || []).find(d => d.name === '不合格')?.value) || 0)

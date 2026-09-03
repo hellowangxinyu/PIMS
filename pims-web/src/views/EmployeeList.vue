@@ -73,6 +73,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -92,7 +93,7 @@ function emptyForm() {
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 const deptOptions = ref([
   { value: 'PRODUCTION', label: '生产' }, { value: 'SALES', label: '销售' }, { value: 'ADMIN', label: '行政' },
   { value: 'TECH', label: '技术' }, { value: 'QC', label: '质检' }, { value: 'OTHER', label: '其他' }

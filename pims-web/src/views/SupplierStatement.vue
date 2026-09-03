@@ -57,6 +57,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 // v6.3 供应商对账单：与客户版同款时点三流口径（应付立账/付款/退货冲减），复用对账单打印骨架
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -78,8 +79,7 @@ function firstDayOfQuarter() {
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
-
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 const payTotal = computed(() => (data.value?.lines || []).filter(l => l.type === '付款').reduce((s, l) => s + Number(l.credit || 0), 0))
 const returnTotal = computed(() => (data.value?.lines || []).filter(l => l.type === '退货冲减').reduce((s, l) => s + Number(l.credit || 0), 0))
 

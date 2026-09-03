@@ -137,6 +137,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import api from '../api'
 import SvgLineChart from '../components/charts/SvgLineChart.vue'
@@ -151,7 +152,7 @@ const data = reactive({})
 const margin = reactive({})
 const exec = reactive({})
 
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function fmtQty(v) { return Number(v || 0).toLocaleString('zh-CN', { maximumFractionDigits: 3 }) }
 function numColor(v) { return Number(v) < 0 ? 'num-red' : (Number(v) > 0 ? 'num-green' : '') }
 function rateColor(r) { return Number(r) >= 100 ? '#10b981' : (Number(r) > 0 ? '#f59e0b' : '#ef4444') }

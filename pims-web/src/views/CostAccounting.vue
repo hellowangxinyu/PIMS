@@ -110,6 +110,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../api'
@@ -126,7 +127,7 @@ const feeForm = ref({ laborFee: 0, overheadFee: 0 })
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function fmtMs(v) {
   if (v == null) return ''
   if (typeof v === 'number' || /^\d{10,}$/.test(String(v))) return new Date(Number(v)).toISOString().slice(0, 10)

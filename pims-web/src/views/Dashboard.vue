@@ -3,8 +3,8 @@
     <!-- 欢迎区 -->
     <div class="welcome-bar">
       <div>
-        <h1 class="welcome-title">王新宇的芃远综合管理系统</h1>
-        <p class="welcome-sub">王新宇的芃远综合管理系统 · 进销存</p>
+        <h1 class="welcome-title">{{ greeting }}，{{ realName }}</h1>
+        <p class="welcome-sub">芃远新材料综合管理系统 · 进销存</p>
       </div>
       <div class="date-badge">{{ today }}</div>
     </div>
@@ -178,6 +178,11 @@
 </template>
 
 <script setup>
+// v6.4 标题去硬编码人名（动态登录人 + 分时问候）
+const realName = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').realName || '同事' } catch { return '同事' } })()
+const greeting = (() => { const h = new Date().getHours(); return h < 6 ? '夜深了' : h < 9 ? '早上好' : h < 12 ? '上午好' : h < 14 ? '中午好' : h < 18 ? '下午好' : '晚上好' })()
+import { fmt } from '../utils/fmt'
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Close, OfficeBuilding, Box, Van, User, Avatar, Grid, ShoppingCart, TrendCharts, Connection, DataAnalysis, Key, House, Bell} from '@element-plus/icons-vue'
 import api from '../api'
@@ -281,12 +286,11 @@ function confirmAddQuick() {
   addQuickVisible.value = false
 }
 
+// v6.4 状态色统一（复合状态串按关键词归一）
 function statusType(s) {
   if (!s) return 'info'
-  if (s.includes('DRAFT')) return 'info'
-  if (s.includes('RECEIVED')||s.includes('SHIPPED')||s.includes('FINISHED')||s.includes('PAID')) return 'success'
   if (s.includes('CANCELLED')) return 'danger'
-  return 'warning'
+  return globalStatusType(s.split('_')[0])
 }
 
 // 状态统一映射为中文，避免显示英文
@@ -297,8 +301,7 @@ const STATUS_MAP = {
 }
 function statusLabel(s) { return s ? (STATUS_MAP[s] || '未知') : '-' }
 
-function fmt(v) { return (v||0).toLocaleString('zh-CN', { minimumFractionDigits:2, maximumFractionDigits:2 }) }
-
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 onMounted(async () => {
   try { perms.value = JSON.parse(localStorage.getItem('user')||'{}').permissions || [] } catch {}
   loadQuickActions()
@@ -323,10 +326,10 @@ onMounted(async () => {
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
 .stat-card { padding: 22px; border-radius: 16px; color: #fff; position: relative; overflow: hidden; transition: transform 0.25s, box-shadow 0.25s; }
 .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,0.15); }
-.stat-card.purple { background: linear-gradient(135deg, #6366f1, #4f46e5); }
-.stat-card.amber  { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.stat-card.emerald{ background: linear-gradient(135deg, #10b981, #059669); }
-.stat-card.rose   { background: linear-gradient(135deg, #f43f5e, #e11d48); }
+.stat-card.purple { background: linear-gradient(135deg, #6366f1, #4f46e5); }   /* 主色最深阶 */
+.stat-card.amber  { background: linear-gradient(135deg, #7c81f2, #6366f1); }  /* v6.4 同色系二阶（原琥珀彩） */
+.stat-card.emerald{ background: linear-gradient(135deg, #968ef5, #7c81f2); }  /* v6.4 同色系三阶（原翡翠彩） */
+.stat-card.rose   { background: linear-gradient(135deg, #b3aef8, #968ef5); }  /* v6.4 同色系四阶（原玫瑰彩） */
 .stat-card::after { content:''; position:absolute; width:100px; height:100px; border-radius:50%; background:rgba(255,255,255,0.08); top:-20px; right:-20px; }
 .stat-card::before { content:''; position:absolute; width:60px; height:60px; border-radius:50%; background:rgba(255,255,255,0.06); bottom:-10px; left:30px; }
 .stat-icon {

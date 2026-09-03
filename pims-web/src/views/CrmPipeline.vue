@@ -127,6 +127,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -159,7 +160,7 @@ function emptyForm() {
   return { title: '', customerId: null, companyName: '', productInterest: '', expectAmount: null, expectDate: '', owner: '', remark: '' }
 }
 function hasPerm(c) { return perms.value.includes(c) }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function stageTag(s) { return { LEAD: 'info', QUOTED: 'primary', SAMPLING: 'warning', NEGOTIATING: 'warning', WON: 'success', LOST: 'danger' }[s] || 'info' }
 
 const filtered = computed(() => {

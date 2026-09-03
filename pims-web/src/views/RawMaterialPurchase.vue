@@ -300,6 +300,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -408,7 +409,7 @@ function hasPerm(c) { return perms.value.includes(c) }
 
 // 状态文案/类型映射（含已到货）
 function statusText(s) { return { DRAFT: '开立', APPROVED: '已审核', RECEIVED: '已到货' }[s] || '未知' }
-function statusType(s) { return { DRAFT: 'info', APPROVED: 'success', RECEIVED: 'warning' }[s] || 'info' }
+// v6.4 状态色统一（utils/statusTag 全局映射）
 
 // ===== 开立单据查询 =====
 async function fetchDraft() {
@@ -536,8 +537,7 @@ function calcAmount() {
   }
 }
 
-function fmt(v) { return v != null ? v.toLocaleString('zh-CN', { minimumFractionDigits: 2 }) : '-' }
-
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 // ===== v5.71 打印请购单（按合同号聚合全部物料行，可直接发给供应商） =====
 let supplierPrintCache = null
 async function printOrder(row) {

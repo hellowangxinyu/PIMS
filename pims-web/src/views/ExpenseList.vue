@@ -112,6 +112,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -140,8 +141,7 @@ function emptyForm() {
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
-
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 // 支付方式固定清单（带序号，下拉支持输入编号快选，如 01=银行转账）
 const METHOD_OPTIONS = [
   { no: 1, value: 'BANK', label: '银行转账' },

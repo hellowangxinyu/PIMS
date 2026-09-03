@@ -152,6 +152,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -182,9 +183,8 @@ const perms = ref([])
 const { cw, onHeaderDragend } = useColumnResize('sample_request')
 
 function hasPerm(code) { return perms.value.includes(code) }
-function statusType(s) {
-  return { APPLIED: 'info', COLORING: 'primary', SENT: 'primary', SATISFIED: 'success', ADJUST: 'warning', WON: 'success', LOST: 'danger' }[s] || 'info'
-}
+// v6.4 状态色统一：全局 + 打样域局部
+const statusType = (s) => globalStatusType(s, { APPLIED: 'info', COLORING: 'primary', SENT: 'primary', SATISFIED: 'success', ADJUST: 'warning', WON: 'success', LOST: 'danger' })
 
 async function fetch() {
   const params = {}

@@ -47,7 +47,9 @@ export default defineComponent({
         return node
       })
     }
-    return () => h(ElTable, { ...attrs, onHeaderDragend }, {
+    // v6.4 表格密度统一：未显式指定 size 的表格默认 small（ERP 高密度惯例，与既有 size="small" 页面拉齐）
+    const { size, ...rest } = attrs
+    return () => h(ElTable, { size: size || 'small', ...rest, onHeaderDragend }, {
       ...slots,
       default: slots.default ? () => injectWidth(slots.default()) : undefined
     })

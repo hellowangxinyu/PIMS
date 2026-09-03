@@ -279,7 +279,7 @@
         <div class="process-section">
           <div class="section-header">
             <h4>包装标准 <span class="ver-label" v-if="boundPackaging">{{ boundPackaging.name }}</span></h4>
-            <span class="dim-desc" v-if="boundPackaging">{{ boundPackaging.capacityKg ? boundPackaging.capacityKg + 'kg/套' : '整件' }}　套单价￥{{ Number(boundPackaging.setPrice ?? boundPackaging.unitPrice ?? 0).toFixed(2) }}</span>
+            <span class="dim-desc" v-if="boundPackaging">{{ boundPackaging.capacityKg ? boundPackaging.capacityKg + 'kg/套' : '整件' }}　套单价￥{{ fmt(boundPackaging.setPrice ?? boundPackaging.unitPrice ?? 0) }}</span>
           </div>
           <p-table v-if="boundPackaging && boundPackaging.items && boundPackaging.items.length" :data="boundPackaging.items" border size="small" style="width:100%">
             <el-table-column type="index" label="#" width="45" align="center" />
@@ -292,7 +292,7 @@
               <template #default="{ row }">{{ Number(row.qty) }}</template>
             </el-table-column>
             <el-table-column label="单价(元)" width="90" align="right">
-              <template #default="{ row }">{{ Number(row.unitPrice).toFixed(2) }}</template>
+              <template #default="{ row }">{{ fmt(row.unitPrice) }}</template>
             </el-table-column>
             <el-table-column label="小计" width="90" align="right">
               <template #default="{ row }">￥{{ (Number(row.qty) * Number(row.unitPrice)).toFixed(2) }}</template>
@@ -364,7 +364,7 @@
         <el-form-item label="包装标准">
           <el-select v-model="recipeForm.packagingStandardId" clearable placeholder="选择桶/袋（计入配方理论成本）" style="width:100%">
             <el-option v-for="ps in packagingStandards" :key="ps.id"
-              :label="ps.name + '（' + (ps.capacityKg ? ps.capacityKg + 'kg/套 ' : '') + '套￥' + Number(ps.setPrice ?? ps.unitPrice ?? 0).toFixed(2) + '）'" :value="ps.id" />
+              :label="ps.name + '（' + (ps.capacityKg ? ps.capacityKg + 'kg/套 ' : '') + '套￥' + fmt(ps.setPrice ?? ps.unitPrice ?? 0) + '）'" :value="ps.id" />
           </el-select>
         </el-form-item>
         <el-form-item :label="recipeForm.recipeType === 'GRINDING' ? '半成品' : '成品'" required>
@@ -448,6 +448,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -1026,7 +1027,7 @@ function printPackagingText() {
   if (!id) return '-'
   const ps = (packagingStandards.value || []).find(x => x.id === id)
   if (!ps) return '-'
-  return ps.name + '（' + (ps.capacityKg ? ps.capacityKg + 'kg/套 ' : '') + '套￥' + Number(ps.setPrice ?? ps.unitPrice ?? 0).toFixed(2) + '）'
+  return ps.name + '（' + (ps.capacityKg ? ps.capacityKg + 'kg/套 ' : '') + '套￥' + fmt(ps.setPrice ?? ps.unitPrice ?? 0) + '）'
 }
 // v5.87 打印区块：标准工艺（详细版=原工艺指导单内容：步序+参数+工序质检项），配方单与工艺单合一
 function printProcessSectionHtml() {
@@ -1073,9 +1074,9 @@ function printPackagingSectionHtml() {
   if (!ps) return '<div class="sec-title">四、包装标准</div><div style="font-size:12px;color:#666">未绑定</div>'
   const items = ps.items || []
   const rows = items.length ? items.map((it, i) => '<tr><td class="center">' + (i + 1) + '</td><td>' + escHtml(it.name || '') +
-    '</td><td>' + escHtml(it.spec || '') + '</td><td class="num">' + Number(it.qty) + '</td><td class="num">' + Number(it.unitPrice).toFixed(2) +
+    '</td><td>' + escHtml(it.spec || '') + '</td><td class="num">' + Number(it.qty) + '</td><td class="num">' + fmt(it.unitPrice) +
     '</td><td class="num">' + (Number(it.qty) * Number(it.unitPrice)).toFixed(2) + '</td></tr>').join('') : ''
-  return '<div class="sec-title">四、包装标准：' + escHtml(ps.name) + '（' + (ps.capacityKg ? ps.capacityKg + 'kg/套 ' : '') + '套￥' + Number(ps.setPrice ?? ps.unitPrice ?? 0).toFixed(2) + '）</div>' +
+  return '<div class="sec-title">四、包装标准：' + escHtml(ps.name) + '（' + (ps.capacityKg ? ps.capacityKg + 'kg/套 ' : '') + '套￥' + fmt(ps.setPrice ?? ps.unitPrice ?? 0) + '）</div>' +
     (rows ? '<table class="main"><thead><tr><th style="width:40px">#</th><th>包装物料</th><th>规格</th><th style="width:70px">每套数量</th><th style="width:70px">单价</th><th style="width:70px">小计</th></tr></thead><tbody>' + rows + '</tbody></table>' : '')
 }
 
@@ -1083,7 +1084,7 @@ function printPackagingItemsRow() {
   const id = current.value?.packagingStandardId
   const ps = (packagingStandards.value || []).find(x => x.id === id)
   if (!ps || !ps.items || !ps.items.length) return ''
-  const txt = ps.items.map(i => i.name + (Number(i.qty) === 1 ? '' : '×' + Number(i.qty)) + ' ￥' + Number(i.unitPrice).toFixed(2)).join('；')
+  const txt = ps.items.map(i => i.name + (Number(i.qty) === 1 ? '' : '×' + Number(i.qty)) + ' ￥' + fmt(i.unitPrice)).join('；')
   return '<tr><td class="k">包装组合</td><td colspan="3" style="font-size:12px;">' + escHtml(txt) + '</td></tr>'
 }
 

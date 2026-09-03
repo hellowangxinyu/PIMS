@@ -33,10 +33,34 @@ public class PurchaseOrderController {
         return Result.ok(service.getItems(id));
     }
 
+    /** v6.4：请购单创建支持明细（Map 体：order 字段 + items 数组；原实体体收不到明细恒空） */
     @PostMapping
     @SaCheckPermission(value = "purchase:write")
-    public Result<PurchaseOrder> create(@RequestBody PurchaseOrder order) {
-        return Result.ok(service.create(order, List.of()));
+    public Result<PurchaseOrder> create(@RequestBody java.util.Map<String, Object> body) {
+        PurchaseOrder order = new PurchaseOrder();
+        if (body.get("supplierId") != null) order.supplierId = Long.valueOf(String.valueOf(body.get("supplierId")));
+        order.orderDate = body.get("orderDate") != null && !String.valueOf(body.get("orderDate")).isBlank()
+                ? java.time.LocalDate.parse(String.valueOf(body.get("orderDate")).substring(0, 10)) : java.time.LocalDate.now();
+        order.targetWarehouseId = body.get("targetWarehouseId") != null ? String.valueOf(body.get("targetWarehouseId")) : "1";
+        order.paymentTerms = body.get("paymentTerms") != null ? String.valueOf(body.get("paymentTerms")) : null;
+        order.expectedDeliveryDate = body.get("expectedDeliveryDate") != null && !String.valueOf(body.get("expectedDeliveryDate")).isBlank()
+                ? java.time.LocalDate.parse(String.valueOf(body.get("expectedDeliveryDate")).substring(0, 10)) : null;
+        order.remark = body.get("remark") != null ? String.valueOf(body.get("remark")) : null;
+        order.createdBy = body.get("createdBy") != null ? String.valueOf(body.get("createdBy")) : null;
+        java.util.List<PurchaseOrderItem> items = new java.util.ArrayList<>();
+        Object raw = body.get("items");
+        if (raw instanceof java.util.List<?> l) {
+            for (Object o : l) {
+                if (!(o instanceof java.util.Map<?, ?> m)) continue;
+                PurchaseOrderItem it = new PurchaseOrderItem();
+                it.materialCode = String.valueOf(m.get("materialCode"));
+                it.qty = new java.math.BigDecimal(String.valueOf(m.get("qty")));
+                it.unit = m.get("unit") != null ? String.valueOf(m.get("unit")) : "kg";
+                it.unitPrice = m.get("unitPrice") != null ? new java.math.BigDecimal(String.valueOf(m.get("unitPrice"))) : null;
+                items.add(it);
+            }
+        }
+        return Result.ok(service.create(order, items));
     }
 
     /** v6.3：删除草稿请购单（MRP 误单清理） */

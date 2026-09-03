@@ -25,11 +25,11 @@
           <template #default="{ row }">{{ row.materialQtySummary || '-' }}</template>
         </el-table-column>
         <el-table-column label="金额" width="110" align="right">
-          <template #default="{ row }">￥{{ Number(row.totalAmount || 0).toFixed(2) }}</template>
+          <template #default="{ row }">￥{{ fmt(row.totalAmount || 0) }}</template>
         </el-table-column>
         <el-table-column label="运费" width="95" align="right" v-if="hasPerm('finance:amount')">
           <template #default="{ row }">
-            <span v-if="Number(row.freightTotal) > 0">￥{{ Number(row.freightTotal).toFixed(2) }}</span>
+            <span v-if="Number(row.freightTotal) > 0">￥{{ fmt(row.freightTotal) }}</span>
             <span v-else class="text-muted">—</span>
           </template>
         </el-table-column>
@@ -155,7 +155,7 @@
         <el-table-column prop="qty" label="数量" width="90" align="right" />
         <el-table-column prop="unit" label="单位" width="60" align="center" />
         <el-table-column label="单价(含税)" width="105" align="right">
-          <template #default="{ row }">{{ row.unitPrice != null ? '￥' + Number(row.unitPrice).toFixed(2) : '-' }}</template>
+          <template #default="{ row }">{{ row.unitPrice != null ? '￥' + fmt(row.unitPrice) : '-' }}</template>
         </el-table-column>
         <el-table-column label="不含税单价" width="100" align="right">
           <template #default="{ row }">{{ fmtTax(netOfTax(row.unitPrice, detailTaxRate)) }}</template>
@@ -258,6 +258,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { loadTaxRate, netOfTax, taxOf, fmtTax } from '../utils/tax'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -360,7 +361,7 @@ function hasPerm(c) { return perms.value.includes(c) }
 function fmtTime(t) { return t ? t.replace('T', ' ').substring(0, 16) : '' }
 function whName(id) { const w = warehouses.value.find(w => String(w.id) === String(id)); return w ? w.name : (id || '-') }
 function custName(id) { const c = customers.value.find(c => c.id === id); return c ? c.name : (id || '-') }
-function statusType(s) { return s === 'SHIPPED' ? 'success' : s === 'CONFIRMED' ? 'primary' : s === 'CLOSED' ? 'info' : 'warning' }
+// v6.4 状态色统一（utils/statusTag 全局映射）
 function statusLabel(s) { return s === 'SHIPPED' ? '已发货' : s === 'CONFIRMED' ? '已确认' : s === 'CLOSED' ? '已结束' : '草稿' }
 
 // v5.27：Tab（进行中=草稿+已确认 / 已发货 / 已结束）
@@ -400,7 +401,7 @@ async function onQtyChange(row) {
     if (pm && pm.price != null) {
       if (row.unitPrice == null || Number(row.unitPrice) !== Number(pm.price)) {
         row.unitPrice = Number(pm.price)
-        ElMessage.info(`按数量 ${row.qty} 匹配价格政策 ￥${Number(pm.price).toFixed(2)}（${pm.tier}）`)
+        ElMessage.info(`按数量 ${row.qty} 匹配价格政策 ￥${fmt(pm.price)}（${pm.tier}）`)
       }
     }
   } catch {}
@@ -414,7 +415,7 @@ async function onItemMatChange(row) {
       const pm = await api.get('/price-policy/match', { params: { materialCode: row.materialCode, qty: row.qty || 1 } })
       if (pm && pm.price != null) {
         row.unitPrice = Number(pm.price)
-        ElMessage.info(`已带出价格政策 ￥${Number(pm.price).toFixed(2)}（${pm.tier}），可修改`)
+        ElMessage.info(`已带出价格政策 ￥${fmt(pm.price)}（${pm.tier}），可修改`)
         return
       }
     } catch {}
@@ -425,7 +426,7 @@ async function onItemMatChange(row) {
     const r = await api.get('/sales-order/recent-price', { params: { customerId: form.value.customerId, materialCode: row.materialCode } })
     if (r && r.unitPrice != null) {
       row.unitPrice = Number(r.unitPrice)
-      ElMessage.info(`已带出最近成交价 ￥${Number(r.unitPrice).toFixed(2)}（${r.orderNo}），可修改`)
+      ElMessage.info(`已带出最近成交价 ￥${fmt(r.unitPrice)}（${r.orderNo}），可修改`)
     }
   } catch {}
 }
@@ -462,8 +463,8 @@ async function submitCreate() {
     const cc = await api.get(`/customer/${form.value.customerId}/credit-check`, { params: { amount } })
     if (cc && cc.exceed) {
       await ElMessageBox.confirm(
-        `客户当前应收欠款 ￥${Number(cc.arBalance).toFixed(2)}，加本单 ￥${Number(cc.orderAmount).toFixed(2)}，` +
-        `合计 ￥${Number(cc.projected).toFixed(2)} 已超信用额度 ￥${Number(cc.creditLimit).toFixed(2)}，是否继续下单？`,
+        `客户当前应收欠款 ￥${fmt(cc.arBalance)}，加本单 ￥${fmt(cc.orderAmount)}，` +
+        `合计 ￥${fmt(cc.projected)} 已超信用额度 ￥${fmt(cc.creditLimit)}，是否继续下单？`,
         '信用额度预警', { type: 'warning', confirmButtonText: '继续下单', cancelButtonText: '取消' })
     }
   }
@@ -503,8 +504,8 @@ async function confirmOrder(row) {
       const cc = await api.get(`/customer/${row.customerId}/credit-check`, { params: { amount: row.totalAmount } })
       if (cc && cc.exceed) {
         exceeded = true
-        creditTip = `客户「${row.customerName}」当前应收欠款 ￥${Number(cc.arBalance).toFixed(2)}，加本单 ￥${Number(cc.orderAmount).toFixed(2)}，` +
-          `合计 ￥${Number(cc.projected).toFixed(2)} 已超信用额度 ￥${Number(cc.creditLimit).toFixed(2)}。\n\n仍要确认该订单吗？（仅记录不阻断）`
+        creditTip = `客户「${row.customerName}」当前应收欠款 ￥${fmt(cc.arBalance)}，加本单 ￥${fmt(cc.orderAmount)}，` +
+          `合计 ￥${fmt(cc.projected)} 已超信用额度 ￥${fmt(cc.creditLimit)}。\n\n仍要确认该订单吗？（仅记录不阻断）`
       }
     } catch { /* 信用查询失败不挡确认 */ }
     await ElMessageBox.confirm(creditTip, exceeded ? '信用额度预警' : '确认订单',
@@ -645,7 +646,7 @@ function buildContractHtml(order, items, customer) {
       + '<td>' + escHtml(it.materialCode || '-') + '</td>'
       + '<td style="text-align:right">' + (it.qty != null ? Number(it.qty) : '-') + '</td>'
       + '<td style="text-align:center">' + escHtml(it.unit || '') + '</td>'
-      + '<td style="text-align:right">' + (it.unitPrice != null ? Number(it.unitPrice).toFixed(2) : '-') + '</td>'
+      + '<td style="text-align:right">' + (it.unitPrice != null ? fmt(it.unitPrice) : '-') + '</td>'
       + '<td style="text-align:right">' + amount + '</td></tr>'
   }).join('')
   const buyer = customer || {}
@@ -746,8 +747,8 @@ async function openShip(row) {
   try {
     const cc = await api.get(`/customer/${row.customerId}/credit-check`, { params: { amount: row.totalAmount } })
     if (cc && cc.exceed) {
-      shipCreditWarn.value = `信用预警：该客户应收欠款 ￥${Number(cc.arBalance).toFixed(2)} + 本单 ￥${Number(cc.orderAmount).toFixed(2)} ` +
-        `已超额度 ￥${Number(cc.creditLimit).toFixed(2)}，请知悉后发货`
+      shipCreditWarn.value = `信用预警：该客户应收欠款 ￥${fmt(cc.arBalance)} + 本单 ￥${fmt(cc.orderAmount)} ` +
+        `已超额度 ￥${fmt(cc.creditLimit)}，请知悉后发货`
     }
   } catch {}
   try {

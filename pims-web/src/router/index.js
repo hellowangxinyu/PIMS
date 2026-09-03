@@ -79,6 +79,7 @@ const routes = [
       { path: 'report-overview', name: 'ReportOverview', component: () => import('../views/ReportOverview.vue') },
       { path: 'quality-inspection', name: 'QualityInspection', component: () => import('../views/QualityInspection.vue') },
       { path: 'quality-statistics', name: 'QualityStatistics', component: () => import('../views/QualityStatistics.vue') },
+      { path: 'purchase-order', name: 'PurchaseOrder', component: () => import('../views/PurchaseOrderList.vue') },
       { path: 'price-policy', name: 'PricePolicyList', component: () => import('../views/PricePolicyList.vue') },
       { path: 'mrp-suggest', name: 'MrpSuggest', component: () => import('../views/MrpSuggest.vue') },
       { path: 'report-turnover', name: 'ReportTurnover', component: () => import('../views/ReportTurnover.vue') },

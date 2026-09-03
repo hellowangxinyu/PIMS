@@ -57,6 +57,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../api'
 import SvgBarChart from '../components/charts/SvgBarChart.vue'
@@ -66,8 +67,7 @@ const loading = ref(false)
 const data = reactive({})
 const arTab = ref('AR')
 
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
-
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function statusTagType(s) { return { UNPAID: 'danger', PARTIAL: 'warning', PAID: 'success' }[s] || 'info' }
 function statusLabel(s) { return { UNPAID: '未结清', PARTIAL: '部分结清', PAID: '已结清' }[s] || s }
 function isOverdue(row) {

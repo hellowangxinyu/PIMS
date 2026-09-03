@@ -112,7 +112,7 @@ const tailingOptions = ref([])
 const form = ref({})
 
 function settleLabel(s) { return s === 'PAID_RECYCLE' ? '付费回收' : s === 'DISCOUNT_RETURN' ? '折价退回' : '-' }
-function statusType(s) { return { CONFIRMED: 'success', DRAFT: 'info', REJECTED: 'danger' }[s] || 'info' }
+// v6.4 状态色统一（utils/statusTag 全局映射）
 function statusLabel(s) { return { CONFIRMED: '已入油尾库', DRAFT: '草稿', REJECTED: '已驳回' }[s] || '未知' }
 function fmtTime(t) { return t ? t.replace('T', ' ').substring(0, 16) : '' }
 function fmtMoney(v) { return '￥' + (Number(v) || 0).toFixed(2) }

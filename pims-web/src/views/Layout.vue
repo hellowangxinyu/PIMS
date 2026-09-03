@@ -67,6 +67,7 @@
           <el-icon size="20"><component :is="'expand'" /></el-icon>
         </button>
         <div class="topbar-breadcrumb">
+          <el-icon v-if="loadingActive" class="loading-spinner is-loading" size="14" color="#7dd3fc"><component :is="'loading'" /></el-icon>
           <span v-if="route.path !== '/'">{{ pageTitle }}</span>
           <span v-else>工作台</span>
         </div>
@@ -182,6 +183,7 @@ const NAV_GROUPS = [
       { path: '/raw-material-purchase', title: '原料采购', icon: ShoppingCart, perm: 'purchase:read' },
       { path: '/finished-product-purchase', title: '成品采购', icon: ShoppingTrolley, perm: 'purchase:read' },
       { path: '/purchase-arrival', title: '采购到货', icon: Position, perm: 'purchase:read' },
+      { path: '/purchase-order', title: '请购单', icon: Document, perm: 'purchase:read' },
       { path: '/mrp-suggest', title: '采购建议 MRP', icon: ShoppingCart, perm: 'purchase:read' },
       { path: '/return-order', title: '采购退货单', icon: RefreshLeft, perm: 'purchase:read' },
       { path: '/supplier-quality-trace', title: '质量追溯', icon: Warning, perm: 'strace:read' }
@@ -384,6 +386,9 @@ function onTabMouseDown(e, path) {
 import { watch } from 'vue'
 watch(() => route.path, () => addCurrentTab(), { immediate: true })
 const ready = ref(false)
+// v6.4 全局加载指示（api 请求计数广播）
+const loadingActive = ref(false)
+window.addEventListener('pims-loading', e => { loadingActive.value = !!e.detail })
 
 function hasPerm(code) { return perms.value.includes(code) }
 
@@ -442,7 +447,11 @@ function updateTime() {
     ' ' + d.toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' })
 }
 
-function logout() {
+async function logout() {
+  try {
+    await ElMessageBox.confirm('确定退出登录吗？', '退出确认', { type: 'warning', confirmButtonText: '退出', cancelButtonText: '取消' })
+  } catch { return }
+  try { await api.post('/auth/logout') } catch {}
   localStorage.removeItem('pims-token')
   localStorage.removeItem('user')
   router.replace('/login')
@@ -813,4 +822,10 @@ function logout() {
 .tab-ops { flex-shrink: 0; display: flex; gap: 2px; margin-bottom: 5px; }
 .tab-op { border: none; background: transparent; color: #64748b; font-size: 12px; padding: 3px 8px; border-radius: 4px; cursor: pointer; }
 .tab-op:hover { color: var(--pims-primary, #2563eb); background: rgba(255, 255, 255, .6); }
+</style>
+
+<style>
+/* v6.4 顶栏加载指示 */
+.loading-spinner { animation: pims-spin 0.9s linear infinite; margin-right: 4px; vertical-align: -2px }
+@keyframes pims-spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
 </style>

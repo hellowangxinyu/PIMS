@@ -254,6 +254,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -286,9 +287,8 @@ function onRecipeTypeChange() {
 }
 function fmtTime(t) { return t ? t.replace('T', ' ').substring(0, 16) : '' }
 // v5.27：状态展示（displayStatus 推导：OUTSOURCED=已委外 INBOUND=已入库 SHIPPED=已发货）
-function statusType(s) {
-  return { CONFIRMED: 'success', COMPLETED: 'info', OUTSOURCED: 'primary', INBOUND: 'success', SHIPPED: 'info' }[s] || 'warning'
-}
+// v6.4 状态色统一：全局 + 生产域局部（完成态绿）
+const statusType = (s) => globalStatusType(s, { COMPLETED: 'success', SHIPPED: 'success', INBOUND: 'success' })
 function statusLabel(s) {
   return { CONFIRMED: '已确认', COMPLETED: '已完工', OUTSOURCED: '已委外', INBOUND: '已入库', SHIPPED: '已发货', DRAFT: '草稿' }[s] || s
 }

@@ -113,6 +113,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import api from '../api'
 import { downloadFile } from '../utils/download'
@@ -125,7 +126,7 @@ const view = ref('product')
 const onlyWarn = ref('')
 
 function hasPerm(c) { return perms.value.includes(c) }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function pct(v) { return (Number(v || 0) * 100).toFixed(1) + '%' }
 function rateClass(v) {
   const n = Number(v || 0)

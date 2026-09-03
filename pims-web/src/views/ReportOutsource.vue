@@ -42,6 +42,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, reactive, onMounted } from 'vue'
 import api from '../api'
 import SvgLineChart from '../components/charts/SvgLineChart.vue'
@@ -51,8 +52,7 @@ const months = ref(6)
 const loading = ref(false)
 const data = reactive({})
 
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
-
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 async function loadData() {
   loading.value = true
   try {

@@ -117,6 +117,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Odometer } from '@element-plus/icons-vue'
 import api from '../api'
@@ -133,8 +134,7 @@ const marginTab = ref('product')
 const warnTab = ref('low')
 const cockpit = reactive({ sales: {}, margin: {}, lowStock: [], expiry: [], exec: {} })
 
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
-
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 const salesRank = computed(() => {
   const src = salesTab.value === 'product' ? cockpit.sales.materialRank : cockpit.sales.customerRank
   return (src || []).slice(0, 8)

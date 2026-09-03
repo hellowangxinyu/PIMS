@@ -144,6 +144,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -158,7 +159,7 @@ const typeFilter = ref('')
 const dialogVisible = ref(false)
 const profileVisible = ref(false)
 const profile = ref(null)
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 async function openProfile(row) {
   profile.value = null
   profileVisible.value = true

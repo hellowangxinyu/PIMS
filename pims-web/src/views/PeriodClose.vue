@@ -49,6 +49,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -61,7 +62,7 @@ const costingMethod = ref('SPECIFIC')   // v5.63 全月平均结账前置
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function fmtTime(t) {
   if (!t) return ''
   if (typeof t === 'number') { const d = new Date(t); return d.toLocaleString('zh-CN', { hour12: false }) }

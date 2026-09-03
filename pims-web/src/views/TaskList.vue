@@ -162,6 +162,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -207,9 +208,10 @@ function statusLabel(row) {
   if (isOverdue(row)) return '逾期'
   return { PENDING: '待接收', IN_PROGRESS: '进行中', COMPLETED: '已完成', CANCELLED: '已取消' }[row.status] || row.status
 }
+// v6.4 状态色统一：全局 + 任务域局部（逾期红优先）
 function statusType(row) {
   if (isOverdue(row)) return 'danger'
-  return { PENDING: 'info', IN_PROGRESS: 'primary', COMPLETED: 'success', CANCELLED: 'warning' }[row.status] || 'info'
+  return globalStatusType(row.status, { PENDING: 'warning', IN_PROGRESS: 'primary', CANCELLED: 'info' })
 }
 function progressLabel(t) {
   return { CREATE: '创建', START: '开始', UPDATE: '汇报', COMPLETE: '完成', CANCEL: '取消', REOPEN: '重开' }[t] || t

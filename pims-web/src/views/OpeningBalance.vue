@@ -57,6 +57,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../api'
@@ -69,7 +70,7 @@ const loading = ref(false)
 const CATEGORIES = { ASSET: '资产', LIABILITY: '负债', EQUITY: '权益', COST: '成本', PL: '损益' }
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function categoryLabel(c) { return CATEGORIES[c] || c }
 
 const drSum = computed(() => rows.value.filter(r => r.openingDirection === 'DR').reduce((s, r) => s + Number(r.openingBalance || 0), 0))

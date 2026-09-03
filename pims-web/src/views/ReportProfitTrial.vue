@@ -65,6 +65,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import api from '../api'
 import { downloadFile } from '../utils/download'
@@ -95,7 +96,7 @@ const quickMonths = computed(() => {
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function dictItems(type) { return dicts.value[type] || [] }
 function dictLabel(type, v) { return dictItems(type).find(d => d.value === v)?.label }
 

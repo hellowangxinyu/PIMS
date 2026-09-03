@@ -427,7 +427,7 @@ function hasPerm(c) { return perms.value.includes(c) }
 
 // 状态文案/类型映射（含已到货）
 function statusText(s) { return { DRAFT: '开立', APPROVED: '已审核', RECEIVED: '已到货' }[s] || '未知' }
-function statusType(s) { return { DRAFT: 'info', APPROVED: 'success', RECEIVED: 'warning' }[s] || 'info' }
+// v6.4 状态色统一（utils/statusTag 全局映射）
 
 // ===== 开立单据查询 =====
 async function fetchDraft() {

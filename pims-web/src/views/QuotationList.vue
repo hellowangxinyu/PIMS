@@ -23,7 +23,7 @@
       <el-table-column prop="quoteDate" label="报价日期" :width="cw('报价日期') || 100" />
       <el-table-column prop="validUntil" label="有效期至" :width="cw('有效期至') || 100" />
       <el-table-column label="金额" align="right" :width="cw('金额') || 110">
-        <template #default="{ row }">￥{{ Number(row.totalAmount || 0).toFixed(2) }}</template>
+        <template #default="{ row }">￥{{ fmt(row.totalAmount || 0) }}</template>
       </el-table-column>
       <el-table-column label="状态" :width="cw('状态') || 92" align="center">
         <template #default="{ row }">
@@ -112,10 +112,10 @@
         <el-table-column prop="qty" label="数量" width="100" align="right" />
         <el-table-column prop="unit" label="单位" width="60" />
         <el-table-column label="单价" width="110" align="right">
-          <template #default="{ row }">{{ row.unitPrice != null ? '￥' + Number(row.unitPrice).toFixed(2) : '-' }}</template>
+          <template #default="{ row }">{{ row.unitPrice != null ? '￥' + fmt(row.unitPrice) : '-' }}</template>
         </el-table-column>
         <el-table-column label="小计" width="120" align="right">
-          <template #default="{ row }">￥{{ Number(row.amount || 0).toFixed(2) }}</template>
+          <template #default="{ row }">￥{{ fmt(row.amount || 0) }}</template>
         </el-table-column>
       </p-table>
     </el-dialog>
@@ -123,6 +123,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -203,7 +204,7 @@ async function onItemMatChange(row) {
     const r = await api.get('/sales-order/recent-price', { params: { customerId: form.value.customerId, materialCode: row.materialCode } })
     if (r && r.unitPrice != null) {
       row.unitPrice = Number(r.unitPrice)
-      ElMessage.info(`已带出最近成交价 ￥${Number(r.unitPrice).toFixed(2)}（${r.orderNo}），可修改`)
+      ElMessage.info(`已带出最近成交价 ￥${fmt(r.unitPrice)}（${r.orderNo}），可修改`)
     }
   } catch {}
 }

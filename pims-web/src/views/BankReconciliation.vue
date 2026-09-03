@@ -140,6 +140,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 // v6.3 出纳银行对账：日记账 vs 银行流水双栏、自动勾对、手工勾对、余额调节表
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -162,8 +163,7 @@ function hasPerm(c) { return perms.value.includes(c) }
 
 function today() { return new Date().toISOString().slice(0, 10) }
 function monthStart() { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10) }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
-
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 const bindable = computed(() => (journal.value.rows || []).filter(r => !r.matched))
 
 async function fetchAccounts() {

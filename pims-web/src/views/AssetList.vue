@@ -113,6 +113,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -145,8 +146,7 @@ function emptyForm() {
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
-
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 const inUseCount = computed(() => list.value.filter(a => a.status === 'IN_USE').length)
 const sumOriginal = computed(() => list.value.reduce((s, a) => s + Number(a.originalValue || 0), 0))
 const sumDep = computed(() => list.value.reduce((s, a) => s + Number(a.accumulatedDep || 0), 0))

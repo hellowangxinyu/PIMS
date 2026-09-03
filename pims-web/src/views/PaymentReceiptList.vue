@@ -98,6 +98,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../api'
@@ -118,7 +119,7 @@ const form = ref({ customerId: null, amount: null, method: 'BANK', bankAccount: 
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function fmtTime(t) { return t ? String(t).replace('T', ' ').substring(0, 16) : '' }
 function payMethodLabel(m) { return { CASH: '现金', BANK: '银行', ACCEPTANCE: '承兑汇票' }[m] || m || '未知' }
 

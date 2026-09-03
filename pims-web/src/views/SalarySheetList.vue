@@ -128,6 +128,7 @@
 </template>
 
 <script setup>
+import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -145,7 +146,7 @@ const items = ref([])
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
-function fmt(v) { return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+// v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function rowGross(r) { return Number(r.base || 0) + Number(r.bonus || 0) + Number(r.piecework || 0) - Number(r.deduction || 0) }
 const DEPTS = { PRODUCTION: '生产', SALES: '销售', ADMIN: '行政', TECH: '技术', QC: '质检', OTHER: '其他' }
 function deptLabel(v) { return DEPTS[v] || v }
