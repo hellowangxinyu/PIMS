@@ -82,6 +82,7 @@ const routes = [
       { path: 'price-policy', name: 'PricePolicyList', component: () => import('../views/PricePolicyList.vue') },
       { path: 'mrp-suggest', name: 'MrpSuggest', component: () => import('../views/MrpSuggest.vue') },
       { path: 'report-turnover', name: 'ReportTurnover', component: () => import('../views/ReportTurnover.vue') },
+      { path: 'bank-reconciliation', name: 'BankReconciliation', component: () => import('../views/BankReconciliation.vue') },
       { path: 'qc-template', name: 'QcTemplateList', component: () => import('../views/QcTemplateList.vue') },
       { path: 'voucher', name: 'VoucherList', component: () => import('../views/VoucherList.vue') },
       { path: 'account-subject', name: 'AccountSubjectList', component: () => import('../views/AccountSubjectList.vue') },
