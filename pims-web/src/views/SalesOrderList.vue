@@ -117,7 +117,7 @@
               </el-table-column>
               <el-table-column label="数量" width="130">
                 <template #default="{ row }">
-                  <el-input-number v-model="row.qty" :min="0.001" :precision="3" :step="1" size="small" controls-position="right" style="width:110px" />
+                  <el-input-number v-model="row.qty" :min="0.001" :precision="3" :step="1" size="small" controls-position="right" style="width:110px" @change="onQtyChange(row)" />
                 </template>
               </el-table-column>
               <el-table-column label="单位" width="80">
@@ -391,9 +391,34 @@ function openCreate() {
 function emptyItem() { return { materialCode: '', materialName: '', qty: 1, unit: 'kg', unitPrice: null } }
 function addItem() { form.value.items.push(emptyItem()) }
 function onCustChange() {}
+
+// v6.3 数量变化重匹配价格阶梯（量大优惠按数量档）
+async function onQtyChange(row) {
+  if (!row.materialCode) return
+  try {
+    const pm = await api.get('/price-policy/match', { params: { materialCode: row.materialCode, qty: row.qty || 1 } })
+    if (pm && pm.price != null) {
+      if (row.unitPrice == null || Number(row.unitPrice) !== Number(pm.price)) {
+        row.unitPrice = Number(pm.price)
+        ElMessage.info(`按数量 ${row.qty} 匹配价格政策 ￥${Number(pm.price).toFixed(2)}（${pm.tier}）`)
+      }
+    }
+  } catch {}
+}
 async function onItemMatChange(row) {
   const m = materials.value.find(m => m.code === row.materialCode)
   if (m) { row.materialName = m.name || ''; if (!row.unit && m.unit) row.unit = m.unit }
+  // v6.3 价格政策优先：维护了阶梯价/大类价则带出（量大优惠按当前数量档），否则回落最近成交价
+  if (row.materialCode) {
+    try {
+      const pm = await api.get('/price-policy/match', { params: { materialCode: row.materialCode, qty: row.qty || 1 } })
+      if (pm && pm.price != null) {
+        row.unitPrice = Number(pm.price)
+        ElMessage.info(`已带出价格政策 ￥${Number(pm.price).toFixed(2)}（${pm.tier}），可修改`)
+        return
+      }
+    } catch {}
+  }
   // v5.52 带出该客户最近成交价（防报错价），无历史则不动
   if (!form.value.customerId || !row.materialCode) return
   try {

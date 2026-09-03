@@ -40,6 +40,7 @@ public class ReportService {
     private final OutsourceFinishInboundRepository outsourceInRepo;
     private final StatMaterialUsageRepository statUsageRepo;
     private final MaterialRepository materialRepo;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;   // v6.3 周转率聚合
     private final DictItemRepository dictItemRepo;
     private final SalesOutboundRepository salesOutRepo;
     private final SalesOrderRepository salesOrderRepo;
@@ -75,7 +76,8 @@ public class ReportService {
                          PaymentDisbursementRepository payDisbursRepo,
                          FinishedProductPurchaseRepository finishedPurchaseRepo,
                          CustomerRepository customerRepo,
-                         SupplierRepository supplierRepo) {
+                         SupplierRepository supplierRepo,
+                         org.springframework.jdbc.core.JdbcTemplate jdbc) {
         this.purchaseRepo = purchaseRepo;
         this.inventoryDailyRepo = inventoryDailyRepo;
         this.ledgerRepo = ledgerRepo;
@@ -89,6 +91,7 @@ public class ReportService {
         this.outsourceInRepo = outsourceInRepo;
         this.statUsageRepo = statUsageRepo;
         this.materialRepo = materialRepo;
+        this.jdbc = jdbc;
         this.dictItemRepo = dictItemRepo;
         this.salesOutRepo = salesOutRepo;
         this.salesOrderRepo = salesOrderRepo;
@@ -158,6 +161,98 @@ private Map<String, Object> doPurchaseReport(int months) {
     public Map<String, Object> inventoryReport(int months) {
     return (Map<String, Object>) cached("inventoryReport:" + months, () -> doInventoryReport(months));
 }
+
+    /**
+     * v6.3 第三批：库存周转率。
+     * 口径（实用版）：近 N 天总出库量 ÷ 当前库存 × (365/N) = 年化周转次数；
+     * 按大类汇总 + 物料明细（库存>0 或 有出库），排除隔离行。周转越低越呆滞。
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> turnoverReport(int days) {
+        return (Map<String, Object>) cached("turnoverReport:" + days, () -> {
+            long since = System.currentTimeMillis() - days * 86400_000L;
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("days", days);
+
+            // 期间出库量（按物料，各出库单据 UNION）
+            Map<String, BigDecimal> outQty = new LinkedHashMap<>();
+            String outSql = """
+                SELECT material_code AS code, SUM(qty) AS q FROM (
+                  SELECT material_code, qty FROM sales_outbound WHERE status='CONFIRMED' AND create_time >= ?
+                  UNION ALL SELECT material_code, qty FROM production_outbound WHERE status='CONFIRMED' AND create_time >= ?
+                  UNION ALL SELECT material_code, qty FROM outsource_material_outbound WHERE status IN ('CONFIRMED','SIGNED') AND create_time >= ?
+                  UNION ALL SELECT material_code, qty FROM other_outbound WHERE status='CONFIRMED' AND create_time >= ?
+                ) GROUP BY material_code
+                """;
+            for (var row : jdbc.queryForList(outSql, since, since, since, since)) {
+                outQty.put(String.valueOf(row.get("code")), toBigDecimal(row.get("q")));
+            }
+            // 当前库存（排除隔离）
+            Map<String, BigDecimal[]> stock = new LinkedHashMap<>();   // code -> [qty, amount]
+            for (var row : jdbc.queryForList(
+                    "SELECT material_code AS code, SUM(qty) AS q, SUM(COALESCE(amount,0)) AS a FROM inventory_ledger " +
+                    "WHERE qty > 0 AND (qc_status IS NULL OR qc_status NOT IN ('REJECT','TAILING','EXPIRED')) GROUP BY material_code")) {
+                stock.put(String.valueOf(row.get("code")), new BigDecimal[]{toBigDecimal(row.get("q")), toBigDecimal(row.get("a"))});
+            }
+            // 物料档案（大类）
+            Map<String, Object[]> mats = new LinkedHashMap<>();   // code -> [name, category]
+            for (var m : materialRepo.findAll()) mats.put(m.code, new Object[]{m.name, m.category});
+
+            java.util.Set<String> codes = new java.util.LinkedHashSet<>();
+            codes.addAll(outQty.keySet());
+            codes.addAll(stock.keySet());
+
+            BigDecimal factor = new BigDecimal(365.0 / days);
+            List<Map<String, Object>> details = new ArrayList<>();
+            Map<String, BigDecimal[]> byCategory = new LinkedHashMap<>();   // cat -> [out, stockQty]
+            for (String code : codes) {
+                BigDecimal out = outQty.getOrDefault(code, BigDecimal.ZERO);
+                BigDecimal[] st = stock.getOrDefault(code, new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+                Object[] m = mats.get(code);
+                String cat = m != null && m[1] != null ? String.valueOf(m[1]) : "其他";
+                if (st[0].compareTo(BigDecimal.ZERO) <= 0 && out.compareTo(BigDecimal.ZERO) <= 0) continue;
+                BigDecimal turnover = st[0].compareTo(BigDecimal.ZERO) > 0
+                        ? out.divide(st[0], 4, java.math.RoundingMode.HALF_UP).multiply(factor).setScale(2, java.math.RoundingMode.HALF_UP)
+                        : null;   // 无库存但有出库（已清仓）周转无意义
+                Map<String, Object> d = new LinkedHashMap<>();
+                d.put("materialCode", code);
+                d.put("materialName", m != null && m[0] != null ? String.valueOf(m[0]) : "");
+                d.put("materialCategory", cat);
+                d.put("outQty", out.setScale(3, java.math.RoundingMode.HALF_UP));
+                d.put("stockQty", st[0].setScale(3, java.math.RoundingMode.HALF_UP));
+                d.put("stockAmount", st[1].setScale(2, java.math.RoundingMode.HALF_UP));
+                d.put("turnover", turnover);
+                d.put("stockDays", turnover != null && turnover.compareTo(BigDecimal.ZERO) > 0
+                        ? java.math.BigDecimal.valueOf(365).divide(turnover, 0, java.math.RoundingMode.HALF_UP).intValue() : null);
+                details.add(d);
+                BigDecimal[] agg = byCategory.computeIfAbsent(cat, k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+                agg[0] = agg[0].add(out);
+                agg[1] = agg[1].add(st[0]);
+            }
+            // 大类汇总周转
+            List<Map<String, Object>> catRows = new ArrayList<>();
+            for (var e : byCategory.entrySet()) {
+                Map<String, Object> c = new LinkedHashMap<>();
+                c.put("materialCategory", e.getKey());
+                c.put("outQty", e.getValue()[0].setScale(3, java.math.RoundingMode.HALF_UP));
+                c.put("stockQty", e.getValue()[1].setScale(3, java.math.RoundingMode.HALF_UP));
+                c.put("turnover", e.getValue()[1].compareTo(BigDecimal.ZERO) > 0
+                        ? e.getValue()[0].divide(e.getValue()[1], 4, java.math.RoundingMode.HALF_UP).multiply(factor).setScale(2, java.math.RoundingMode.HALF_UP)
+                        : null);
+                catRows.add(c);
+            }
+            catRows.sort((a, b) -> ((BigDecimal) b.get("outQty")).compareTo((BigDecimal) a.get("outQty")));
+            // 呆滞提示：有库存但期间零出库
+            details.sort((a, b) -> {
+                BigDecimal ta = a.get("turnover") == null ? new BigDecimal("-1") : (BigDecimal) a.get("turnover");
+                BigDecimal tb = b.get("turnover") == null ? new BigDecimal("-1") : (BigDecimal) b.get("turnover");
+                return ta.compareTo(tb);
+            });
+            result.put("byCategory", catRows);
+            result.put("details", details.size() > 300 ? details.subList(0, 300) : details);
+            return result;
+        });
+    }
 
 private Map<String, Object> doInventoryReport(int months) {
         String since = sinceDate(months);

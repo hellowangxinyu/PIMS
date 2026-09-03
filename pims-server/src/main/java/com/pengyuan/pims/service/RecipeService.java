@@ -40,6 +40,8 @@ public class RecipeService {
     private static final Logger log = LoggerFactory.getLogger(RecipeService.class);
 
     private final RecipeRepository recipeRepo;
+    private final com.pengyuan.pims.repository.RecipeChangeLogRepository changeLogRepo;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;   // v6.3 buildPriceMap 聚合   // v6.3 变更日志
     private final RecipeVersionRepository versionRepo;
     private final RecipeTreeNodeRepository treeNodeRepo;
     private final InventoryLedgerRepository ledgerRepo;
@@ -62,7 +64,9 @@ public class RecipeService {
                          ProcessTemplateRepository processTemplateRepo,
                          MaterialRepository materialRepo,
                          WarehouseRepository warehouseRepo,
-                         WriteQueue writeQueue, com.pengyuan.pims.repository.PackagingStandardRepository packagingRepo, com.pengyuan.pims.repository.PackagingStandardItemRepository packagingItemRepo) {
+                         WriteQueue writeQueue, com.pengyuan.pims.repository.PackagingStandardRepository packagingRepo, com.pengyuan.pims.repository.PackagingStandardItemRepository packagingItemRepo,
+                                 com.pengyuan.pims.repository.RecipeChangeLogRepository changeLogRepo,
+                                 org.springframework.jdbc.core.JdbcTemplate jdbc) {
         this.recipeRepo = recipeRepo;
         this.versionRepo = versionRepo;
         this.treeNodeRepo = treeNodeRepo;
@@ -75,6 +79,8 @@ public class RecipeService {
         this.materialRepo = materialRepo;
         this.warehouseRepo = warehouseRepo;
         this.writeQueue = writeQueue;
+        this.changeLogRepo = changeLogRepo;
+        this.jdbc = jdbc;
     }
 
     /** 校验配方绑定的工艺路线：必填、存在、类型一致 */
@@ -268,6 +274,9 @@ public class RecipeService {
         v.remark = input != null ? input.remark : null;
         v.createTime = LocalDateTime.now();
         versionRepo.save(v);
+        { var rec = recipeRepo.findById(recipeId).orElse(null);   // v6.3 变更日志
+          if (rec != null) logChange(recipeId, rec.recipeNo, rec.productName, v.id, v.versionNo,
+                  "CREATE", "新建版本（批量 " + (v.batchQty != null ? v.batchQty : "-") + "kg）", v.createdBy); }
 
         // 从最新 RELEASED 版本复制树
         Optional<RecipeVersion> released = versionRepo.findByRecipeIdAndStatus(recipeId, "RELEASED");
@@ -285,11 +294,16 @@ public class RecipeService {
         if (!"DRAFT".equals(v.status)) {
             throw new IllegalArgumentException("只有草稿版本可编辑");
         }
+        java.math.BigDecimal oldBatch = v.batchQty;
         v.batchQty = updated.batchQty;
         v.unit = "kg"; // v4.9：所有物料单位统一为公斤
         v.remark = updated.remark;
         v.updateTime = LocalDateTime.now();
         versionRepo.save(v);
+        { var rec = recipeRepo.findById(v.recipeId).orElse(null);   // v6.3 变更日志
+          if (rec != null) logChange(v.recipeId, rec.recipeNo, rec.productName, v.id, v.versionNo,
+                  "UPDATE", (oldBatch != null && updated.batchQty != null && oldBatch.compareTo(updated.batchQty) != 0
+                          ? "批量 " + oldBatch + "→" + updated.batchQty : "版本信息修改"), updated.createdBy); }
         return v;
     }
 
@@ -315,8 +329,18 @@ public class RecipeService {
         v.status = "RELEASED";
         v.releasedBy = operator;
         v.releasedTime = LocalDateTime.now();
+        if (v.effectiveDate == null) v.effectiveDate = java.time.LocalDate.now();   // v6.3：默认发布即生效
         v.updateTime = LocalDateTime.now();
         versionRepo.save(v);
+        var rec = recipeRepo.findById(v.recipeId).orElse(null);
+        if (oldReleased.isPresent() && rec != null) {
+            logChange(v.recipeId, rec.recipeNo, rec.productName, oldReleased.get().id, oldReleased.get().versionNo,
+                    "ARCHIVE", "新版本 " + v.versionNo + " 发布，旧版本自动归档", operator);
+        }
+        if (rec != null) {
+            logChange(v.recipeId, rec.recipeNo, rec.productName, v.id, v.versionNo,
+                    "RELEASE", "发布生效（生效日 " + v.effectiveDate + "，批量 " + v.batchQty + "kg）", operator);
+        }
         log.info("配方版本发布: recipeId={} version={}", v.recipeId, v.versionNo);
         return v;
     }
@@ -394,6 +418,17 @@ public class RecipeService {
             saveTreeNodes(treeData, versionId, null);
         }
         log.info("配方树保存: versionId={} 节点数={}", versionId, treeData != null ? treeData.size() : 0);
+        { var rec = recipeRepo.findById(v.recipeId).orElse(null);   // v6.3 变更日志（树为全删重建，记节点数与构成摘要）
+          if (rec != null) {
+              StringBuilder sb = new StringBuilder();
+              if (treeData != null) for (Map<String, Object> n : treeData) {
+                  if (sb.length() > 0) sb.append("，");
+                  sb.append(String.valueOf(n.get("materialName"))).append("×").append(n.get("qty"));
+              }
+              String summary = sb.length() == 0 ? "空" : (sb.length() > 400 ? sb.substring(0, 400) + "…" : sb.toString());
+              logChange(v.recipeId, rec.recipeNo, rec.productName, v.id, v.versionNo,
+                      "TREE_SAVE", "保存配方树（" + (treeData == null ? 0 : treeData.size()) + " 节点）：" + summary, v.createdBy);
+          } }
     }
 
     /**
@@ -810,24 +845,21 @@ public class RecipeService {
 
     private Map<String, BigDecimal> buildPriceMap() {
         Map<String, BigDecimal> priceMap = new HashMap<>();
-        // 库存加权平均价（v5.35：排除油尾库——油尾金额为 0，参与加权会稀释均价）
-        Map<String, BigDecimal> qtySum = new HashMap<>();
-        Map<String, BigDecimal> amountSum = new HashMap<>();
-        for (InventoryLedger l : ledgerRepo.findAll()) {
-            if (l.qty == null || l.qty.compareTo(BigDecimal.ZERO) <= 0) continue;
-            // v6.1.6：隔离库存不参与配方回退价加权（不合格/油尾/过期不可用于生产，与 CostingService 同口径）
-            if ("TAILING".equals(l.qcStatus) || "REJECT".equals(l.qcStatus) || "EXPIRED".equals(l.qcStatus)) continue;
-            qtySum.merge(l.materialCode, l.qty, BigDecimal::add);
-            BigDecimal amount = l.amount != null ? l.amount
-                    : (l.unitPrice != null ? l.qty.multiply(l.unitPrice) : BigDecimal.ZERO);
-            amountSum.merge(l.materialCode, amount, BigDecimal::add);
-        }
-        qtySum.forEach((code, qty) -> {
-            BigDecimal amount = amountSum.getOrDefault(code, BigDecimal.ZERO);
-            if (amount.compareTo(BigDecimal.ZERO) > 0) {
-                priceMap.put(code, amount.divide(qty, 4, RoundingMode.HALF_UP));
+        // v6.3 第四批：库存加权均价改 SQL 聚合（原 Java 全表加载逐行累加——台账到几十万行时配方页明显变慢）；
+        // 排除隔离行（REJECT/TAILING/EXPIRED 不可用于生产，v6.1.6 口径），amount 为空按 qty×unit_price 兜底
+        for (var row : jdbc.queryForList("""
+                SELECT material_code AS code, SUM(qty) AS q,
+                       SUM(CASE WHEN amount IS NOT NULL THEN amount ELSE qty * COALESCE(unit_price, 0) END) AS a
+                FROM inventory_ledger
+                WHERE qty > 0 AND (qc_status IS NULL OR qc_status NOT IN ('REJECT','TAILING','EXPIRED'))
+                GROUP BY material_code
+                """)) {
+            BigDecimal qty = toBigDecimal(row.get("q"));
+            BigDecimal amount = toBigDecimal(row.get("a"));
+            if (qty.compareTo(BigDecimal.ZERO) > 0 && amount.compareTo(BigDecimal.ZERO) > 0) {
+                priceMap.put(String.valueOf(row.get("code")), amount.divide(qty, 4, RoundingMode.HALF_UP));
             }
-        });
+        }
         // 回退：最近原料采购单价（v6.1.6：按创建时间倒序取最新——原 findAll 无序，取到哪单算哪单）
         for (RawMaterialPurchase p : rawPurchaseRepo.findAllByOrderByCreateTimeDesc()) {
             if (p.materialCode == null || p.unitPrice == null || priceMap.containsKey(p.materialCode)) continue;
@@ -999,5 +1031,28 @@ public class RecipeService {
         if (val instanceof Long) return (Long) val;
         return Long.valueOf(val.toString());
     }
+    /** v6.3 变更日志 */
+    private void logChange(Long recipeId, String recipeNo, String productName, Long versionId, String versionNo,
+                           String action, String detail, String operator) {
+        try {
+            com.pengyuan.pims.entity.RecipeChangeLog lg = new com.pengyuan.pims.entity.RecipeChangeLog();
+            lg.recipeId = recipeId;
+            lg.recipeNo = recipeNo;
+            lg.productName = productName;
+            lg.versionId = versionId;
+            lg.versionNo = versionNo;
+            lg.action = action;
+            lg.detail = detail;
+            lg.operator = operator == null || operator.isBlank() ? "系统" : operator;
+            changeLogRepo.save(lg);
+        } catch (Exception e) {
+            log.warn("配方变更日志写入失败（不影响业务）: {}", e.getMessage());
+        }
+    }
+
+    public java.util.List<com.pengyuan.pims.entity.RecipeChangeLog> listChanges(Long recipeId) {
+        return changeLogRepo.findByRecipeIdOrderByCreateTimeDescIdDesc(recipeId);
+    }
+
 }
 

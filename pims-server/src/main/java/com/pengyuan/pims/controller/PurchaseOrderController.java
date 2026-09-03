@@ -38,4 +38,12 @@ public class PurchaseOrderController {
     public Result<PurchaseOrder> create(@RequestBody PurchaseOrder order) {
         return Result.ok(service.create(order, List.of()));
     }
+
+    /** v6.3：删除草稿请购单（MRP 误单清理） */
+    @DeleteMapping("/{id}")
+    @SaCheckPermission(value = "purchase:write")
+    public Result<?> delete(@PathVariable Long id) {
+        service.delete(id);
+        return Result.ok("已删除");
+    }
 }

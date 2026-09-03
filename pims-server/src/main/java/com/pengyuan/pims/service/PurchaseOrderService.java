@@ -81,4 +81,15 @@ public class PurchaseOrderService {
     }
 
     public List<PurchaseOrderItem> getItems(Long orderId) { return itemRepo.findByOrderId(orderId); }
+
+    /** v6.3：删除请购单（仅草稿——MRP 生成的误单可清理；已审核单走业务流不可删） */
+    public void delete(Long id) {
+        PurchaseOrder order = orderRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("请购单不存在"));
+        if (!"DRAFT".equals(order.status)) throw new IllegalArgumentException("只有草稿状态的请购单可删除");
+        writeQueue.executeTx(() -> {
+            itemRepo.deleteAll(itemRepo.findByOrderId(id));
+            orderRepo.deleteById(id);
+        });
+    }
 }

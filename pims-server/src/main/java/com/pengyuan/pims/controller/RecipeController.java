@@ -118,6 +118,13 @@ public class RecipeController {
         return Result.ok(service.listVersions(id));
     }
 
+    /** v6.3 配方变更日志：版本创建/修改/发布/归档/树保存全留痕 */
+    @GetMapping("/{id}/changes")
+    @SaCheckPermission(value = "recipe:read")
+    public Result<?> changes(@PathVariable Long id) {
+        return Result.ok(service.listChanges(id));
+    }
+
     @PostMapping("/{id}/version")
     @SaCheckPermission("recipe:write")
     public Result createVersion(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {

@@ -36,6 +36,13 @@ public class ReportController {
         return Result.ok(reportService.inventoryReport(months));
     }
 
+    /** v6.3 库存周转率：近 N 天出库/当前库存年化，大类汇总 + 物料明细（升序=最呆滞在前） */
+    @GetMapping("/turnover")
+    @SaCheckPermission(value = "inventory:read")
+    public Result<Map<String, Object>> turnover(@RequestParam(defaultValue = "90") int days) {
+        return Result.ok(reportService.turnoverReport(days));
+    }
+
     /** 财务报表：月度应收应付趋势 + 回款率 + 收支对比 */
     @GetMapping("/finance")
     @SaCheckPermission("finance:read")

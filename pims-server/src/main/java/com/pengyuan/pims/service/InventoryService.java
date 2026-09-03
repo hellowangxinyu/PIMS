@@ -63,10 +63,7 @@ public class InventoryService {
 
     // ==================== 查询 ====================
 
-    /** 查询全部库存台账 */
-    public List<InventoryLedger> queryAll() {
-        return ledgerRepo.findAll();
-    }
+    /** v6.3 第四批：删除台账全表直出（无调用方；前端走分页 search，防大表全量加载） */
 
     /** 按物料查所有仓库库存 */
     public List<InventoryLedger> queryByMaterial(String materialCode) {

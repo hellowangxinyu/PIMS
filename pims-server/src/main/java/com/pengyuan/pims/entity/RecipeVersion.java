@@ -35,6 +35,8 @@ public class RecipeVersion {
     public String releasedBy;          // 发布人
 
     public LocalDateTime releasedTime; // 发布时间
+    /** v6.3：独立生效日期（默认=发布日；计划性换版可指定未来日期，展示与追溯用） */
+    public java.time.LocalDate effectiveDate;
 
     @Column(length = 50)
     public String createdBy;           // 创建人

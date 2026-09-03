@@ -76,7 +76,10 @@
         <div class="version-section">
           <div class="section-header">
             <h4>配方版本</h4>
-            <el-button size="small" type="primary" @click="createVersion">+ 新建版本</el-button>
+            <div style="display:flex;gap:8px">
+              <el-button size="small" @click="openChanges">变更记录</el-button>
+              <el-button size="small" type="primary" @click="createVersion">+ 新建版本</el-button>
+            </div>
           </div>
           <p-table :data="versions" border size="small" highlight-current-row @current-change="onSelectVersion" style="width:100%">
             <el-table-column prop="versionNo" label="版本" width="80" />
@@ -422,7 +425,26 @@
         <el-button type="primary" @click="confirmAddNode">确定</el-button>
       </template>
     </el-dialog>
-  </div>
+  
+    <!-- v6.3 配方变更日志 -->
+    <el-dialog title="配方变更记录" v-model="changesVisible" width="860px">
+      <p-table :data="changes" border size="small" style="width:100%" max-height="480">
+        <el-table-column prop="createTime" label="时间" width="160">
+          <template #default="{ row }">{{ (row.createTime || '').replace('T', ' ').slice(0, 19) }}</template>
+        </el-table-column>
+        <el-table-column prop="versionNo" label="版本" width="80" align="center" />
+        <el-table-column prop="action" label="动作" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="{ CREATE: 'info', UPDATE: 'warning', RELEASE: 'success', ARCHIVE: 'danger', TREE_SAVE: 'primary' }[row.action] || 'info'">
+              {{ { CREATE: '新建', UPDATE: '修改', RELEASE: '发布', ARCHIVE: '归档', TREE_SAVE: '配方树' }[row.action] || row.action }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="operator" label="操作人" width="100" />
+        <el-table-column prop="detail" label="内容" min-width="320" show-overflow-tooltip />
+      </p-table>
+    </el-dialog>
+</div>
 </template>
 
 <script setup>
@@ -680,6 +702,16 @@ function onSelectVersion(row) {
   if (!row) return
   currentVersion.value = { ...row }
   fetchTree(row.id)
+}
+
+const changesVisible = ref(false)
+const changes = ref([])
+async function openChanges() {
+  if (!current.value?.id) { ElMessage.warning('请先选择配方'); return }
+  try {
+    changes.value = await api.get(`/recipe/${current.value.id}/changes`)
+    changesVisible.value = true
+  } catch {}
 }
 
 async function createVersion() {

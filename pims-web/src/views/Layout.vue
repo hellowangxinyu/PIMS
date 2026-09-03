@@ -124,7 +124,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { HomeFilled, Operation, List, Box, TrendCharts, Connection, User, Key, Collection, Notebook, Folder, ShoppingCart, SetUp, Setting, ArrowDown, DataAnalysis, Checked, Money, Van, Avatar, Ticket, House, MagicStick, Document, Upload, Download, ShoppingTrolley, Position, RefreshLeft, Search, Memo, Coin, WalletFilled, Wallet, Odometer, PieChart, Histogram, DataLine, Files, Link, Bell, AlarmClock, CircleCheck, Stopwatch, CreditCard, Aim, Brush, Warning, Check, Calendar, Tickets, Stamp, Grid, Suitcase, OfficeBuilding } from '@element-plus/icons-vue'
+import { HomeFilled, Operation, List, Box, TrendCharts, Connection, User, Key, Collection, Notebook, Folder, ShoppingCart, SetUp, Setting, ArrowDown, DataAnalysis, Checked, Money, Van, Avatar, Ticket, House, MagicStick, Document, Upload, Download, ShoppingTrolley, Position, RefreshLeft, Search, Memo, Coin, WalletFilled, Wallet, Odometer, PieChart, Histogram, DataLine, Files, Link, Bell, AlarmClock, CircleCheck, Stopwatch, CreditCard, Aim, Brush, Warning, Check, Calendar, Tickets, Stamp, Grid, Suitcase, OfficeBuilding, PriceTag } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useTheme } from '../composables/useTheme'
@@ -182,6 +182,7 @@ const NAV_GROUPS = [
       { path: '/raw-material-purchase', title: '原料采购', icon: ShoppingCart, perm: 'purchase:read' },
       { path: '/finished-product-purchase', title: '成品采购', icon: ShoppingTrolley, perm: 'purchase:read' },
       { path: '/purchase-arrival', title: '采购到货', icon: Position, perm: 'purchase:read' },
+      { path: '/mrp-suggest', title: '采购建议 MRP', icon: ShoppingCart, perm: 'purchase:read' },
       { path: '/return-order', title: '采购退货单', icon: RefreshLeft, perm: 'purchase:read' },
       { path: '/supplier-quality-trace', title: '质量追溯', icon: Warning, perm: 'strace:read' }
     ] },
@@ -199,6 +200,7 @@ const NAV_GROUPS = [
       { path: '/crm-pipeline', title: '商机管道', icon: MagicStick, perm: 'crm:read' },
       { path: '/crm-contact', title: '联系人', icon: Avatar, perm: 'crm:read' },
       { path: '/quotation', title: '报价单', icon: Ticket, perm: 'sales:read' },
+      { path: '/price-policy', title: '价格政策', icon: PriceTag, perm: 'sales:read' },
       { path: '/sample', title: '打样样品', icon: Brush, perm: 'sample:read' },
       { path: '/sales', title: '销售订单', icon: Notebook, perm: 'sales:read' },
       { path: '/sales-outbound', title: '销售出库', icon: Upload, perm: 'sales:write' },
@@ -242,6 +244,7 @@ const NAV_GROUPS = [
       { path: '/report-purchase-analysis', title: '采购分析', icon: DataAnalysis, perm: 'purchase:read' },
       { path: '/report-inventory', title: '库存报表', icon: Histogram, perm: 'inventory:read' },
       { path: '/report-stock-analysis', title: '库存分析', icon: DataLine, perm: 'inventory:read' },
+      { path: '/report-turnover', title: '库存周转率', icon: TrendCharts, perm: 'inventory:read' },
       { path: '/report-low-stock', title: '低库存预警', icon: Bell, perm: 'inventory:read' },
       { path: '/report-expiry', title: '过期预警', icon: AlarmClock, perm: 'inventory:read' },
       { path: '/report-production', title: '生产报表', icon: Files, perm: 'inventory:read' },
@@ -325,13 +328,13 @@ const pageTitle = computed(() => {
     '/': '工作台', '/supplier': '供应商', '/customer': '客户', '/material': '物料',
     '/warehouse': '仓库', '/inventory': '库存查询', '/purchase': '采购管理',
     '/raw-material-purchase': '原料采购', '/finished-product-purchase': '成品采购',
-    '/purchase-arrival': '采购到货', '/sales': '销售管理', '/outsource': '委外管理',
-    '/report-ar': '应收明细', '/report-ap': '应付明细', '/report-ar-total': '应收总表', '/report-ap-total': '应付总表', '/report-finance-trend': '趋势分析', '/payment-receipt': '收款单', '/payment-disbursement': '付款单', '/crm-pipeline': '商机管道', '/crm-contact': '联系人', '/quotation': '报价单', '/sample': '打样样品', '/complaint': '客户投诉', '/weekly-topic': '每周议题', '/rd-progress': '研发进度', '/invoice': '发票管理', '/expense': '费用管理', '/advance': '预收预付', '/cost-accounting': '成本核算', '/report-profit-trial': '利润试算', '/customer-statement': '客户对账单', '/supplier-statement': '供应商对账单', '/users': '用户管理', '/roles': '角色权限', '/dict': '数据字典', '/ai': 'AI 智能助手', '/ai-settings': 'AI 设置', '/logs': '操作日志', '/coding-rule': '编码规则',
+    '/purchase-arrival': '采购到货', '/mrp-suggest': '采购建议 MRP', '/sales': '销售管理', '/outsource': '委外管理',
+    '/report-ar': '应收明细', '/report-ap': '应付明细', '/report-ar-total': '应收总表', '/report-ap-total': '应付总表', '/report-finance-trend': '趋势分析', '/payment-receipt': '收款单', '/payment-disbursement': '付款单', '/crm-pipeline': '商机管道', '/crm-contact': '联系人', '/quotation': '报价单', '/price-policy': '价格政策', '/sample': '打样样品', '/complaint': '客户投诉', '/weekly-topic': '每周议题', '/rd-progress': '研发进度', '/invoice': '发票管理', '/expense': '费用管理', '/advance': '预收预付', '/cost-accounting': '成本核算', '/report-profit-trial': '利润试算', '/customer-statement': '客户对账单', '/supplier-statement': '供应商对账单', '/users': '用户管理', '/roles': '角色权限', '/dict': '数据字典', '/ai': 'AI 智能助手', '/ai-settings': 'AI 设置', '/logs': '操作日志', '/coding-rule': '编码规则',
     '/stock-check': '盘库管理', '/schedule': '排产中心', '/production-order': '生产订单', '/abnormal-order': '异常订单处理', '/production-outbound': '生产出库', '/production-inbound': '生产入库', '/sales-outbound': '销售出库',
     '/outsource-outbound': '委外出库', '/outsource-inbound': '委外入库', '/other-outbound': '其他出库', '/other-inbound': '其他入库', '/return-order': '采购退货单', '/supplier-quality-trace': '质量追溯（供应商）', '/sales-return': '销售退货', '/tailing-return': '油尾退回',
     '/report-purchase': '采购报表', '/report-inventory': '库存报表', '/report-production': '生产报表', '/production-progress': '生产进度表',
     '/report-sales': '销售报表', '/report-qc': '质检报表', '/report-aging': '账龄分析',
-    '/report-stock-analysis': '库存分析', '/report-purchase-analysis': '采购分析', '/report-low-stock': '低库存预警', '/report-expiry': '过期预警',
+    '/report-stock-analysis': '库存分析', '/report-turnover': '库存周转率', '/report-purchase-analysis': '采购分析', '/report-low-stock': '低库存预警', '/report-expiry': '过期预警',
     '/report-outsource': '委外报表', '/report-overview': '经营看板',
     '/quality-inspection': '质检管理', '/quality-statistics': '质量统计'
   }
