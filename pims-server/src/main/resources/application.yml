@@ -1,0 +1,59 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: pims-server
+
+  # SQLite 数据源
+  datasource:
+    # v5.28：PRAGMA 全部改走连接 URL 参数——Hikari connection-init-sql 只执行第一条语句，
+    # 多行 PRAGMA 会被 SQLite 驱动静默忽略（此前 journal_mode 生效但 cache_size 等全部未生效）
+    url: jdbc:sqlite:data/pims.db?journal_mode=WAL&busy_timeout=5000&synchronous=NORMAL&foreign_keys=ON&cache_size=-64000&journal_size_limit=67108864
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      # WAL 模式支持一写多读：写仍由 WriteQueue 应用层串行，多余连接供并发读使用
+      maximum-pool-size: 5
+
+  # JPA 配置
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: none                  # 表结构由启动脚本维护，避免SQLite元数据查询超限
+    show-sql: false
+    open-in-view: false              # 避免长事务占用数据库锁
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 20
+
+  # 静态资源
+  web:
+    resources:
+      static-locations: classpath:/static/
+
+# Sa-Token 配置
+sa-token:
+  token-name: pims-token
+  timeout: 86400                    # token 有效期 24 小时
+  active-timeout: 1800              # 30 分钟无操作自动下线
+  is-concurrent: false              # v5.10 单点登录：同一账号仅允许一次登录，后登录自动顶掉先登录（旧 token 立即失效）
+  is-share: false                   # 各端独立 token（不共享），被顶端下一次请求返回 401 跳登录页
+  token-style: uuid
+  is-log: false
+  # v6.2 安全：token 改 HttpOnly Cookie 通道（XSS 无法窃取）——登录自动 Set-Cookie，请求自动携带；
+  # header 通道保留作平滑过渡（老浏览器 localStorage 残留 token 仍可用到自然过期，新登录纯 Cookie）
+  is-read-cookie: true
+  is-read-header: true
+  cookie:
+    http-only: true                 # JS 不可读，堵 XSS 窃取
+    same-site: Lax                  # 跨站 POST 不携带，基本防 CSRF（内网同源部署）
+    max-age: 86400                  # 与 timeout 对齐：浏览器重开仍在，靠服务端 30 分钟活跃超时踢闲置会话
+
+
+# 日志
+logging:
+  level:
+    com.pengyuan.pims: DEBUG
+    org.hibernate.SQL: WARN

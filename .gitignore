@@ -1,0 +1,11 @@
+node_modules/
+target/
+dist/
+*.log
+*.db
+*.db-*
+pims-server/data/
+pims-server/*.bak*
+pims-server/pims-deploy.zip
+tmp/
+.zcode/
