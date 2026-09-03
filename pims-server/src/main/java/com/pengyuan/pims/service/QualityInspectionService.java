@@ -120,6 +120,121 @@ public class QualityInspectionService {
 
     // ==================== 查询 ====================
 
+    /**
+     * v6.3 质量统计分析：期间不良率总览 + 按月趋势 + 按物料 TOP + 按大类 + 按供应商（经到货关联）。
+     * 口径：不良 = status='REJECT'（让步接收 CONCESSION 计合格批次但不计优等）；PENDING 不计入分母。
+     */
+    public java.util.Map<String, Object> statistics(String from, String to) {
+        java.util.Map<String, Object> r = new java.util.LinkedHashMap<>();
+        String judged = "status IN ('PASS','CONCESSION','REJECT')";
+
+        // 总览
+        var overall = jdbc.queryForMap(
+                "SELECT COUNT(*) AS total, SUM(CASE WHEN status='REJECT' THEN 1 ELSE 0 END) AS reject, " +
+                "SUM(CASE WHEN status='CONCESSION' THEN 1 ELSE 0 END) AS concession " +
+                "FROM quality_inspection WHERE " + judged +
+                " AND create_time >= ? AND create_time < ?",
+                startTimeOf(from), endTimeOf(to));
+        long total = ((Number) overall.getOrDefault("total", 0)).longValue();
+        long reject = ((Number) overall.getOrDefault("reject", 0)).longValue();
+        long concession = ((Number) overall.getOrDefault("concession", 0)).longValue();
+        java.util.Map<String, Object> ov = new java.util.LinkedHashMap<>();
+        ov.put("total", total);
+        ov.put("pass", total - reject);
+        ov.put("reject", reject);
+        ov.put("concession", concession);
+        ov.put("rate", total > 0 ? java.math.BigDecimal.valueOf(reject * 100.0 / total).setScale(2, java.math.RoundingMode.HALF_UP) : java.math.BigDecimal.ZERO);
+        r.put("overall", ov);
+
+        // 按月趋势（labels + 数值序列，前端折线图直用）
+        java.util.List<String> months = new java.util.ArrayList<>();
+        java.util.List<Number> mTotal = new java.util.ArrayList<>(), mReject = new java.util.ArrayList<>();
+        java.util.List<java.math.BigDecimal> mRate = new java.util.ArrayList<>();
+        for (var row : jdbc.queryForList(
+                "SELECT strftime('%Y-%m', create_time/1000, 'unixepoch', 'localtime') AS m, COUNT(*) AS total, " +
+                "SUM(CASE WHEN status='REJECT' THEN 1 ELSE 0 END) AS reject " +
+                "FROM quality_inspection WHERE " + judged + " AND create_time >= ? AND create_time < ? " +
+                "GROUP BY m ORDER BY m", startTimeOf(from), endTimeOf(to))) {
+            months.add(String.valueOf(row.get("m")));
+            long t = ((Number) row.get("total")).longValue();
+            long j = ((Number) row.get("reject")).longValue();
+            mTotal.add(t);
+            mReject.add(j);
+            mRate.add(t > 0 ? java.math.BigDecimal.valueOf(j * 100.0 / t).setScale(2, java.math.RoundingMode.HALF_UP) : java.math.BigDecimal.ZERO);
+        }
+        java.util.Map<String, Object> trend = new java.util.LinkedHashMap<>();
+        trend.put("months", months);
+        trend.put("total", mTotal);
+        trend.put("reject", mReject);
+        trend.put("rate", mRate);
+        r.put("monthly", trend);
+
+        // 按物料 TOP 不良（REJECT 数降序前 20）
+        java.util.List<java.util.Map<String, Object>> byMaterial = new java.util.ArrayList<>();
+        for (var row : jdbc.queryForList(
+                "SELECT material_code AS code, MAX(material_name) AS name, COUNT(*) AS total, " +
+                "SUM(CASE WHEN status='REJECT' THEN 1 ELSE 0 END) AS reject " +
+                "FROM quality_inspection WHERE " + judged + " AND create_time >= ? AND create_time < ? " +
+                "AND material_code IS NOT NULL AND material_code != '' " +
+                "GROUP BY material_code HAVING reject > 0 ORDER BY reject DESC LIMIT 20", startTimeOf(from), endTimeOf(to))) {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("materialCode", row.get("code"));
+            m.put("materialName", row.get("name"));
+            m.put("total", ((Number) row.get("total")).longValue());
+            m.put("reject", ((Number) row.get("reject")).longValue());
+            long t = ((Number) row.get("total")).longValue();
+            m.put("rate", java.math.BigDecimal.valueOf(((Number) row.get("reject")).longValue() * 100.0 / t).setScale(2, java.math.RoundingMode.HALF_UP));
+            byMaterial.add(m);
+        }
+        r.put("byMaterial", byMaterial);
+
+        // 按大类
+        java.util.List<java.util.Map<String, Object>> byCategory = new java.util.ArrayList<>();
+        for (var row : jdbc.queryForList(
+                "SELECT COALESCE(material_category, '未分类') AS cat, COUNT(*) AS total, " +
+                "SUM(CASE WHEN status='REJECT' THEN 1 ELSE 0 END) AS reject " +
+                "FROM quality_inspection WHERE " + judged + " AND create_time >= ? AND create_time < ? " +
+                "GROUP BY cat ORDER BY total DESC", startTimeOf(from), endTimeOf(to))) {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("category", row.get("cat"));
+            m.put("total", ((Number) row.get("total")).longValue());
+            m.put("reject", ((Number) row.get("reject")).longValue());
+            long t = ((Number) row.get("total")).longValue();
+            m.put("rate", java.math.BigDecimal.valueOf(((Number) row.get("reject")).longValue() * 100.0 / t).setScale(2, java.math.RoundingMode.HALF_UP));
+            byCategory.add(m);
+        }
+        r.put("byCategory", byCategory);
+
+        // 按供应商（经到货单关联；无到货关联的来料单不计入此维度）
+        java.util.List<java.util.Map<String, Object>> bySupplier = new java.util.ArrayList<>();
+        for (var row : jdbc.queryForList(
+                "SELECT pa.supplier_name AS sup, COUNT(*) AS total, " +
+                "SUM(CASE WHEN q.status='REJECT' THEN 1 ELSE 0 END) AS reject " +
+                "FROM quality_inspection q JOIN purchase_arrival pa ON q.arrival_id = pa.id " +
+                "WHERE " + judged.replace("status", "q.status") + " AND q.create_time >= ? AND q.create_time < ? " +
+                "AND pa.supplier_name IS NOT NULL AND pa.supplier_name != '' " +
+                "GROUP BY pa.supplier_name HAVING reject > 0 ORDER BY reject DESC LIMIT 20", startTimeOf(from), endTimeOf(to))) {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("supplierName", row.get("sup"));
+            m.put("total", ((Number) row.get("total")).longValue());
+            m.put("reject", ((Number) row.get("reject")).longValue());
+            long t = ((Number) row.get("total")).longValue();
+            m.put("rate", java.math.BigDecimal.valueOf(((Number) row.get("reject")).longValue() * 100.0 / t).setScale(2, java.math.RoundingMode.HALF_UP));
+            bySupplier.add(m);
+        }
+        r.put("bySupplier", bySupplier);
+        return r;
+    }
+
+    /** from/to（YYYY-MM-DD）→ 毫秒边界（台账毫秒时间戳口径，本地时区） */
+    private long startTimeOf(String day) {
+        return java.time.LocalDate.parse(day).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
+    private long endTimeOf(String day) {
+        return java.time.LocalDate.parse(day).plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
     public List<QualityInspection> listAll() {
         return qcRepo.findByOrderByCreateTimeDesc();
     }

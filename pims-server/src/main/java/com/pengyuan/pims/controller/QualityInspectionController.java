@@ -45,6 +45,14 @@ public class QualityInspectionController {
         return Result.ok(service.listPending(type));
     }
 
+    /** v6.3 质量统计分析：期间不良率总览/月趋势/物料 TOP/大类/供应商 */
+    @GetMapping("/statistics")
+    @SaCheckPermission(value = "qc:read")
+    public Result<java.util.Map<String, Object>> statistics(@RequestParam String from,
+                                                            @RequestParam String to) {
+        return Result.ok(service.statistics(from, to));
+    }
+
     /**
      * 质检单分页查询（支持类型 + 状态 + 多条件）
      * 默认每页 20 条，按创建时间倒序

@@ -70,6 +70,17 @@ public class PerfIndexSchemaInitializer implements CommandLineRunner {
         } catch (Exception e) {
             log.warn("操作日志分表索引跳过: {}", e.getMessage());
         }
+        // v6.3 信用软拦截：sales_order 加 credit_exceeded 列（超信用确认留痕）
+        try {
+            var ocols = jdbc.queryForList("PRAGMA table_info(sales_order)");
+            if (!ocols.stream().anyMatch(c -> "credit_exceeded".equals(c.get("name")))) {
+                jdbc.execute("ALTER TABLE sales_order ADD COLUMN credit_exceeded BOOLEAN DEFAULT 0");
+                log.info("信用软拦截：sales_order 新增 credit_exceeded 列");
+            }
+        } catch (Exception e) {
+            log.warn("credit_exceeded 加列跳过: {}", e.getMessage());
+        }
+
         // v6.1 安全：sys_user 加 must_change_pwd 列（强制改密标记）
         try {
             var ucols = jdbc.queryForList("PRAGMA table_info(sys_user)");

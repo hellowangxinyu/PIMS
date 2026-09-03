@@ -166,6 +166,68 @@ public class FinanceReportService {
         return result;
     }
 
+    // ===== 供应商期间对账单（v6.3：与客户版同款纯时点三流口径） =====
+
+    /**
+     * 供应商期间对账单：期初余额 + 期间往来明细（应付立账+/付款−/采购退货冲减−）+ 期末余额。
+     * 期末 = 期初 + 期间应付 − 期间付款 − 期间退货冲减（三流各按业务日期截断）。
+     * 退货冲减口径：系统内退货视同已付款（FIFO 累计 paidAmount），故对账单以"退货冲减"单列体现；
+     * 退货行按「supplier_id 或 采购单号关联 AP」匹配（与 applyPurchaseReturn/BySupplier 的冲减落点对齐）。
+     */
+    public Map<String, Object> supplierStatement(Long supplierId, String from, String to) {
+        List<Map<String, Object>> sup = jdbc.queryForList(
+                "SELECT id, code, name FROM supplier WHERE id = ?", supplierId);
+        if (sup.isEmpty()) throw new IllegalArgumentException("供应商不存在");
+
+        String returnMatch = "(supplier_id = ? OR EXISTS (SELECT 1 FROM accounts_payable ap WHERE ap.purchase_order_no = return_order.purchase_order_no AND ap.supplier_id = ?))";
+
+        BigDecimal openAp = sumOrZero("SELECT SUM(amount) FROM accounts_payable WHERE supplier_id = ? AND " + dayBefore("create_time"), supplierId, from);
+        BigDecimal openPay = sumOrZero("SELECT SUM(amount) FROM payment_disbursement WHERE supplier_id = ? AND " + dayBefore("pay_date"), supplierId, from);
+        BigDecimal openRet = sumOrZero("SELECT SUM(return_amount) FROM return_order WHERE type = 'PURCHASE_RETURN' AND status = 'DONE' AND " + returnMatch + " AND " + dayBefore("COALESCE(update_time, create_time)"),
+                supplierId, supplierId, from);
+        BigDecimal opening = openAp.subtract(openPay).subtract(openRet);
+
+        List<Map<String, Object>> lines = new ArrayList<>();
+        for (Map<String, Object> r : jdbc.queryForList(
+                "SELECT " + tsDay("create_time") + " AS d, doc_no AS docNo, purchase_order_no AS refNo, amount FROM accounts_payable " +
+                "WHERE supplier_id = ? AND " + dayStart("create_time") + " AND " + dayThrough("create_time") + " ORDER BY create_time", supplierId, from, to)) {
+            lines.add(line(r, "应付立账", r.get("refNo") == null ? "" : "采购 " + r.get("refNo"), toBd(r.get("amount")), null));
+        }
+        for (Map<String, Object> r : jdbc.queryForList(
+                "SELECT " + tsDay("pay_date") + " AS d, doc_no AS docNo, ap_doc_no AS refNo, amount FROM payment_disbursement " +
+                "WHERE supplier_id = ? AND " + dayStart("pay_date") + " AND " + dayThrough("pay_date") + " ORDER BY pay_date", supplierId, from, to)) {
+            lines.add(line(r, "付款", r.get("refNo") == null ? "" : "核销 " + r.get("refNo"), null, toBd(r.get("amount"))));
+        }
+        for (Map<String, Object> r : jdbc.queryForList(
+                "SELECT " + tsDay("COALESCE(update_time, create_time)") + " AS d, doc_no AS docNo, material_name AS refNo, return_amount AS amount FROM return_order " +
+                "WHERE type = 'PURCHASE_RETURN' AND status = 'DONE' AND " + returnMatch + " AND " + dayStart("COALESCE(update_time, create_time)") + " AND " + dayThrough("COALESCE(update_time, create_time)"),
+                supplierId, supplierId, from, to)) {
+            lines.add(line(r, "退货冲减", r.get("refNo") == null ? "" : String.valueOf(r.get("refNo")), null, toBd(r.get("amount"))));
+        }
+
+        lines.sort((a, b) -> String.valueOf(a.get("date")).compareTo(String.valueOf(b.get("date"))));
+        BigDecimal debit = lines.stream().map(l -> toBd(l.get("debit"))).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal credit = lines.stream().map(l -> toBd(l.get("credit"))).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 期末纯时点口径（与客户版 v6.1.2 一致）；AP 台账当前余额（Σ立账−Σpaid，退货已累计在 paid 内）作参考列
+        BigDecimal closing = opening.add(debit).subtract(credit);
+        BigDecimal ledgerBalance = sumOrZero("SELECT SUM(amount) - SUM(COALESCE(paid_amount,0)) FROM accounts_payable WHERE supplier_id = ?", supplierId);
+        BigDecimal ledgerDiff = ledgerBalance.subtract(closing);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("supplier", sup.get(0));
+        result.put("from", from);
+        result.put("to", to);
+        result.put("opening", opening);
+        result.put("lines", lines);
+        result.put("debit", debit);
+        result.put("credit", credit);
+        result.put("closing", closing);
+        result.put("ledgerBalance", ledgerBalance);
+        result.put("ledgerDiff", ledgerDiff);
+        return result;
+    }
+
     private static Map<String, Object> line(Map<String, Object> r, String type, String note, BigDecimal debit, BigDecimal credit) {
         Map<String, Object> l = new LinkedHashMap<>();
         l.put("date", r.get("d"));

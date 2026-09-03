@@ -29,6 +29,7 @@ public class SalesOrderService {
     private final RecipeService recipeService;
     private final MaterialRepository materialRepo;
     private final MaterialService materialService;
+    private final FinanceService financeService;
     // v5.24：全局写锁（单号生成+保存共用，防并发撞号）
     private final WriteQueue writeQueue;
     private final SalesOrderChangeLogRepository changeLogRepo;
@@ -43,7 +44,8 @@ public class SalesOrderService {
                              WriteQueue writeQueue,
                              MaterialService materialService,
                              SalesOrderChangeLogRepository changeLogRepo,
-                             org.springframework.jdbc.core.JdbcTemplate jdbc) {
+                             org.springframework.jdbc.core.JdbcTemplate jdbc,
+                             FinanceService financeService) {
         this.orderRepo = orderRepo;
         this.itemRepo = itemRepo;
         this.inventoryService = inventoryService;
@@ -52,6 +54,7 @@ public class SalesOrderService {
         this.recipeService = recipeService;
         this.materialRepo = materialRepo;
         this.materialService = materialService;
+        this.financeService = financeService;
         this.writeQueue = writeQueue;
         this.changeLogRepo = changeLogRepo;
         this.jdbc = jdbc;
@@ -173,6 +176,17 @@ public class SalesOrderService {
             throw new IllegalArgumentException("只有草稿状态的订单可确认");
         if (itemRepo.findByOrderId(id).isEmpty())
             throw new IllegalArgumentException("订单无明细，不可确认");
+        // v6.3 信用软拦截：确认时复核信用占用并留痕（不阻断——创建/确认两道前端已弹确认，此处落审计标记）
+        try {
+            var cc = financeService.creditCheck(order.customerId, order.totalAmount);
+            order.creditExceeded = Boolean.TRUE.equals(cc.get("exceed"));
+            if (Boolean.TRUE.equals(order.creditExceeded)) {
+                log.warn("信用超额订单确认: 单号={} 客户={} 欠款={} 本单={} 额度={}", order.orderNo, order.customerName,
+                        cc.get("arBalance"), cc.get("orderAmount"), cc.get("creditLimit"));
+            }
+        } catch (Exception e) {
+            log.warn("信用复核跳过（不阻断确认）: {}", e.getMessage());
+        }
         order.status = "CONFIRMED";
         order.updateTime = java.time.LocalDateTime.now();
         return orderRepo.save(order);

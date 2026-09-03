@@ -33,9 +33,10 @@
             <span v-else class="text-muted">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
+        <el-table-column label="状态" width="120" align="center">
           <template #default="{ row }">
             <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+            <el-tag v-if="row.creditExceeded" type="danger" size="small" effect="plain" style="margin-left:4px">超信用</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="发货仓库" width="110">
@@ -180,6 +181,7 @@
         <el-form-item label="客户">
           <el-input :value="shipOrder?.customerName || custName(shipOrder?.customerId)" disabled />
         </el-form-item>
+        <el-alert v-if="shipCreditWarn" :title="shipCreditWarn" type="warning" show-icon :closable="false" style="margin-bottom: 12px" />
         <el-form-item label="出库仓库" required>
           <el-select v-model="shipForm.warehouseId" placeholder="选择出库仓库" style="width:100%">
             <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="String(w.id)" />
@@ -469,7 +471,19 @@ async function submitCreate() {
 // ==================== 确认/删除 ====================
 async function confirmOrder(row) {
   try {
-    await ElMessageBox.confirm(`确认销售订单 ${row.orderNo}？\n确认后可安排发货。`, '确认订单', { type: 'warning' })
+    // v6.3 信用软拦截：确认环节复核信用占用，超额弹数字详情二次确认（不阻断，订单落审计标记）
+    let creditTip = `确认销售订单 ${row.orderNo}？\n确认后可安排发货。`
+    let exceeded = false
+    try {
+      const cc = await api.get(`/customer/${row.customerId}/credit-check`, { params: { amount: row.totalAmount } })
+      if (cc && cc.exceed) {
+        exceeded = true
+        creditTip = `客户「${row.customerName}」当前应收欠款 ￥${Number(cc.arBalance).toFixed(2)}，加本单 ￥${Number(cc.orderAmount).toFixed(2)}，` +
+          `合计 ￥${Number(cc.projected).toFixed(2)} 已超信用额度 ￥${Number(cc.creditLimit).toFixed(2)}。\n\n仍要确认该订单吗？（仅记录不阻断）`
+      }
+    } catch { /* 信用查询失败不挡确认 */ }
+    await ElMessageBox.confirm(creditTip, exceeded ? '信用额度预警' : '确认订单',
+      { type: 'warning', confirmButtonText: exceeded ? '仍要确认' : '确认' })
     await api.post(`/sales-order/${row.id}/confirm`)
     ElMessage.success('订单已确认')
     fetch()
@@ -695,12 +709,22 @@ async function printContract(row) {
 }
 
 // ==================== 发货 ====================
+const shipCreditWarn = ref('')
 async function openShip(row) {
   shipOrder.value = row
   shipItems.value = []
   batchOptions.value = {}
   shipForm.value = { warehouseId: String(row.sourceWarehouseId || ''), remark: '' }
   shipVisible.value = true
+  // v6.3 信用软拦截：发货前再提示一次（不阻断，确认/创建环节已各拦过一道）
+  shipCreditWarn.value = ''
+  try {
+    const cc = await api.get(`/customer/${row.customerId}/credit-check`, { params: { amount: row.totalAmount } })
+    if (cc && cc.exceed) {
+      shipCreditWarn.value = `信用预警：该客户应收欠款 ￥${Number(cc.arBalance).toFixed(2)} + 本单 ￥${Number(cc.orderAmount).toFixed(2)} ` +
+        `已超额度 ￥${Number(cc.creditLimit).toFixed(2)}，请知悉后发货`
+    }
+  } catch {}
   try {
     const items = await api.get(`/sales-order/${row.id}/items`)
     shipItems.value = items

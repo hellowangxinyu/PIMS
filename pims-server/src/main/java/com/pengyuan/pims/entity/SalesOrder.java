@@ -22,6 +22,8 @@ public class SalesOrder {
     public java.math.BigDecimal taxRate = java.math.BigDecimal.valueOf(13);
     @Column(length = 20) public String contractNo;
     @Column(nullable = false, length = 20) public String status = "DRAFT";
+    /** v6.3 信用软拦截留痕：确认时应收+本单超信用额度（软拦截不阻断，订单可继续，此处审计可查） */
+    public Boolean creditExceeded;
     @Column(precision = 14, scale = 2) public BigDecimal totalAmount = BigDecimal.ZERO;
     /** v5.27：发货仓库由排产环节确定，下单不选（空串=待排产） */
     @Column(nullable = false, length = 20) public String sourceWarehouseId = "";

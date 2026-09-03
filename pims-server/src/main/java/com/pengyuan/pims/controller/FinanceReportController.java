@@ -71,6 +71,15 @@ public class FinanceReportController {
         return Result.ok(service.statement(customerId, from, to));
     }
 
+    /** v6.3 供应商对账单：期初 + 期间往来明细（应付/付款/退货冲减）+ 期末，与客户版同款时点口径 */
+    @GetMapping("/supplier-statement")
+    @SaCheckPermission("finance:read")
+    public Result<Map<String, Object>> supplierStatement(@RequestParam Long supplierId,
+                                                         @RequestParam String from,
+                                                         @RequestParam String to) {
+        return Result.ok(service.supplierStatement(supplierId, from, to));
+    }
+
     // ===== v5.61 总账账簿与三大报表 =====
 
     /** 科目余额表（level: TOP 仅一级 / ALL 含明细） */
