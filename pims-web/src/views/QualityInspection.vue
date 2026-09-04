@@ -220,6 +220,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../api'
@@ -315,10 +316,8 @@ const judgeItems = ref([])
 const hasMeasuredInput = computed(() => judgeItems.value.some(i => i.measuredValue && String(i.measuredValue).trim()))
 
 // 状态文案/标签颜色
-function statusTagType(s) {
-  const map = { PENDING: 'warning', PASS: 'success', CONCESSION: '', REJECT: 'danger' }
-  return map[s] || 'info'
-}
+// v6.6 收口：全局映射（PENDING 待检橙/PASS 绿/CONCESSION 让步橙/REJECT 红，与全局 MAP 一致）
+const statusTagType = globalStatusType;
 function statusLabel(s) {
   const map = { PENDING: '待检', PASS: '合格', CONCESSION: '让步接收', REJECT: '不合格' }
   return map[s] || '未知'

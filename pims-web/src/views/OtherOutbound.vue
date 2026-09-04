@@ -99,6 +99,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -123,7 +124,7 @@ const batchOpts = ref([])
 function whName(id) { const w = warehouses.value.find(w => String(w.id) === String(id)); return w ? w.name : id }
 function fmtTime(t) { return t ? t.replace('T', ' ').substring(0, 16) : '' }
 function reasonLabel(r) { return dictLabel('outbound_reason', r) }
-function statusTagType(s) { return { CONFIRMED: 'success', PENDING_QC: 'warning', REJECTED: 'danger', DRAFT: 'info' }[s] || 'info' }
+const statusTagType = (s) => globalStatusType(s, {CONFIRMED: 'success', PENDING_QC: 'warning', REJECTED: 'danger', DRAFT: 'info'})   // v6.6 收口：全局 + 域局部
 function statusLabel(s) { return { CONFIRMED: '已确认', PENDING_QC: '待质检', REJECTED: '质检不合格', DRAFT: '草稿' }[s] || '未知' }
 
 async function fetch() {

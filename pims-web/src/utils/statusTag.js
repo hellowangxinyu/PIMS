@@ -35,6 +35,9 @@ const MAP = {
   RELEASED: 'success',
   ARCHIVED: 'info',
   EXPIRED: 'danger',
+  RECEIVED: 'success',      // 到齐/收货完成（v6.6 补：采购页在用）
+  REJECTED: 'danger',       // 已拒（质检拒收变体，与 REJECT 同义）
+  PENDING_QC: 'warning',    // 待质检（待办）
   // 库存
   PASS_QUALIFIED: 'success',
 }

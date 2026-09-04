@@ -57,6 +57,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { fmt } from '../utils/fmt'
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../api'
@@ -68,7 +69,7 @@ const data = reactive({})
 const arTab = ref('AR')
 
 // v6.4 金额格式统一（utils/fmt 千分位 2 位）
-function statusTagType(s) { return { UNPAID: 'danger', PARTIAL: 'warning', PAID: 'success' }[s] || 'info' }
+const statusTagType = (s) => globalStatusType(s, {UNPAID: 'danger', PARTIAL: 'warning', PAID: 'success'})   // v6.6 收口：全局 + 域局部
 function statusLabel(s) { return { UNPAID: '未结清', PARTIAL: '部分结清', PAID: '已结清' }[s] || s }
 function isOverdue(row) {
   if (!row.dueDate) return false

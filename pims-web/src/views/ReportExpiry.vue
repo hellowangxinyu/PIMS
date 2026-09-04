@@ -80,6 +80,7 @@
 </template>
 
 <script setup>
+import { fmtMoney } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -126,10 +127,7 @@ function fmtNum(v) {
   return Number.isInteger(n) ? n.toString() : n.toFixed(2).replace(/\.?0+$/, '')
 }
 
-function fmtMoney(v) {
-  if (v === null || v === undefined) return '-'
-  return '￥' + Number(v).toFixed(2)
-}
+// v6.6 金额格式收口（utils/fmt）
 
 function isExpired(row) { return row.level === 'EXPIRED' }
 

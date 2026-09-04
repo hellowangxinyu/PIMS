@@ -196,6 +196,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -223,7 +224,7 @@ const locations = ref([])
 
 function fmtTime(t) { return t ? String(t).replace('T', ' ').substring(0, 16) : '' }
 function statusLabel(s) { return { DRAFT: '待审核', APPROVED: '已审核', REJECTED: '已驳回', DONE: '已入库' }[s] || '未知' }
-function statusTagType(s) { return { DRAFT: 'warning', APPROVED: 'primary', REJECTED: 'danger', DONE: 'success' }[s] || 'info' }
+const statusTagType = (s) => globalStatusType(s, {DRAFT: 'warning', APPROVED: 'primary', REJECTED: 'danger', DONE: 'success'})   // v6.6 收口：全局 + 域局部
 
 // Tab 切换（已退货明细进入时加载数据）
 function switchTab(tab) {

@@ -187,6 +187,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, computed, onMounted, watch } from 'vue'
 import { loadTaxRate, netOfTax, taxOf, fmtTax } from '../utils/tax'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -289,10 +290,8 @@ async function fetchDetails() {
 function onDetailSearch() { detailPage.value = 1; fetchDetails() }
 
 // 状态标签类型
-function statusTagType(status) {
-  const map = { 'DRAFT': 'info', 'APPROVED': 'primary', 'RECEIVED': 'success', 'CLOSED': 'danger' }
-  return map[status] || 'info'
-}
+// v6.6 收口：全局映射（CLOSED 归档灰，原 danger 红易误读为异常）
+const statusTagType = globalStatusType;
 
 // 状态标签文本
 function statusLabel(status) {

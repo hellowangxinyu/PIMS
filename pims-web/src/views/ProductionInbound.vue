@@ -165,6 +165,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -207,7 +208,7 @@ let traceUid = 0
 function whName(id) { const w = warehouses.value.find(w => String(w.id) === String(id)); return w ? w.name : id }
 function fmtTime(t) { return t ? t.replace('T', ' ').substring(0, 16) : '' }
 // 状态：草稿→待质检（确认后）→已入库（QC合格后由系统回写DONE）
-function prodStatusType(s) { return { CONFIRMED: 'warning', DRAFT: 'info', DONE: 'success', REJECTED: 'danger' }[s] || 'info' }
+const prodStatusType = (s) => globalStatusType(s, {CONFIRMED: 'warning', DRAFT: 'info', DONE: 'success', REJECTED: 'danger'})   // v6.6 收口：全局 + 域局部
 function prodStatusLabel(s) { return { CONFIRMED: '待质检', DRAFT: '草稿', DONE: '已入库', REJECTED: '已入不合格库' }[s] || '未知' }
 // 得率着色：≥98% 绿，≥90% 橙，否则红
 function yieldClass(rate) {

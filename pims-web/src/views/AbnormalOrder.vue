@@ -118,6 +118,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../api'
@@ -146,7 +147,7 @@ function fmtNum(v) {
 }
 function fmtTime(t) { return t ? String(t).replace('T', ' ').substring(0, 16) : '' }
 function statusLabel(s) { return { PENDING: '待处理', PROCESSING: '处理中', CLOSED: '已闭环' }[s] || s }
-function statusTagType(s) { return { PENDING: 'danger', PROCESSING: 'warning', CLOSED: 'success' }[s] || 'info' }
+const statusTagType = (s) => globalStatusType(s, {PENDING: 'danger', PROCESSING: 'warning', CLOSED: 'success'})   // v6.6 收口：全局 + 域局部
 function rowClass({ row }) { return row.handleStatus === 'CLOSED' ? 'row-closed' : '' }
 
 async function loadData() {

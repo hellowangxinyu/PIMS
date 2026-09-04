@@ -100,6 +100,7 @@
 </template>
 
 <script setup>
+import { fmtMoney as fmtMoneyBase } from '../utils/fmt'
 import { statusType } from '../utils/statusTag'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -116,7 +117,7 @@ function settleLabel(s) { return s === 'PAID_RECYCLE' ? '付费回收' : s === '
 // v6.4 状态色统一（utils/statusTag 全局映射）
 function statusLabel(s) { return { CONFIRMED: '已入油尾库', DRAFT: '草稿', REJECTED: '已驳回' }[s] || '未知' }
 function fmtTime(t) { return t ? t.replace('T', ' ').substring(0, 16) : '' }
-function fmtMoney(v) { return '￥' + (Number(v) || 0).toFixed(2) }
+function fmtMoney(v) { return '￥' + fmtMoneyBase(v) }   // v6.6 收口：千分位（utils/fmt）
 
 async function fetchList() {
   try { rows.value = await api.get('/tailing-return') } catch {}

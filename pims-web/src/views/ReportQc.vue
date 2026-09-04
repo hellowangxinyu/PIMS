@@ -77,6 +77,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { fmt } from '../utils/fmt'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import api from '../api'
@@ -102,7 +103,7 @@ const overallRate = computed(() => {
   return pass * 100 / total
 })
 
-function statusTagType(s) { return { PASS: 'success', CONCESSION: 'warning', REJECT: 'danger', PENDING: 'info' }[s] || 'info' }
+const statusTagType = (s) => globalStatusType(s, {PASS: 'success', CONCESSION: 'warning', REJECT: 'danger', PENDING: 'info'})   // v6.6 收口：全局 + 域局部
 function statusLabel(s) { return { PASS: '合格', CONCESSION: '让步', REJECT: '不合格', PENDING: '待检' }[s] || s }
 
 const detailFiltered = computed(() => {

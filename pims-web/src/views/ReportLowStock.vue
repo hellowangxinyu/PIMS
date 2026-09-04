@@ -155,6 +155,7 @@
 </template>
 
 <script setup>
+import { fmtMoney as fmtMoneyBase } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../api'
@@ -182,7 +183,7 @@ function fmtNum(v) {
   return Number.isInteger(n) ? n.toString() : n.toFixed(2).replace(/\.?0+$/, '')
 }
 
-function fmtMoney(v) { return '￥' + Number(v).toFixed(2) }
+function fmtMoney(v) { return '￥' + fmtMoneyBase(v) }   // v6.6 收口：千分位（utils/fmt）
 
 function isRed(row) { return Number(row.availableDays) < 10 }
 

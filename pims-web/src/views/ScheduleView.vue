@@ -14,7 +14,7 @@
 
     <!-- 生产排产 -->
     <div class="table-card" v-if="tab === 'MO'">
-      <el-table ref="moTableRef" :data="sortedMoList" stripe border style="width:100%">
+      <el-table size="small" ref="moTableRef" :data="sortedMoList" stripe border style="width:100%">
         <el-table-column label="顺序" width="70" align="center">
           <template #default="{ row }">
             <!-- v5.27：鼠标拖动把手调整排产顺序（SortableJS 整行拖拽，其他行平滑让位） -->
@@ -46,7 +46,7 @@
 
     <!-- 委外排产 -->
     <div class="table-card" v-else>
-      <el-table ref="ooTableRef" :data="sortedOoList" stripe border style="width:100%">
+      <el-table size="small" ref="ooTableRef" :data="sortedOoList" stripe border style="width:100%">
         <el-table-column label="顺序" width="70" align="center">
           <template #default="{ row }">
             <!-- v5.27：鼠标拖动把手调整排产顺序（SortableJS 整行拖拽，其他行平滑让位） -->
@@ -79,6 +79,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -88,15 +89,12 @@ const moList = ref([])
 const ooList = ref([])
 
 // v5.27：状态标签（推导状态：FEED=已投料 INBOUND=已入库 SHIPPED=已发货）
-function moStatusType(s) {
-  return { SCHEDULED: 'primary', FEED: 'warning', INBOUND: 'success', SHIPPED: 'info', COMPLETED: 'info' }[s] || 'info'
-}
+// v6.6 收口：全局 + 生产域局部（SHIPPED/COMPLETED 完成态绿）
+const moStatusType = (s) => globalStatusType(s, { FEED: 'primary', INBOUND: 'success', SHIPPED: 'success', COMPLETED: 'success' })
 function moStatusLabel(s) {
   return { SCHEDULED: '已排产', FEED: '已投料', INBOUND: '已入库', SHIPPED: '已发货', COMPLETED: '已完工', CONFIRMED: '已确认', DRAFT: '草稿' }[s] || s
 }
-function ooStatusType(s) {
-  return { OUTSOURCED: 'primary', INBOUND: 'success', SHIPPED: 'info', COMPLETED: 'info' }[s] || 'info'
-}
+const ooStatusType = (s) => globalStatusType(s, { INBOUND: 'success', SHIPPED: 'success', COMPLETED: 'success' })
 function ooStatusLabel(s) {
   return { OUTSOURCED: '已委外', INBOUND: '已入库', SHIPPED: '已发货', COMPLETED: '已完工', CONFIRMED: '已确认', DRAFT: '草稿' }[s] || s
 }

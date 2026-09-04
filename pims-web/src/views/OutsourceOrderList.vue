@@ -254,6 +254,7 @@
 </template>
 
 <script setup>
+import { fmtMoney as fmtMoneyBase } from '../utils/fmt'
 import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -687,7 +688,7 @@ function isOutbound(row) {
   const ds = row.displayStatus || row.status
   return ['FEED', 'INBOUND', 'SHIPPED'].includes(ds)
 }
-function fmtMoney(v) { return v == null ? '-' : Number(v).toFixed(2) }
+function fmtMoney(v) { return v == null ? '-' : fmtMoneyBase(v) }   // v6.6 收口：千分位
 function whName(id) { const w = warehouses.value.find(w => String(w.id) === String(id)); return w ? w.name : (id || '-') }
 // 有「查看金额」权限才显示单价/成本（生产人员不显示价格）
 const hasFinanceAmount = computed(() => {

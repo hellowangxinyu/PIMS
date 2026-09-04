@@ -137,6 +137,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { fmt } from '../utils/fmt'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import api from '../api'
@@ -162,7 +163,7 @@ const statusDist = computed(() => {
   return (data.statusDist || []).map(s => ({ name: map[s.status] || s.status, value: s.count }))
 })
 
-function orderStatusType(s) { return { DRAFT: 'info', CONFIRMED: 'warning', SHIPPED: 'success' }[s] || 'info' }
+const orderStatusType = (s) => globalStatusType(s, {DRAFT: 'info', CONFIRMED: 'warning', SHIPPED: 'success'})   // v6.6 收口：全局 + 域局部
 function orderStatusLabel(s) { return { DRAFT: '草稿', CONFIRMED: '已确认', SHIPPED: '已发货' }[s] || s }
 
 // ---- 订单执行筛选 + 分页 ----

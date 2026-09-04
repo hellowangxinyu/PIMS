@@ -130,23 +130,28 @@ public class PurchaseOrderService {
                 .orElseThrow(() -> new IllegalArgumentException("请购单不存在"));
         if (!"APPROVED".equals(order.status)) throw new IllegalArgumentException("只有已审核的请购单可转采购");
         if (order.supplierId == null) throw new IllegalArgumentException("请先补充供应商再转采购");
+        if (order.remark != null && order.remark.contains("已转采购：")) {
+            throw new IllegalArgumentException("该请购单已转过采购，请勿重复操作");
+        }
         var items = itemRepo.findByOrderId(id);
         if (items.isEmpty()) throw new IllegalArgumentException("请购单无明细");
-        var sup = purchaseService.findSupplier(order.supplierId);
-        java.util.List<String> created = new java.util.ArrayList<>();
-        for (PurchaseOrderItem it : items) {
-            var mat = purchaseService.findMaterialCategory(it.materialCode);
-            if (mat.code() == null) throw new IllegalArgumentException("物料不存在：" + it.materialCode);
-            String purchaseNo = purchaseService.createPurchaseFromRequisition(sup.id(), sup.name(),
-                    it.materialCode, mat.name(), it.qty, it.unitPrice, order.targetWarehouseId, operator);
-            created.add(purchaseNo);
-        }
-        writeQueue.executeTx(() -> {
+        // v6.6 原子性：逐单生成+请购关闭包同一 executeTx（锁重入、单事务）——
+        // 原各 create 内部事务独立，中途失败时已生成的采购单留存 → 重试产生真实重复单据
+        java.util.List<String> created = writeQueue.executeTx(() -> {
+            var sup = purchaseService.findSupplier(order.supplierId);
+            java.util.List<String> nos = new java.util.ArrayList<>();
+            for (PurchaseOrderItem it : items) {
+                var mat = purchaseService.findMaterialCategory(it.materialCode);
+                if (mat.code() == null) throw new IllegalArgumentException("物料不存在：" + it.materialCode);
+                nos.add(purchaseService.createPurchaseFromRequisition(sup.id(), sup.name(),
+                        it.materialCode, mat.name(), it.qty, it.unitPrice, order.targetWarehouseId, operator));
+            }
             order.status = "CLOSED";
             order.remark = (order.remark == null || order.remark.isBlank() ? "" : order.remark + "；")
-                    + "已转采购：" + String.join("、", created);
+                    + "已转采购：" + String.join("、", nos);
             order.updateTime = java.time.LocalDateTime.now();
             orderRepo.save(order);
+            return nos;
         });
         java.util.Map<String, Object> r = new java.util.LinkedHashMap<>();
         r.put("purchaseOrders", created);

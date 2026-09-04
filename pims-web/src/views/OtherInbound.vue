@@ -105,6 +105,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, onMounted } from 'vue'
 import { loadTaxRate, netOfTax, taxOf, fmtTax } from '../utils/tax'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -133,7 +134,7 @@ function dictLabel(type, value) {
   const d = (dicts.value[type] || []).find(d => d.value === value)
   return d ? d.label : (value || '-')
 }
-function statusTagType(s) { return { DONE: 'success', CONFIRMED: 'success', PENDING_QC: 'warning', REJECTED: 'danger', DRAFT: 'info' }[s] || 'info' }
+const statusTagType = (s) => globalStatusType(s, {DONE: 'success', CONFIRMED: 'success', PENDING_QC: 'warning', REJECTED: 'danger', DRAFT: 'info'})   // v6.6 收口：全局 + 域局部
 function statusLabel(s) { return { DONE: '已入库', CONFIRMED: '已入库', PENDING_QC: '待质检', REJECTED: '已入不合格库', DRAFT: '草稿' }[s] || '未知' }
 
 async function fetch() {

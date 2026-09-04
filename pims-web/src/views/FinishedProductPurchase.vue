@@ -261,6 +261,7 @@
 </template>
 
 <script setup>
+import { fmtMoney as fmtMoneyBase } from '../utils/fmt'
 import { statusType } from '../utils/statusTag'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -341,7 +342,7 @@ function onBatchMaterialChange(row, name) {
   row.brand = m.brand || ''
 }
 
-function fmtMoney(v) { return '￥' + Number(v || 0).toFixed(2) }
+function fmtMoney(v) { return '￥' + fmtMoneyBase(v) }   // v6.6 收口：千分位（utils/fmt）
 
 // ===== v5.71 打印请购单（按合同号聚合全部物料行，可直接发给供应商） =====
 let supplierPrintCache = null

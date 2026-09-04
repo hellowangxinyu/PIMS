@@ -172,6 +172,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, onMounted, computed, watch } from 'vue'
 import { loadTaxRate, netOfTax, taxOf, fmtTax } from '../utils/tax'
 import axios from 'axios'
@@ -298,7 +299,8 @@ function ageClass(row) {
 
 // === 质检状态显示 ===
 function qcTagType(s) {
-  return { PASS: 'success', CONCESSION: 'warning', REJECT: 'danger', TAILING: 'warning', EXPIRED: 'danger', PENDING: 'info', PENDING_QC: 'info' }[s] || 'info'
+  // v6.6 收口：全局 + 质检局部（待检橙、油尾橙）
+  return globalStatusType(s, { PENDING: 'warning', TAILING: 'warning', PENDING_QC: 'warning' })
 }
 function qcStatusLabel(s) {
   return { PASS: '合格', CONCESSION: '让步接收', REJECT: '不合格', TAILING: '油尾', EXPIRED: '已过期', PENDING: '待检', PENDING_QC: '待检' }[s] || '未知'

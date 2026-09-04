@@ -332,6 +332,7 @@
 </template>
 
 <script setup>
+import { fmtMoney as fmtMoneyBase } from '../utils/fmt'
 import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -697,7 +698,7 @@ async function viewOutbounds(row) {
   outboundVisible.value = true
 }
 
-function fmtMoney(v) { return v == null ? '-' : Number(v).toFixed(2) }
+function fmtMoney(v) { return v == null ? '-' : fmtMoneyBase(v) }   // v6.6 收口：千分位
 
 // 打印并出库：先弹库存检查预览 → 用户确认后才自动出库（先进先出）→ 打印（含批次明细）
 const stockDialogVisible = ref(false)

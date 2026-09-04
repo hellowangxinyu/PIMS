@@ -46,6 +46,7 @@
 </template>
 
 <script setup>
+import { statusType as globalStatusType } from '../utils/statusTag'
 import { fmt } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import api from '../api'
@@ -69,7 +70,7 @@ async function doExport() {
 }
 
 // 状态中文映射（避免英文显示）
-function arStatusType(s) { return { UNPAID: 'danger', PARTIAL: 'warning', PAID: 'success' }[s] || 'info' }
+const arStatusType = (s) => globalStatusType(s, {UNPAID: 'danger', PARTIAL: 'warning', PAID: 'success'})   // v6.6 收口：全局 + 域局部
 function arStatusLabel(s) { return { UNPAID: '未收款', PARTIAL: '部分收款', PAID: '已结清' }[s] || '未知' }
 
 async function loadAR() {

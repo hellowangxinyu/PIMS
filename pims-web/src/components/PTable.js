@@ -1,4 +1,4 @@
-import { defineComponent, h, cloneVNode } from 'vue'
+import { defineComponent, h, cloneVNode, withDirectives, resolveDirective } from 'vue'
 import { ElTable } from 'element-plus'
 import { useRoute } from 'vue-router'
 
@@ -50,11 +50,17 @@ export default defineComponent({
     // v6.4.1 修复：解构必须放 render 内（attrs 是响应式代理，setup 里一次性解构会冻结 data 为
     // 初始空数组——"供应商/物料全没了"实为全站表格行不渲染，数据一直在库）
     return () => {
-      const { size, ...rest } = attrs
-      return h(ElTable, { size: size || 'small', ...rest, onHeaderDragend }, {
+      // v6.6：透传 loading 到 el-table 的 v-loading 指令（页面 <p-table :loading="x"> 一处生效）
+      const { size, loading, ...rest } = attrs
+      const table = h(ElTable, { size: size || 'small', ...rest, onHeaderDragend }, {
         ...slots,
         default: slots.default ? () => injectWidth(slots.default()) : undefined
       })
+      if (loading != null) {
+        const vLoading = resolveDirective('loading')
+        return withDirectives(table, [[vLoading, !!loading]])
+      }
+      return table
     }
   }
 })
