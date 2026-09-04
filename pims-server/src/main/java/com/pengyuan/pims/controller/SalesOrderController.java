@@ -193,8 +193,9 @@ public class SalesOrderController {
      */
     @PostMapping("/{id}/close")
     @SaCheckPermission(value = "sales:write")
-    public Result<?> close(@PathVariable Long id) {
-        return Result.ok(service.closeOrder(id, userService.currentOperatorName()));
+    public Result<?> close(@PathVariable Long id,
+                           @RequestParam(required = false) String reason) {
+        return Result.ok(service.closeOrder(id, userService.currentOperatorName(), reason));
     }
 
     /**

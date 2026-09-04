@@ -279,8 +279,9 @@ public class PurchaseController {
     /** 手动结束采购订单 */
     @PostMapping("/purchase/close/{id}")
     @SaCheckPermission(value = "purchase:write")
-    public Result<?> closeOrder(@PathVariable Long id, @RequestParam String type) {
-        service.closeOrder(id, type);
+    public Result<?> closeOrder(@PathVariable Long id, @RequestParam String type,
+                                @RequestParam(required = false) String reason) {
+        service.closeOrder(id, type, reason);
         return Result.ok("订单已关闭");
     }
 

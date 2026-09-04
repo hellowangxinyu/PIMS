@@ -50,7 +50,7 @@
             <button v-if="row.status !== 'DRAFT'" class="op-btn op-btn-primary" @click="viewOutbounds(row)">出库记录</button>
             <button v-if="row.status === 'DRAFT'" class="op-btn op-btn-primary" @click="openEdit(row)">编辑</button>
             <button v-if="row.status === 'DRAFT'" class="op-btn op-btn-success" @click="confirm(row)">确认并出库</button>
-            <button v-if="row.status === 'CONFIRMED'" class="op-btn op-btn-warn" @click="complete(row)">完工</button>
+            <button v-if="row.status === 'CONFIRMED' || row.status === 'SCHEDULED'" class="op-btn op-btn-warn" @click="complete(row)">完工</button>
             <button v-if="activeTab === 'COMPLETED' && row.ioStatus === 'ABNORMAL'" class="op-btn op-btn-danger" @click="handleAbnormal(row)">处理异常</button>
             <button v-if="row.status === 'DRAFT'" class="op-btn op-btn-danger" @click="del(row)">删除</button>
           </template>
@@ -604,10 +604,18 @@ async function unschedule(row) {
 async function complete(row) {
   try {
     await ElMessageBox.confirm(`确认订单 ${row.orderNo} 已完工？`, '完工', { type: 'info' })
-    await api.post(`/production-order/${row.id}/complete`)
+    // v6.8：排产中按实际完结必须填原因（投出比异常将自动建异常订单记录）
+    let reason = null
+    if (row.status === 'SCHEDULED') {
+      const { value } = await ElMessageBox.prompt(
+        '该订单仍在排产/生产中，按实际完结必须填写原因（如：质检不合格客户让步、短量产出）：',
+        '按实际完结原因', { inputValue: '按实际量完结' })
+      reason = value
+    }
+    await api.post(`/production-order/${row.id}/complete`, null, { params: { reason: reason || undefined } })
     ElMessage.success('已完工')
     fetch()
-  } catch (e) { if (e !== 'cancel' && e !== 'close') {} }
+  } catch (e) { if (e !== 'cancel' && e !== 'close' && e?.message !== 'cancel') {} }
 }
 
 // 投入产出比相关数量格式化（kg，去尾零）

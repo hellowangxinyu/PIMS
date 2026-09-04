@@ -159,8 +159,9 @@ public class ProductionOrderController {
 
     @PostMapping("/{id}/complete")
     @SaCheckPermission(value = "production:write")
-    public Result complete(@PathVariable Long id) {
-        return Result.ok(service.complete(id));
+    public Result complete(@PathVariable Long id,
+                           @org.springframework.web.bind.annotation.RequestParam(required = false) String reason) {
+        return Result.ok(service.complete(id, reason));
     }
 
     /** 生产订单自动出库（打印即出库，按先进先出自动分配批次，不足自动补下一批次） */

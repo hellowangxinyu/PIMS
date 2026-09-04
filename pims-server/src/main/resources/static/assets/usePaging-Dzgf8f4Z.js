@@ -1,0 +1,1 @@
+import{as as u,l as t}from"./index-DZz2Ihqp.js";function l(o){const e=t(1),s=t(25),r=u(()=>{const n=o.value||[],a=(e.value-1)*s.value;return n.slice(a,a+s.value)});return{page:e,pageSize:s,pagedRows:r,resetPage:()=>{e.value=1}}}export{l as u};

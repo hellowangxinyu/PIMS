@@ -75,6 +75,9 @@ public class ProductionOutbound {
     @Column(length = 500)
     public String remark;
 
+    /** v6.8：补领原因（COLOR_ADJUST 色差调整 / OVER_CONSUME 超耗补充；正常领料/退料为空） */
+    @Column(length = 20) public String supplementType;
+
     public LocalDateTime createTime = LocalDateTime.now();
     public LocalDateTime updateTime;
 }

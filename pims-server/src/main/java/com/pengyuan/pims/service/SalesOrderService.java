@@ -280,7 +280,7 @@ public class SalesOrderService {
      * 结束后不可再发货、不可转生产/转委外
      */
     @Transactional
-    public SalesOrder closeOrder(Long id, String operator) {
+    public SalesOrder closeOrder(Long id, String operator, String reason) {
         SalesOrder order = orderRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("销售订单不存在"));
         if ("DRAFT".equals(order.status)) {
@@ -289,9 +289,33 @@ public class SalesOrderService {
         if ("CLOSED".equals(order.status)) {
             throw new IllegalArgumentException("订单已结束");
         }
+        // v6.8 短交完结正规化：存在未发完明细时原因必填，快照+原因入变更日志（事后可查"100 为什么只发 98"）
+        java.math.BigDecimal ordered = java.math.BigDecimal.ZERO, shipped = java.math.BigDecimal.ZERO;
+        for (SalesOrderItem it : itemRepo.findByOrderId(id)) {
+            ordered = ordered.add(it.qty == null ? java.math.BigDecimal.ZERO : it.qty);
+            shipped = shipped.add(it.shippedQty == null ? java.math.BigDecimal.ZERO : it.shippedQty);
+        }
+        boolean shortShipped = shipped.compareTo(ordered) < 0;
+        if (shortShipped && (reason == null || reason.isBlank())) {
+            throw new IllegalArgumentException(String.format(
+                    "短交完结必须填写原因：应发 %s 实发 %s，尚差 %s",
+                    ordered.stripTrailingZeros().toPlainString(), shipped.stripTrailingZeros().toPlainString(),
+                    ordered.subtract(shipped).stripTrailingZeros().toPlainString()));
+        }
         order.status = "CLOSED";
         order.updateTime = java.time.LocalDateTime.now();
-        return orderRepo.save(order);
+        orderRepo.save(order);
+        if (shortShipped) {
+            SalesOrderChangeLog lg = new SalesOrderChangeLog();
+            lg.orderId = id;
+            lg.orderNo = order.orderNo;
+            lg.detail = String.format("短交完结：应发 %s 实发 %s 差 %s，原因：%s",
+                    ordered.stripTrailingZeros().toPlainString(), shipped.stripTrailingZeros().toPlainString(),
+                    ordered.subtract(shipped).stripTrailingZeros().toPlainString(), reason.trim());
+            lg.operator = operator;
+            changeLogRepo.save(lg);
+        }
+        return order;
     }
 
     /** 确认发货（出库） */

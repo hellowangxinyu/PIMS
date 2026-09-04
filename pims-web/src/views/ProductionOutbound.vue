@@ -15,7 +15,7 @@
       <p-table :data="rows" stripe border style="width:100%">
         <el-table-column label="单据号" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">
-            <el-tag v-if="row.docType === 'RETURN'" type="danger" size="small" style="margin-right:4px">退料</el-tag>{{ row.docNo }}
+            <el-tag v-if="row.docType === 'RETURN'" type="danger" size="small" style="margin-right:4px">退料</el-tag><el-tag v-if="row.supplementType === 'COLOR_ADJUST'" type="warning" size="small" style="margin-right:4px">色差补领</el-tag>{{ row.docNo }}
           </template>
         </el-table-column>
         <el-table-column prop="productionOrderNo" label="生产订单" min-width="130" show-overflow-tooltip />
@@ -81,6 +81,13 @@
 
     <!-- 参照生产订单创建出库（补领模式：可选已领料订单，仅填写本次追加用量） -->
     <el-dialog :title="supplement ? '补领（追加领料）' : '参照生产订单领料'" v-model="visible" width="min(1250px, 96vw)" destroy-on-close>
+    <div v-if="supplement" style="margin: 0 0 12px; display: flex; align-items: center; gap: 8px">
+      <span style="font-size: 13px; color: #64748b">补领原因：</span>
+      <el-radio-group v-model="supplementType" size="small">
+        <el-radio-button value="OVER_CONSUME">超耗补充</el-radio-button>
+        <el-radio-button value="COLOR_ADJUST">色差调整</el-radio-button>
+      </el-radio-group>
+    </div>
       <el-form :model="form" label-width="100px">
         <el-form-item label="领料方式">
           <el-radio-group v-model="supplement" @change="onModeChange">
@@ -241,6 +248,7 @@ const costingMethod = ref('SPECIFIC')   // v5.63 计价方式（FIFO 默认选�
 const visible = ref(false)
 const loading = ref(false)
 const supplement = ref(false)   // 补领模式：可选已领料订单，仅填写本次追加用量
+const supplementType = ref('OVER_CONSUME')   // v6.8 补领原因：COLOR_ADJUST 色差调整 / OVER_CONSUME 超耗补充
 const form = ref({ productionOrderId: null, warehouseId: '', remark: '' })
 
 function whName(id) { const w = warehouses.value.find(w => String(w.id) === String(id)); return w ? w.name : id }
@@ -382,7 +390,8 @@ async function submit() {
     const overrides = {}
     activeItems.forEach(it => { overrides[it.materialCode] = { qty: Number(it.qty), batchNo: it.batchNo || null, locationId: it.locationId || null, warehouseId: it.warehouseId } })
     await api.post('/outbound/production', overrides, {
-      params: { productionOrderId: form.value.productionOrderId, remark: form.value.remark || undefined, supplement: supplement.value }
+      params: { productionOrderId: form.value.productionOrderId, remark: form.value.remark || undefined, supplement: supplement.value,
+        supplementType: supplement.value ? (supplementType.value || undefined) : undefined }   // v6.8 补领原因
     })
     ElMessage.success('出库单据已生成并确认，库存已扣减')
     visible.value = false

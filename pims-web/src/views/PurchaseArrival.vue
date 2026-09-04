@@ -411,7 +411,16 @@ async function closeOrder(row) {
       '结束订单确认',
       { type: 'warning' }
     )
-    await api.post(`/purchase/close/${row.id}`, null, { params: { type: type.value } })
+    // v6.8：短量关闭必须填原因（留痕进订单备注）
+    let reason = null
+    const shortfall = Number(row.qty) - Number(row.receivedQty || 0)
+    if (shortfall > 0.0001) {
+      const { value } = await ElMessageBox.prompt(
+        `本单尚有 ${shortfall.toFixed(3)} 未到货，请填写短量原因（将记入订单备注）：`,
+        '短量关闭原因', { inputValue: '供应商短量交货，不再补货' })
+      reason = value
+    }
+    await api.post(`/purchase/close/${row.id}`, null, { params: { type: type.value, reason: reason || undefined } })
     ElMessage.success('订单已关闭')
     fetch()
   } catch (e) {

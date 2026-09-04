@@ -545,11 +545,23 @@ async function deleteOrder(row) {
 // v5.27：手工结束订单（结束后不可发货、不可转生产/委外）
 async function closeOrder(row) {
   try {
-    await ElMessageBox.confirm(`确认结束销售订单 ${row.orderNo}？\n结束后该订单不可再发货、不可转生产/转委外。`, '结束订单', { type: 'warning' })
-    await api.post(`/sales-order/${row.id}/close`)
+    await ElMessageBox.confirm(`确认结束销售订单 ${row.orderNo}？
+结束后该订单不可再发货、不可转生产/转委外。`, '结束订单', { type: 'warning' })
+    // v6.8：短交完结必须填原因（快照+原因入变更日志）
+    let reason = null
+    const items = await api.get(`/sales-order/${row.id}/items`)
+    const ordered = items.reduce((a, it) => a + Number(it.qty || 0), 0)
+    const shipped = items.reduce((a, it) => a + Number(it.shippedQty || 0), 0)
+    if (ordered - shipped > 0.0001) {
+      const { value } = await ElMessageBox.prompt(
+        `本单尚有 ${(ordered - shipped).toFixed(3)} 未发货，请填写短交原因（将记入订单变更日志）：`,
+        '短交完结原因', { inputValue: '客户接受短交' })
+      reason = value
+    }
+    await api.post(`/sales-order/${row.id}/close`, null, { params: { reason: reason || undefined } })
     ElMessage.success('订单已结束')
     fetch()
-  } catch (e) { if (e !== 'cancel' && e !== 'close') {} }
+  } catch (e) { if (e !== 'cancel' && e !== 'close' && e?.message !== 'cancel') {} }
 }
 
 // ==================== 明细 ====================

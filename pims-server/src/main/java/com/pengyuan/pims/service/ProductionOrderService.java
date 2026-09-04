@@ -36,6 +36,7 @@ public class ProductionOrderService {
     private static final Logger log = LoggerFactory.getLogger(ProductionOrderService.class);
 
     private final ProductionOrderRepository orderRepo;
+    private final com.pengyuan.pims.repository.ProductionOrderExceptionRepository exceptionRepo;   // v6.8 完工联动
     private final ProductionOrderItemRepository itemRepo;
     private final ProductionOutboundRepository outboundRepo;
     private final ProductionInboundRepository inboundRepo;
@@ -52,7 +53,8 @@ public class ProductionOrderService {
                                   SalesOrderRepository salesOrderRepo,
                                   InventoryLedgerRepository inventoryLedgerRepo,
                                   WriteQueue writeQueue,
-                                  com.pengyuan.pims.repository.MaterialRepository materialRepo) {
+                                  com.pengyuan.pims.repository.MaterialRepository materialRepo,
+                                     com.pengyuan.pims.repository.ProductionOrderExceptionRepository exceptionRepo) {
         this.orderRepo = orderRepo;
         this.itemRepo = itemRepo;
         this.outboundRepo = outboundRepo;
@@ -61,6 +63,7 @@ public class ProductionOrderService {
         this.inventoryLedgerRepo = inventoryLedgerRepo;
         this.writeQueue = writeQueue;
         this.materialRepo = materialRepo;
+        this.exceptionRepo = exceptionRepo;
     }
 
     public List<ProductionOrder> listAll() {
@@ -393,14 +396,48 @@ public class ProductionOrderService {
      * 完工（生产完成）
      */
     @Transactional
-    public ProductionOrder complete(Long id) {
+    public ProductionOrder complete(Long id, String reason) {
         ProductionOrder order = getById(id);
-        if (!"CONFIRMED".equals(order.status))
-            throw new IllegalArgumentException("只有已确认的订单可完工");
+        // v6.8：SCHEDULED（已排产/已领料）也允许按实际完结——质检不合格不返工、产出短量等场景的正式出口；
+        // 带 reason 必填，若投出比异常且尚无处置记录，自动建异常订单记录（PENDING）要求闭环
+        boolean scheduled = "SCHEDULED".equals(order.status);
+        if (!"CONFIRMED".equals(order.status) && !scheduled)
+            throw new IllegalArgumentException("只有已确认或已排产的订单可完工");
+        if (scheduled && (reason == null || reason.isBlank()))
+            throw new IllegalArgumentException("排产中的订单按实际完结必须填写原因（如：质检不合格客户让步、短量产出完结）");
         order.status = "COMPLETED";
+        if (scheduled && reason != null && !reason.isBlank()) {
+            order.remark = (order.remark == null || order.remark.isBlank() ? "" : order.remark + "；")
+                    + "按实际完结：" + reason.trim();
+        }
         order.updateTime = LocalDateTime.now();
         orderRepo.save(order);
+        // 投出比异常联动：填快照建档，走异常订单处置闭环
+        try {
+            fillIoRatio(java.util.List.of(order));
+            if (order.ioStatus != null && order.ioStatus.contains("ABNORMAL")
+                    && exceptionRepo.findByOrderNo(order.orderNo).isEmpty()) {
+                var ex = new com.pengyuan.pims.entity.ProductionOrderException();
+                ex.orderNo = order.orderNo;
+                ex.ioRatio = order.ioRatio;
+                ex.inputQty = order.inputQty;
+                ex.outputQty = order.outputQty;
+                ex.reason = "按实际完结：" + reason;
+                ex.status = "PENDING";
+                ex.createdBy = "系统";
+                exceptionRepo.save(ex);
+                log.warn("订单 {} 按实际完结且投出比异常（{}%），已自动建异常订单记录待处置", order.orderNo, order.ioRatio);
+            }
+        } catch (Exception e) {
+            log.warn("完工联动异常订单建档失败（不影响完工）: {}", e.getMessage());
+        }
         return order;
+    }
+
+    /** 兼容旧调用（无原因完结，仅 CONFIRMED） */
+    @Transactional
+    public ProductionOrder complete(Long id) {
+        return complete(id, null);
     }
 
     /**

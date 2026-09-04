@@ -693,23 +693,59 @@ public class PurchaseService {
         generateAPForArrival(pa);
     }
 
-    /** 手动结束采购订单（即使未完全到货） */
+    /**
+     * 手动结束采购订单（即使未完全到货）。
+     * v6.8 短量完结正规化：① 状态守卫——RECEIVED 已到齐无需关闭、DRAFT 请删除或先审核，防手滑误关；
+     * ② 短量（已到 < 订量）时 reason 必填；③ 原因与到货快照追加进 remark，事后可查"为什么 100 只到了 95"。
+     */
     @Transactional
-    public void closeOrder(Long id, String type) {
+    public void closeOrder(Long id, String type, String reason) {
         if ("RAW".equals(type)) {
             RawMaterialPurchase rp = rawRepo.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("原料采购单不存在"));
+            if ("RECEIVED".equals(rp.status)) throw new IllegalArgumentException("订单已全额到货（RECEIVED），无需关闭");
+            if ("DRAFT".equals(rp.status)) throw new IllegalArgumentException("草稿单请直接删除或先审核，不支持关闭");
+            if ("CLOSED".equals(rp.status)) throw new IllegalArgumentException("订单已关闭");
+            java.math.BigDecimal received = rp.receivedQty == null ? java.math.BigDecimal.ZERO : rp.receivedQty;
+            boolean shortQty = received.compareTo(rp.qty == null ? java.math.BigDecimal.ZERO : rp.qty) < 0;
+            if (shortQty && (reason == null || reason.isBlank())) {
+                throw new IllegalArgumentException(String.format(
+                        "短量关闭必须填写原因：到货 %s / 订量 %s，尚差 %s", received.stripTrailingZeros().toPlainString(),
+                        rp.qty.stripTrailingZeros().toPlainString(),
+                        rp.qty.subtract(received).stripTrailingZeros().toPlainString()));
+            }
             rp.status = "CLOSED";
+            if (shortQty) {
+                rp.remark = (rp.remark == null || rp.remark.isBlank() ? "" : rp.remark + "；")
+                        + String.format("短量关闭：到货 %s/%s，原因：%s", received.stripTrailingZeros().toPlainString(),
+                        rp.qty.stripTrailingZeros().toPlainString(), reason.trim());
+            }
             rp.updateTime = java.time.LocalDateTime.now();
             rawRepo.save(rp);
-            log.info("原料采购单手动关闭: {}", rp.orderNo);
+            log.info("原料采购单手动关闭: {} 短量={} 原因={}", rp.orderNo, shortQty, reason);
         } else {
             FinishedProductPurchase fp = finishedRepo.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("成品采购单不存在"));
+            if ("RECEIVED".equals(fp.status)) throw new IllegalArgumentException("订单已全额到货（RECEIVED），无需关闭");
+            if ("DRAFT".equals(fp.status)) throw new IllegalArgumentException("草稿单请直接删除或先审核，不支持关闭");
+            if ("CLOSED".equals(fp.status)) throw new IllegalArgumentException("订单已关闭");
+            java.math.BigDecimal received = fp.receivedQty == null ? java.math.BigDecimal.ZERO : fp.receivedQty;
+            boolean shortQty = received.compareTo(fp.qty == null ? java.math.BigDecimal.ZERO : fp.qty) < 0;
+            if (shortQty && (reason == null || reason.isBlank())) {
+                throw new IllegalArgumentException(String.format(
+                        "短量关闭必须填写原因：到货 %s / 订量 %s，尚差 %s", received.stripTrailingZeros().toPlainString(),
+                        fp.qty.stripTrailingZeros().toPlainString(),
+                        fp.qty.subtract(received).stripTrailingZeros().toPlainString()));
+            }
             fp.status = "CLOSED";
+            if (shortQty) {
+                fp.remark = (fp.remark == null || fp.remark.isBlank() ? "" : fp.remark + "；")
+                        + String.format("短量关闭：到货 %s/%s，原因：%s", received.stripTrailingZeros().toPlainString(),
+                        fp.qty.stripTrailingZeros().toPlainString(), reason.trim());
+            }
             fp.updateTime = java.time.LocalDateTime.now();
             finishedRepo.save(fp);
-            log.info("成品采购单手动关闭: {}", fp.orderNo);
+            log.info("成品采购单手动关闭: {} 短量={} 原因={}", fp.orderNo, shortQty, reason);
         }
     }
 

@@ -582,6 +582,7 @@ private Map<String, Object> doProductionReport(int months) {
      * 低库存预警：仅统计原材料（物料大类 A/P/F/R/S，助剂/颜料/填料/树脂/溶剂）。
      * 口径说明：
      *  - 历史用量：出库异动 docType ∈ (PRODUCTION_OUT, OUTSOURCE_OUT, OTHER_OUT, SALES_OUT)
+     *  v6.8 口径：REWORK_OUT 返工出库不计入——已耗料再利用（消耗已在首次领料计入）；隔离库存不计可用，分子分母口径一致
      *    （调拨 TRANSFER / 盘盈亏 ADJUSTMENT 不算实际用量）
      *  - 月均用量 = 总用量 ÷ 实际使用月份数（有出库记录的去重月份，非自然月）
      *  - 日均用量 = 总用量 ÷ 实际使用天数（有出库记录的去重天数）

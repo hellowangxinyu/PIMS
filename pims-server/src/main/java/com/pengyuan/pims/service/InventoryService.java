@@ -373,7 +373,8 @@ public class InventoryService {
         if (batchNo == null || batchNo.isBlank()) {
             throw new IllegalArgumentException("出库必须指定批号（物料操作精确到批次铁律）: " + materialCode);
         }
-        boolean unqBlocked = isUnqualifiedLocation(locationId) && !"OTHER_OUT".equals(docType);
+        // v6.8：返工领料 REWORK_OUT 同步放行不合格库（与 zoneAllowedByDocType 同口径）
+        boolean unqBlocked = isUnqualifiedLocation(locationId) && !"OTHER_OUT".equals(docType) && !"REWORK_OUT".equals(docType);
         boolean tailBlocked = isTailingLocation(locationId)
                 && !"PRODUCTION_OUT".equals(docType) && !"OTHER_OUT".equals(docType);
         if (unqBlocked) {
@@ -877,7 +878,8 @@ public class InventoryService {
             case "UNQUALIFIED_RAW":
             case "UNQUALIFIED_SEMI":
             case "UNQUALIFIED_FIN":
-                return "OTHER_OUT".equals(docType);
+            // v6.8：REWORK_OUT 返工领料——不合格品领出重新加工（其余仍只能报废/退货走 OTHER_OUT）
+                return "OTHER_OUT".equals(docType) || "REWORK_OUT".equals(docType);   // v6.8 返工领料放行
             case "TAILING":
             case "TAILING_FC":
                 return "PRODUCTION_OUT".equals(docType) || "OTHER_OUT".equals(docType);

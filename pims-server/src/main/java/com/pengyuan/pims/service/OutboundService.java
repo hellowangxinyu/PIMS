@@ -269,7 +269,7 @@ public class OutboundService {
     public List<ProductionOutbound> createFromOrder(Long productionOrderId, String warehouseId,
                                                     String operator, String remark,
                                                     java.util.Map<String, java.util.Map<String, Object>> overrides) {
-        return createFromOrder(productionOrderId, warehouseId, operator, remark, overrides, false);
+        return createFromOrder(productionOrderId, warehouseId, operator, remark, overrides, false, null);
     }
 
     /**
@@ -283,7 +283,7 @@ public class OutboundService {
     public List<ProductionOutbound> createFromOrder(Long productionOrderId, String warehouseId,
                                                     String operator, String remark,
                                                     java.util.Map<String, java.util.Map<String, Object>> overrides,
-                                                    boolean supplement) {
+                                                    boolean supplement, String supplementType) {
         // v5.24：单号生成+单据保存+库存变动整体排队（WriteQueue 全局锁），防并发撞号
         return writeQueue.executeTx(() -> {
         ProductionOrder order = orderRepo.findById(productionOrderId)
@@ -378,7 +378,8 @@ public class OutboundService {
                             doc.cost = pc[1];
                         });
                 doc.status = "CONFIRMED";
-                doc.createdBy = operator;
+                if (supplement && supplementType != null && !supplementType.isBlank()) doc.supplementType = supplementType;   // v6.8 补领原因
+            doc.createdBy = operator;
                 doc.remark = remark;
                 doc.createTime = LocalDateTime.now();
                 doc.updateTime = LocalDateTime.now();
@@ -1635,16 +1636,20 @@ public class OutboundService {
                 doc.unitPrice = pc[0];
                 doc.cost = pc[1];
             });
-            // 财务字段
-            doc.genFinance = genFinance != null && genFinance;
+            // 财务字段（v6.8：返工强制不立应收）
+            final boolean rework = "REWORK".equals(reason);
+            doc.genFinance = genFinance != null && genFinance && !rework;
             doc.financeAmount = financeAmount;
             doc.financePartnerId = financePartnerId;
             doc.financePartnerName = financePartnerName;
             // 库存内均为已质检合格品，出库无需再质检，创建即扣减库存
             // v5.23：报废/样品/退货为过期批次处理通道，允许出库；其余原因禁止过期批次出库
             boolean allowExpired = reason != null
-                    && (reason.equals("SCRAP") || reason.equals("SAMPLE") || reason.equals("RETURN"));
-            inventoryService.outbound("OTHER_OUT", docNo, materialCode,
+                    && (reason.equals("SCRAP") || reason.equals("SAMPLE") || reason.equals("RETURN") || reason.equals("REWORK"));
+            if (rework && Boolean.TRUE.equals(genFinance)) {
+                log.warn("返工领料单 {} 忽略前端立应收请求（返工不产生收入）", docNo);
+            }
+            inventoryService.outbound(rework ? "REWORK_OUT" : "OTHER_OUT", docNo, materialCode,
                     batchNo, warehouseId, qty, operator, allowExpired);
             doc.status = "CONFIRMED";
             doc.createdBy = operator;

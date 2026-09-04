@@ -74,9 +74,11 @@ public class OutboundController {
                                                              @RequestParam(required = false) String warehouseId,
                                                              @RequestParam(required = false) String remark,
                                                              @RequestParam(required = false, defaultValue = "false") Boolean supplement,
+                                                             @RequestParam(required = false) String supplementType,
                                                              @RequestBody(required = false) Map<String, Map<String, Object>> overrides) {
         String operator = userService.currentOperatorName();
-        return Result.ok(service.createFromOrder(productionOrderId, warehouseId, operator, remark, overrides, supplement));
+        return Result.ok(service.createFromOrder(productionOrderId, warehouseId, operator, remark, overrides,
+                Boolean.TRUE.equals(supplement), supplementType));
     }
 
     /** 生产退料：按订单退料（可多行部分退），库存按原批次原库位加回，成本按负数行自动净额 */

@@ -511,6 +511,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
 
         // ---------- v4.8 物料用量月度汇总（低库存预警数据源） ----------
         // 口径与低库存预警报表一致：出库用量 = PRODUCTION_OUT/OUTSOURCE_OUT/OTHER_OUT/SALES_OUT（调拨、盘盈亏不计入）
+        // v6.8 口径补充：REWORK_OUT 返工出库不计入——已耗料再利用（消耗已在首次领料计入），隔离库存不计可用，分子分母一致
         // v5.34：增加仓库维度（material_code, period, warehouse_id），低库存预警按仓库计算
         // usage_days 按「该物料该仓库该月有出库记录的去重天数」维护：同月同日同仓第二条记录不再 +1
         jdbc.execute("DROP TRIGGER IF EXISTS trg_movement_usage");
