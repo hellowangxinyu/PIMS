@@ -2,7 +2,7 @@ import { ref } from 'vue'
 
 // 八套主题：4 套纯配色 + 4 套质感风格（液态玻璃/3D 拟物/软糯黏土/复古像素，规则见 style.css 对应段）
 export const THEMES = [
-  { id: 'indigo', name: '靛蓝 · 经典', primary: '#6366f1', light: '#818cf8', dark: '#4f46e5' },
+  { id: 'indigo', name: '黛青 · 素雅', primary: '#4a7c74', light: '#7da59d', dark: '#3a655e' },
   { id: 'emerald', name: '翡翠 · 松涛', primary: '#10b981', light: '#34d399', dark: '#059669' },
   { id: 'amber', name: '琥珀 · 暖阳', primary: '#d97706', light: '#f59e0b', dark: '#b45309' },
   { id: 'violet', name: '绛紫 · 晨曦', primary: '#8b5cf6', light: '#a78bfa', dark: '#7c3aed' },

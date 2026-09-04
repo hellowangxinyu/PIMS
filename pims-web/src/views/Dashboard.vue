@@ -326,10 +326,11 @@ onMounted(async () => {
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
 .stat-card { padding: 22px; border-radius: 16px; color: #fff; position: relative; overflow: hidden; transition: transform 0.25s, box-shadow 0.25s; }
 .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,0.15); }
-.stat-card.purple { background: linear-gradient(135deg, #6366f1, #4f46e5); }   /* 主色最深阶 */
-.stat-card.amber  { background: linear-gradient(135deg, #7c81f2, #6366f1); }  /* v6.4 同色系二阶（原琥珀彩） */
-.stat-card.emerald{ background: linear-gradient(135deg, #968ef5, #7c81f2); }  /* v6.4 同色系三阶（原翡翠彩） */
-.stat-card.rose   { background: linear-gradient(135deg, #b3aef8, #968ef5); }  /* v6.4 同色系四阶（原玫瑰彩） */
+/* v6.9：统计卡四阶渐变改主题变量——跟主色走（黛青/靛蓝/翡翠任何主题自动适配），不再硬编码 */
+.stat-card.purple { background: linear-gradient(135deg, var(--pims-primary-dark), var(--pims-primary)); }
+.stat-card.amber  { background: linear-gradient(135deg, var(--pims-primary), var(--pims-primary-light)); }
+.stat-card.emerald{ background: linear-gradient(135deg, var(--pims-primary-light), var(--pims-primary-light)); filter: brightness(1.06); }
+.stat-card.rose   { background: linear-gradient(135deg, var(--pims-primary-light), var(--pims-primary-light)); filter: brightness(1.12); }
 .stat-card::after { content:''; position:absolute; width:100px; height:100px; border-radius:50%; background:rgba(255,255,255,0.08); top:-20px; right:-20px; }
 .stat-card::before { content:''; position:absolute; width:60px; height:60px; border-radius:50%; background:rgba(255,255,255,0.06); bottom:-10px; left:30px; }
 .stat-icon {

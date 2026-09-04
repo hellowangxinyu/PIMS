@@ -4,23 +4,23 @@
 
 /* ----- CSS 变量覆写 ----- */
 :root {
-  /* 主题一：靛蓝 · 经典（默认） */
-  --pims-primary: #6366f1;
-  --pims-primary-light: #818cf8;
-  --pims-primary-dark: #4f46e5;
-  --pims-primary-rgb: 99,102,241;
-  --pims-primary-light-rgb: 129,140,248;
-  --pims-primary-dark-rgb: 79,70,229;
-  --pims-link: #2563eb;
-  --pims-link-hover: #1d4ed8;
-  --pims-sidebar-start: #1a1744;
-  --pims-sidebar-mid: #272362;
-  --pims-accent: #f59e0b;
-  --pims-success: #10b981;
-  --pims-danger: #ef4444;
-  --pims-warning: #f59e0b;
-  --pims-info: #6366f1;
-  --pims-bg: #f1f5f9;
+  /* 主题一：黛青 · 素雅（默认）v6.9 */
+  --pims-primary: #4a7c74;
+  --pims-primary-light: #7da59d;
+  --pims-primary-dark: #3a655e;
+  --pims-primary-rgb: 74,124,116;
+  --pims-primary-light-rgb: 125,165,157;
+  --pims-primary-dark-rgb: 58,101,94;
+  --pims-link: #3a655e;
+  --pims-link-hover: #2f544e;
+  --pims-sidebar-start: #ffffff;
+  --pims-sidebar-mid: #ffffff;
+  --pims-accent: #b08968;
+  --pims-success: #5b8a5e;
+  --pims-danger: #b05a4e;
+  --pims-warning: #b58a3c;
+  --pims-info: #8a8f98;
+  --pims-bg: #f6f5f1;
   --pims-surface: #ffffff;
   --pims-text: #1e293b;
   --pims-text-secondary: #64748b;
@@ -29,17 +29,17 @@
   --pims-border-light: #f1f5f9;
 
   /* 侧边栏 */
-  --pims-sidebar-bg-start: #1e1b4b;
-  --pims-sidebar-bg-mid: #312e81;
-  --pims-sidebar-text: rgba(255,255,255,0.75);
-  --pims-sidebar-text-muted: rgba(255,255,255,0.45);
-  --pims-sidebar-text-dim: rgba(255,255,255,0.3);
+  --pims-sidebar-bg-start: #ffffff;
+  --pims-sidebar-bg-mid: #ffffff;
+  --pims-sidebar-text: rgba(47,58,58,.78);
+  --pims-sidebar-text-muted: rgba(47,58,58,.5);
+  --pims-sidebar-text-dim: rgba(47,58,58,.35);
   --pims-sidebar-width: 240px;
   --pims-sidebar-collapsed-width: 64px;
-  --pims-sidebar-border: rgba(255,255,255,0.08);
-  --pims-sidebar-hover: rgba(255,255,255,0.08);
-  --pims-sidebar-active-bg: rgba(var(--pims-primary-rgb),0.35);
-  --pims-sidebar-active-shadow: 0 2px 8px rgba(var(--pims-primary-rgb),0.2);
+  --pims-sidebar-border: rgba(47,58,58,.1);
+  --pims-sidebar-hover: rgba(47,58,58,.05);
+  --pims-sidebar-active-bg: rgba(var(--pims-primary-rgb),0.1);
+  --pims-sidebar-active-shadow: none;
 
   /* 卡片/表面 */
   --pims-card-bg: #ffffff;
@@ -78,7 +78,7 @@
   --pims-transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* 布局背景 */
-  --pims-layout-bg: #f1f5f9;
+  --pims-layout-bg: #f6f5f1;
 
   /* Element Plus 覆写 */
   --el-color-primary: var(--pims-primary);
