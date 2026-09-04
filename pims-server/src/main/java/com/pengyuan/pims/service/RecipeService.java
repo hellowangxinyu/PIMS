@@ -41,7 +41,8 @@ public class RecipeService {
 
     private final RecipeRepository recipeRepo;
     private final com.pengyuan.pims.repository.RecipeChangeLogRepository changeLogRepo;
-    private final org.springframework.jdbc.core.JdbcTemplate jdbc;   // v6.3 buildPriceMap 聚合   // v6.3 变更日志
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final com.pengyuan.pims.service.UserService userService;   // v6.5 B4 日志操作人服务端取   // v6.3 buildPriceMap 聚合   // v6.3 变更日志
     private final RecipeVersionRepository versionRepo;
     private final RecipeTreeNodeRepository treeNodeRepo;
     private final InventoryLedgerRepository ledgerRepo;
@@ -66,7 +67,8 @@ public class RecipeService {
                          WarehouseRepository warehouseRepo,
                          WriteQueue writeQueue, com.pengyuan.pims.repository.PackagingStandardRepository packagingRepo, com.pengyuan.pims.repository.PackagingStandardItemRepository packagingItemRepo,
                                  com.pengyuan.pims.repository.RecipeChangeLogRepository changeLogRepo,
-                                 org.springframework.jdbc.core.JdbcTemplate jdbc) {
+                                 org.springframework.jdbc.core.JdbcTemplate jdbc,
+                                 com.pengyuan.pims.service.UserService userService) {
         this.recipeRepo = recipeRepo;
         this.versionRepo = versionRepo;
         this.treeNodeRepo = treeNodeRepo;
@@ -81,6 +83,7 @@ public class RecipeService {
         this.writeQueue = writeQueue;
         this.changeLogRepo = changeLogRepo;
         this.jdbc = jdbc;
+        this.userService = userService;
     }
 
     /** 校验配方绑定的工艺路线：必填、存在、类型一致 */
@@ -250,7 +253,7 @@ public class RecipeService {
     /**
      * 新建版本（从最新 RELEASED 版本复制树），版本号自动递增
      */
-    @Transactional
+    // v6.5 B7：版本号计算+保存整体入锁（原 size()+1 无锁，并发创建同号相撞）
     public RecipeVersion createVersion(Long recipeId, RecipeVersion input) {
         Recipe recipe = getById(recipeId);
 
@@ -260,11 +263,16 @@ public class RecipeService {
             throw new IllegalArgumentException("已存在草稿版本，请先发布或删除");
         }
 
-        // 计算版本号
-        List<RecipeVersion> versions = versionRepo.findByRecipeIdOrderByCreateTimeDesc(recipeId);
+        return writeQueue.executeTx(() -> createVersionLocked(recipe, input));
+    }
+
+    private RecipeVersion createVersionLocked(Recipe recipe, RecipeVersion input) {
+        // 计算版本号（锁内）
+        List<RecipeVersion> versions = versionRepo.findByRecipeIdOrderByCreateTimeDesc(recipe.id);
         int nextMajor = versions.size() + 1;
         String versionNo = "V" + nextMajor + ".0";
 
+        Long recipeId = recipe.id;
         RecipeVersion v = new RecipeVersion();
         v.recipeId = recipeId;
         v.versionNo = versionNo;
@@ -1043,7 +1051,9 @@ public class RecipeService {
             lg.versionNo = versionNo;
             lg.action = action;
             lg.detail = detail;
-            lg.operator = operator == null || operator.isBlank() ? "系统" : operator;
+            // v6.5 B4：操作人一律服务端取当前登录人（原信任方法参数可被前端伪造）
+            try { lg.operator = userService.currentOperatorName(); }
+            catch (Exception ex) { lg.operator = "系统"; }
             changeLogRepo.save(lg);
         } catch (Exception e) {
             log.warn("配方变更日志写入失败（不影响业务）: {}", e.getMessage());

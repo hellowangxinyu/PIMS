@@ -181,8 +181,16 @@ public class SalesOrderService {
             var cc = financeService.creditCheck(order.customerId, order.totalAmount);
             order.creditExceeded = Boolean.TRUE.equals(cc.get("exceed"));
             if (Boolean.TRUE.equals(order.creditExceeded)) {
+                String snapshot = "信用超额确认：应收欠款 " + cc.get("arBalance") + " + 本单 " + cc.get("orderAmount")
+                        + "，超额度 " + cc.get("creditLimit") + "（确认时点快照）";
                 log.warn("信用超额订单确认: 单号={} 客户={} 欠款={} 本单={} 额度={}", order.orderNo, order.customerName,
                         cc.get("arBalance"), cc.get("orderAmount"), cc.get("creditLimit"));
+                SalesOrderChangeLog lg = new SalesOrderChangeLog();
+                lg.orderId = order.id;
+                lg.orderNo = order.orderNo;
+                lg.detail = snapshot;
+                lg.operator = "系统";
+                changeLogRepo.save(lg);   // v6.5 B6：超额留数字快照（原只有布尔标记，事后无从还原当时占用）
             }
         } catch (Exception e) {
             log.warn("信用复核跳过（不阻断确认）: {}", e.getMessage());

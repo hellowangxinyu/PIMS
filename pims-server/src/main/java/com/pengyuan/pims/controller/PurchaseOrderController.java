@@ -15,7 +15,11 @@ import java.util.List;
 public class PurchaseOrderController {
 
     private final PurchaseOrderService service;
-    public PurchaseOrderController(PurchaseOrderService service) { this.service = service; }
+    private final com.pengyuan.pims.service.UserService userService;
+    public PurchaseOrderController(PurchaseOrderService service, com.pengyuan.pims.service.UserService userService) {
+        this.service = service;
+        this.userService = userService;
+    }
 
     @GetMapping
     @SaCheckPermission(value = "purchase:read")
@@ -53,14 +57,51 @@ public class PurchaseOrderController {
             for (Object o : l) {
                 if (!(o instanceof java.util.Map<?, ?> m)) continue;
                 PurchaseOrderItem it = new PurchaseOrderItem();
-                it.materialCode = String.valueOf(m.get("materialCode"));
-                it.qty = new java.math.BigDecimal(String.valueOf(m.get("qty")));
+                // v6.5 B1：null 安全解析（原 String.valueOf(null) 存成字符串 "null" 绕过 isBlank 校验入库；
+                // qty 缺省 new BigDecimal("null") 抛 NumberFormatException 变 500）
+                Object code = m.get("materialCode");
+                if (code == null || String.valueOf(code).isBlank()) continue;
+                it.materialCode = String.valueOf(code).trim();
+                Object qty = m.get("qty");
+                if (qty == null || String.valueOf(qty).isBlank()) continue;
+                try {
+                    it.qty = new java.math.BigDecimal(String.valueOf(qty));
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("明细 " + it.materialCode + " 数量格式错误：" + qty);
+                }
                 it.unit = m.get("unit") != null ? String.valueOf(m.get("unit")) : "kg";
                 it.unitPrice = m.get("unitPrice") != null ? new java.math.BigDecimal(String.valueOf(m.get("unitPrice"))) : null;
                 items.add(it);
             }
         }
         return Result.ok(service.create(order, items));
+    }
+
+    /** v6.5 B3：编辑请购单头（DRAFT；MRP 单补供应商/仓库/交期） */
+    @PutMapping("/{id}/header")
+    @SaCheckPermission(value = "purchase:write")
+    public Result<PurchaseOrder> updateHeader(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
+        Long supplierId = body.get("supplierId") != null && !String.valueOf(body.get("supplierId")).isBlank()
+                ? Long.valueOf(String.valueOf(body.get("supplierId"))) : null;
+        java.time.LocalDate dlv = body.get("expectedDeliveryDate") != null && !String.valueOf(body.get("expectedDeliveryDate")).isBlank()
+                ? java.time.LocalDate.parse(String.valueOf(body.get("expectedDeliveryDate")).substring(0, 10)) : null;
+        return Result.ok(service.updateHeader(id, supplierId,
+                body.get("targetWarehouseId") != null ? String.valueOf(body.get("targetWarehouseId")) : null,
+                dlv, body.get("remark") != null ? String.valueOf(body.get("remark")) : null));
+    }
+
+    /** v6.5 B3：审核 DRAFT→APPROVED */
+    @PostMapping("/{id}/audit")
+    @SaCheckPermission(value = "purchase:write")
+    public Result<PurchaseOrder> audit(@PathVariable Long id) {
+        return Result.ok(service.audit(id));
+    }
+
+    /** v6.5 B3：转采购（按明细逐物料生成采购单，请购单关闭） */
+    @PostMapping("/{id}/to-purchase")
+    @SaCheckPermission(value = "purchase:write")
+    public Result<java.util.Map<String, Object>> toPurchase(@PathVariable Long id) {
+        return Result.ok(service.toPurchase(id, userService.currentOperatorName()));
     }
 
     /** v6.3：删除草稿请购单（MRP 误单清理） */

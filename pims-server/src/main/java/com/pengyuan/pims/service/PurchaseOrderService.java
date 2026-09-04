@@ -20,15 +20,21 @@ public class PurchaseOrderService {
     private final InventoryService inventoryService;
     // v5.24：全局写锁（单号生成+保存共用，防并发撞号）
     private final WriteQueue writeQueue;
+    private final PurchaseService purchaseService;
+    private final com.pengyuan.pims.repository.MaterialRepository materialRepo;   // v6.5 B1 物料存在性校验   // v6.5 B3 转采购
 
     public PurchaseOrderService(PurchaseOrderRepository orderRepo,
                                 PurchaseOrderItemRepository itemRepo,
                                 InventoryService inventoryService,
-                                WriteQueue writeQueue) {
+                                WriteQueue writeQueue,
+                                         PurchaseService purchaseService,
+                                         com.pengyuan.pims.repository.MaterialRepository materialRepo) {
         this.orderRepo = orderRepo;
         this.itemRepo = itemRepo;
         this.inventoryService = inventoryService;
         this.writeQueue = writeQueue;
+        this.purchaseService = purchaseService;
+        this.materialRepo = materialRepo;
     }
 
     public List<PurchaseOrder> listAll() { return orderRepo.findAll(); }
@@ -45,6 +51,10 @@ public class PurchaseOrderService {
                 throw new IllegalArgumentException("明细行物料编码不能为空");
             if (item.qty == null || item.qty.doubleValue() <= 0)
                 throw new IllegalArgumentException("明细行数量必须大于 0");
+            // v6.5 B1：物料存在性校验（拦 "null" 等任意字符串穿透 isBlank 入库成脏数据）
+            if (materialRepo.findByCode(item.materialCode).isEmpty()) {
+                throw new IllegalArgumentException("明细物料不存在：" + item.materialCode);
+            }
         }
         // v5.70 P1 防呆：单价超 10 万拦截
         if (items != null) {
@@ -81,6 +91,67 @@ public class PurchaseOrderService {
     }
 
     public List<PurchaseOrderItem> getItems(Long orderId) { return itemRepo.findByOrderId(orderId); }
+
+
+    /** v6.5 B3：编辑请购单头（仅 DRAFT；MRP 生成的"供应商待定"单在此补供应商/仓库/交期） */
+    public PurchaseOrder updateHeader(Long id, Long supplierId, String targetWarehouseId,
+                                      java.time.LocalDate expectedDeliveryDate, String remark) {
+        PurchaseOrder order = orderRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("请购单不存在"));
+        if (!"DRAFT".equals(order.status)) throw new IllegalArgumentException("只有草稿状态的请购单可编辑");
+        return writeQueue.executeTx(() -> {
+            if (supplierId != null) order.supplierId = supplierId;
+            if (targetWarehouseId != null && !targetWarehouseId.isBlank()) order.targetWarehouseId = targetWarehouseId;
+            if (expectedDeliveryDate != null) order.expectedDeliveryDate = expectedDeliveryDate;
+            if (remark != null) order.remark = remark;
+            order.updateTime = java.time.LocalDateTime.now();
+            return orderRepo.save(order);
+        });
+    }
+
+    /** v6.5 B3：审核 DRAFT→APPROVED（须已定供应商且有明细） */
+    public PurchaseOrder audit(Long id) {
+        PurchaseOrder order = orderRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("请购单不存在"));
+        if (!"DRAFT".equals(order.status)) throw new IllegalArgumentException("只有草稿状态的请购单可审核");
+        if (order.supplierId == null) throw new IllegalArgumentException("请先补充供应商再审核");
+        if (itemRepo.findByOrderId(id).isEmpty()) throw new IllegalArgumentException("请购单无明细，不可审核");
+        return writeQueue.executeTx(() -> {
+            order.status = "APPROVED";
+            order.updateTime = java.time.LocalDateTime.now();
+            return orderRepo.save(order);
+        });
+    }
+
+    /** v6.5 B3：转采购——按明细逐物料生成原料/成品采购单（APPROVED 采购单，含数量单价），
+     *  请购单置 CLOSED 并在备注记录采购单号；幂等：非 APPROVED 请购单不可转 */
+    public java.util.Map<String, Object> toPurchase(Long id, String operator) {
+        PurchaseOrder order = orderRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("请购单不存在"));
+        if (!"APPROVED".equals(order.status)) throw new IllegalArgumentException("只有已审核的请购单可转采购");
+        if (order.supplierId == null) throw new IllegalArgumentException("请先补充供应商再转采购");
+        var items = itemRepo.findByOrderId(id);
+        if (items.isEmpty()) throw new IllegalArgumentException("请购单无明细");
+        var sup = purchaseService.findSupplier(order.supplierId);
+        java.util.List<String> created = new java.util.ArrayList<>();
+        for (PurchaseOrderItem it : items) {
+            var mat = purchaseService.findMaterialCategory(it.materialCode);
+            if (mat.code() == null) throw new IllegalArgumentException("物料不存在：" + it.materialCode);
+            String purchaseNo = purchaseService.createPurchaseFromRequisition(sup.id(), sup.name(),
+                    it.materialCode, mat.name(), it.qty, it.unitPrice, order.targetWarehouseId, operator);
+            created.add(purchaseNo);
+        }
+        writeQueue.executeTx(() -> {
+            order.status = "CLOSED";
+            order.remark = (order.remark == null || order.remark.isBlank() ? "" : order.remark + "；")
+                    + "已转采购：" + String.join("、", created);
+            order.updateTime = java.time.LocalDateTime.now();
+            orderRepo.save(order);
+        });
+        java.util.Map<String, Object> r = new java.util.LinkedHashMap<>();
+        r.put("purchaseOrders", created);
+        return r;
+    }
 
     /** v6.3：删除请购单（仅草稿——MRP 生成的误单可清理；已审核单走业务流不可删） */
     public void delete(Long id) {

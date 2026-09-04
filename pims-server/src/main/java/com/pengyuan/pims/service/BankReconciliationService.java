@@ -174,9 +174,14 @@ public class BankReconciliationService {
             // 防重：同账户同日期同金额同摘要已存在则跳过（网银重复导出防呆）
             int inserted = 0, skipped = 0;
             for (Map<String, Object> r : parsed) {
+                // v6.5：防重加余额比对——同日同额同摘要但余额不同=两笔真实流水（银行常见：多笔等额手续费），
+                // 仅"四要素全同"才判重复导入跳过（余额是每笔唯一的强指纹）
                 Integer dup = jdbc.queryForObject(
-                        "SELECT COUNT(*) FROM bank_statement WHERE account_id = ? AND tx_date = ? AND amount = ? AND (summary IS ? OR summary = ?)",
-                        Integer.class, accountId, r.get("txDate"), r.get("amount"), r.get("summary"), r.get("summary"));
+                        "SELECT COUNT(*) FROM bank_statement WHERE account_id = ? AND tx_date = ? AND amount = ? " +
+                        "AND (summary IS ? OR summary = ?) AND ((balance IS ? AND ? IS NULL) OR balance = ?)",
+                        Integer.class, accountId, r.get("txDate"), r.get("amount"),
+                        r.get("summary"), r.get("summary"),
+                        r.get("balance"), r.get("balance"), r.get("balance"));
                 if (dup != null && dup > 0) { skipped++; continue; }
                 jdbc.update("INSERT INTO bank_statement (account_id, tx_date, amount, balance, summary, counterparty, status, import_batch) VALUES (?,?,?,?,?,?, 'UNMATCHED', ?)",
                         accountId, r.get("txDate"), r.get("amount"), r.get("balance"), r.get("summary"), r.get("party"), batch);
@@ -288,17 +293,24 @@ public class BankReconciliationService {
             if (!last.isEmpty()) bankEnd = toBd(last.get(0).get("balance"));
         }
         Set<String> matched = matchedKeys(accountId);
+        // v6.5 B2（会计口径修正）：未达账项 = 截至对账日(to)的全部未勾对，含期初之前的——
+        // 原只统计 [from,to] 期间，上期遗留未达漏算，跨期调节表两侧必不相等。
+        // 企业侧：该账户全部收付款单（日期 <= to）中未勾对者；银行侧：流水 status=UNMATCHED 且 tx_date <= to。
         BigDecimal firmIn = BigDecimal.ZERO, firmOut = BigDecimal.ZERO;   // 企业已记银行未记
-        for (var row : (List<Map<String, Object>>) journal.get("rows")) {
-            if (matched.contains(keyOf(row))) continue;
-            BigDecimal signed = toBd(row.get("signed"));
-            if (signed.compareTo(BigDecimal.ZERO) > 0) firmIn = firmIn.add(signed);
-            else firmOut = firmOut.add(signed.negate());
+        for (var row : jdbc.queryForList(
+                "SELECT id, amount FROM payment_receipt WHERE bank_account = ? AND receipt_date < ?", accountName, toMs)) {
+            if (matched.contains("RECEIPT:" + row.get("id"))) continue;
+            firmIn = firmIn.add(toBd(row.get("amount")));
+        }
+        for (var row : jdbc.queryForList(
+                "SELECT id, amount FROM payment_disbursement WHERE bank_account = ? AND pay_date < ?", accountName, toMs)) {
+            if (matched.contains("DISBURSEMENT:" + row.get("id"))) continue;
+            firmOut = firmOut.add(toBd(row.get("amount")));
         }
         BigDecimal bankIn = BigDecimal.ZERO, bankOut = BigDecimal.ZERO;   // 银行已记企业未记
         List<Map<String, Object>> unmatchedStmts = new ArrayList<>();
         for (var st : jdbc.queryForList(
-                "SELECT * FROM bank_statement WHERE account_id = ? AND status = 'UNMATCHED' AND tx_date >= ? AND tx_date <= ? ORDER BY tx_date", accountId, from, to)) {
+                "SELECT * FROM bank_statement WHERE account_id = ? AND status = 'UNMATCHED' AND tx_date <= ? ORDER BY tx_date", accountId, to)) {
             BigDecimal amt = toBd(st.get("amount"));
             if (amt.compareTo(BigDecimal.ZERO) > 0) bankIn = bankIn.add(amt);
             else bankOut = bankOut.add(amt.negate());

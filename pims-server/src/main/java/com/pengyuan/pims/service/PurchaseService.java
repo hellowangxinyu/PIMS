@@ -43,6 +43,7 @@ public class PurchaseService {
     private final WarehouseZoneRepository zoneRepo;
     // v5.24：全局写锁（合同号生成+保存共用，防并发撞号）
     private final WriteQueue writeQueue;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;   // v6.5 B3
     private final MaterialService materialService;
     // v5.60：制单人写入
     private final UserService userService;
@@ -64,7 +65,8 @@ public class PurchaseService {
                            WriteQueue writeQueue,
                            MaterialService materialService,
                            UserService userService,
-                           WarehouseRepository warehouseRepo, com.pengyuan.pims.repository.QualityInspectionRepository qcRepo) {
+                           WarehouseRepository warehouseRepo, com.pengyuan.pims.repository.QualityInspectionRepository qcRepo,
+                       org.springframework.jdbc.core.JdbcTemplate jdbc) {
         this.rawRepo = rawRepo;
         this.finishedRepo = finishedRepo;
         this.arrivalRepo = arrivalRepo;
@@ -81,6 +83,7 @@ public class PurchaseService {
         this.materialService = materialService;
         this.userService = userService;
         this.warehouseRepo = warehouseRepo;
+        this.jdbc = jdbc;
     }
 
     // ==================== 原料采购 ====================
@@ -937,6 +940,69 @@ public class PurchaseService {
         log.info("到货反审核: {} -> {}（删AP + 删PENDING QC + 回写已到货量，PENDING 阶段无库存动作）",
                 pa.type, pa.refOrderNo);
         return pa;
+    }
+
+    // ==================== v6.5 B3：请购单转采购支撑 ====================
+
+    public record SupRef(Long id, String name) {}
+    public record MatRef(String code, String name, String category) {}
+
+    public SupRef findSupplier(Long supplierId) {
+        var rows = jdbc.queryForList("SELECT id, name FROM supplier WHERE id = ?", supplierId);
+        if (rows.isEmpty()) throw new IllegalArgumentException("供应商不存在：" + supplierId);
+        return new SupRef(((Number) rows.get(0).get("id")).longValue(), String.valueOf(rows.get(0).get("name")));
+    }
+
+    public MatRef findMaterialCategory(String code) {
+        var rows = jdbc.queryForList("SELECT code, name, category FROM material WHERE code = ?", code);
+        if (rows.isEmpty()) return new MatRef(null, null, null);
+        var r = rows.get(0);
+        return new MatRef(String.valueOf(r.get("code")), String.valueOf(r.get("name")),
+                r.get("category") == null ? "" : String.valueOf(r.get("category")));
+    }
+
+    /** 请购转采购：生成 APPROVED 状态采购单（原料/成品同构，供应商+仓库+单价承接请购），返回合同号 */
+    public String createPurchaseFromRequisition(Long supplierId, String supplierName, String materialCode, String materialName,
+                                                java.math.BigDecimal qty, java.math.BigDecimal unitPrice,
+                                                String warehouseId, String operator) {
+        if (qty == null || qty.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("物料 " + materialCode + " 数量必须大于 0");
+        }
+        // 判类：C 走成品采购，其余走原料采购（口径与转委外/转生产一致，按档案 category 不按首字符）
+        var mat = findMaterialCategory(materialCode);
+        if ("C".equals(mat.category())) {
+            FinishedProductPurchase fp = new FinishedProductPurchase();
+            fp.supplierId = supplierId;
+            fp.supplierName = supplierName;
+            fp.materialCode = materialCode;
+            fp.materialName = materialName;
+            fp.qty = qty;
+            fp.unitPrice = unitPrice != null ? unitPrice : java.math.BigDecimal.ZERO;
+            fp.warehouseId = warehouseId != null && !warehouseId.isBlank() ? warehouseId : "1";
+            fp.purchaseDate = java.time.LocalDate.now();
+            fp.createdBy = operator;
+            fp.remark = "请购单转采购";
+            FinishedProductPurchase saved = createFinished(fp);
+            saved.status = "APPROVED";
+            saved.updateTime = java.time.LocalDateTime.now();
+            return finishedRepo.save(saved).orderNo;
+        } else {
+            RawMaterialPurchase rp = new RawMaterialPurchase();
+            rp.supplierId = supplierId;
+            rp.supplierName = supplierName;
+            rp.materialCode = materialCode;
+            rp.materialName = materialName;
+            rp.qty = qty;
+            rp.unitPrice = unitPrice != null ? unitPrice : java.math.BigDecimal.ZERO;
+            rp.warehouseId = warehouseId != null && !warehouseId.isBlank() ? warehouseId : "1";
+            rp.purchaseDate = java.time.LocalDate.now();
+            rp.createdBy = operator;
+            rp.remark = "请购单转采购";
+            RawMaterialPurchase saved = createRaw(rp);
+            saved.status = "APPROVED";
+            saved.updateTime = java.time.LocalDateTime.now();
+            return rawRepo.save(saved).orderNo;
+        }
     }
 
     // ==================== 内部方法 ====================

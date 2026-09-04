@@ -145,7 +145,10 @@ public class MrpService {
             return;
         }
         Long recipeId = recipeOpt.get().id;
-        if (!visited.add(recipeId)) return;   // 防环
+        if (!visited.add(recipeId)) {
+            log.warn("MRP 展开遇到循环引用已截断: 配方#{}（{}），该分支按已知需求继续", recipeId, materialCode);   // v6.5 B5：不再静默
+            return;
+        }
         var released = versionRepo.findByRecipeIdAndStatus(recipeId, "RELEASED");
         if (released.isEmpty()) {
             visited.remove(recipeId);

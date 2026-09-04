@@ -35,9 +35,12 @@
         <el-table-column prop="createTime" label="创建时间" :width="cw('创建时间') || 165">
           <template #default="{ row }">{{ String(row.createTime || '').replace('T', ' ').slice(0, 16) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="150" align="center">
+        <el-table-column label="操作" width="230" align="center">
           <template #default="{ row }">
             <button class="op-btn" @click="showItems(row)">明细</button>
+            <button v-if="row.status === 'DRAFT' && hasPerm('purchase:write')" class="op-btn" @click="openEditHeader(row)">编辑</button>
+            <button v-if="row.status === 'DRAFT' && hasPerm('purchase:write')" class="op-btn op-btn-success" @click="audit(row)">审核</button>
+            <button v-if="row.status === 'APPROVED' && hasPerm('purchase:write')" class="op-btn op-btn-primary" @click="toPurchase(row)">转采购</button>
             <button v-if="row.status === 'DRAFT' && hasPerm('purchase:write')" class="op-btn op-btn-danger" @click="del(row)">删除</button>
           </template>
         </el-table-column>
@@ -58,6 +61,23 @@
         <el-table-column prop="unit" label="单位" width="70" align="center" />
         <el-table-column prop="receivedQty" label="已到货" width="90" align="right" />
       </p-table>
+    </el-dialog>
+
+    <!-- v6.5 B3 编辑头（MRP 单补供应商等） -->
+    <el-dialog :title="`编辑请购单 ${editRow?.orderNo || ''}`" v-model="editVisible" width="480px">
+      <el-form :model="editForm" label-width="90px">
+        <el-form-item label="供应商">
+          <el-select v-model="editForm.supplierId" filterable clearable placeholder="必填（审核前请补全）" style="width:100%">
+            <el-option v-for="sp in suppliers" :key="sp.id" :label="sp.name" :value="sp.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="交货日期"><el-date-picker v-model="editForm.expectedDeliveryDate" value-format="YYYY-MM-DD" style="width:100%" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="editForm.remark" type="textarea" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveHeader">保存</el-button>
+      </template>
     </el-dialog>
 
     <!-- 新增弹窗 -->
@@ -175,6 +195,40 @@ async function save() {
     await api.post('/purchase-order', { ...form.value, items })
     ElMessage.success('请购单已保存（草稿）')
     createVisible.value = false
+    fetch()
+  } catch (e) {}
+}
+
+const editVisible = ref(false)
+const editRow = ref(null)
+const editForm = ref({})
+function openEditHeader(row) {
+  editRow.value = row
+  editForm.value = { supplierId: row.supplierId, expectedDeliveryDate: row.expectedDeliveryDate, remark: row.remark }
+  editVisible.value = true
+}
+async function saveHeader() {
+  try {
+    await api.put(`/purchase-order/${editRow.value.id}/header`, editForm.value)
+    ElMessage.success('已保存')
+    editVisible.value = false
+    fetch()
+  } catch (e) {}
+}
+async function audit(row) {
+  if (row.supplierId == null) { ElMessage.warning('请先在「编辑」里补充供应商，再审核'); return }
+  try {
+    await ElMessageBox.confirm(`审核请购单 ${row.orderNo}？审核后可转采购。`, '审核', { type: 'warning' })
+    await api.post(`/purchase-order/${row.id}/audit`)
+    ElMessage.success('已审核')
+    fetch()
+  } catch (e) {}
+}
+async function toPurchase(row) {
+  try {
+    await ElMessageBox.confirm(`将请购单 ${row.orderNo} 按明细逐物料转成采购单（已审核状态）？`, '转采购', { type: 'warning' })
+    const r = await api.post(`/purchase-order/${row.id}/to-purchase`)
+    ElMessage.success(`已转采购：${(r.purchaseOrders || []).join('、')}，请到采购单查看`)
     fetch()
   } catch (e) {}
 }
