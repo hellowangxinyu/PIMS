@@ -261,6 +261,7 @@
 </template>
 
 <script setup>
+import { statusType } from '../utils/statusTag'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'

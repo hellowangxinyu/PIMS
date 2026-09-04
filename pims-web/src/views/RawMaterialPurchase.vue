@@ -300,6 +300,7 @@
 </template>
 
 <script setup>
+import { statusType } from '../utils/statusTag'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

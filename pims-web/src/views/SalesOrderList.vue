@@ -258,6 +258,7 @@
 </template>
 
 <script setup>
+import { statusType } from '../utils/statusTag'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { loadTaxRate, netOfTax, taxOf, fmtTax } from '../utils/tax'
