@@ -47,11 +47,14 @@ export default defineComponent({
         return node
       })
     }
-    // v6.4 表格密度统一：未显式指定 size 的表格默认 small（ERP 高密度惯例，与既有 size="small" 页面拉齐）
-    const { size, ...rest } = attrs
-    return () => h(ElTable, { size: size || 'small', ...rest, onHeaderDragend }, {
-      ...slots,
-      default: slots.default ? () => injectWidth(slots.default()) : undefined
-    })
+    // v6.4.1 修复：解构必须放 render 内（attrs 是响应式代理，setup 里一次性解构会冻结 data 为
+    // 初始空数组——"供应商/物料全没了"实为全站表格行不渲染，数据一直在库）
+    return () => {
+      const { size, ...rest } = attrs
+      return h(ElTable, { size: size || 'small', ...rest, onHeaderDragend }, {
+        ...slots,
+        default: slots.default ? () => injectWidth(slots.default()) : undefined
+      })
+    }
   }
 })
