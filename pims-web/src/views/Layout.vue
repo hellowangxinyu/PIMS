@@ -664,7 +664,7 @@ async function logout() {
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, var(--pims-primary), var(--pims-primary-light));
   border-radius: 10px;
-  color: var(--pims-sidebar-text); font-weight: 700; font-size: 14px;
+  color: #fff; font-weight: 700; font-size: 14px;   /* v6.9.2：头像字在黛青渐变底上必须白色（v6.9 侧栏反白时误改）*/
   flex-shrink: 0;
 }
 

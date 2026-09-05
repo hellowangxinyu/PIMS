@@ -216,9 +216,9 @@ public class BankReconciliationService {
             // 收/付款单未勾对池（按单号判断已勾）
             Set<String> matched = matchedKeys(accountId);
             List<Map<String, Object>> receipts = jdbc.queryForList(
-                    "SELECT id AS jid, doc_no AS docNo, strftime('%Y-%m-%d', receipt_date/1000, 'unixepoch', 'localtime') AS d, amount, customer_name AS party FROM payment_receipt WHERE bank_account = ? ORDER BY receipt_date", accountName(accountId));
+                    "SELECT id AS jid, 'RECEIPT' AS side, doc_no AS docNo, strftime('%Y-%m-%d', receipt_date/1000, 'unixepoch', 'localtime') AS d, amount, customer_name AS party FROM payment_receipt WHERE bank_account = ? ORDER BY receipt_date", accountName(accountId));
             List<Map<String, Object>> disbs = jdbc.queryForList(
-                    "SELECT id AS jid, doc_no AS docNo, strftime('%Y-%m-%d', pay_date/1000, 'unixepoch', 'localtime') AS d, amount, supplier_name AS party FROM payment_disbursement WHERE bank_account = ? ORDER BY pay_date", accountName(accountId));
+                    "SELECT id AS jid, 'DISBURSEMENT' AS side, doc_no AS docNo, strftime('%Y-%m-%d', pay_date/1000, 'unixepoch', 'localtime') AS d, amount, supplier_name AS party FROM payment_disbursement WHERE bank_account = ? ORDER BY pay_date", accountName(accountId));
             int auto = 0;
             for (Map<String, Object> st : statements) {
                 BigDecimal amt = toBd(st.get("amount"));

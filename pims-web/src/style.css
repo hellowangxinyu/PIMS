@@ -291,9 +291,9 @@ body {
 .el-tag--light {
   border: none !important;
 }
-.el-tag--success { background: #ecfdf5; color: #059669; }
-.el-tag--danger { background: #fef2f2; color: #dc2626; }
-.el-tag--warning { background: #fffbeb; color: #d97706; }
+.el-tag--success { background: rgba(91,138,94,0.1); color: var(--pims-success, #5b8a5e); }
+.el-tag--danger { background: rgba(176,90,78,0.1); color: var(--pims-danger, #b05a4e); }
+.el-tag--warning { background: rgba(181,138,60,0.1); color: var(--pims-warning, #b58a3c); }
 .el-tag--info { background: #f1f5f9; color: #64748b; }
 
 /* ----- 对话框 ----- */
