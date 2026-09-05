@@ -84,8 +84,14 @@ public class InventoryController {
 
     @GetMapping("/warehouse/{warehouseId}")
     @SaCheckPermission(value = "inventory:read")
-    public Result<List<InventoryLedger>> byWarehouse(@PathVariable String warehouseId) {
-        return Result.ok(enrichQcInfo(service.queryByWarehouse(warehouseId)));
+    public Result<?> byWarehouse(@PathVariable String warehouseId,
+                                 @RequestParam(required = false) String keyword,
+                                 @RequestParam(defaultValue = "1") int page,
+                                 @RequestParam(defaultValue = "200") int size) {
+        // v7.1：默认分页 200 行（原全表返回；不传分页参数的老调用方也自动受上限保护）
+        var r = service.queryByWarehousePaged(warehouseId, keyword, page, Math.min(size, 1000));
+        r.put("rows", enrichQcInfo((List<InventoryLedger>) r.get("rows")));
+        return Result.ok(r);
     }
 
     /** 库存批次选项（按物料+仓库查询，按批号聚合可用量，供退货出库等选批号，v5.4） */

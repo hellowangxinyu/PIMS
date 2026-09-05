@@ -868,15 +868,25 @@ public class RecipeService {
                 priceMap.put(String.valueOf(row.get("code")), amount.divide(qty, 4, RoundingMode.HALF_UP));
             }
         }
-        // 回退：最近原料采购单价（v6.1.6：按创建时间倒序取最新——原 findAll 无序，取到哪单算哪单）
-        for (RawMaterialPurchase p : rawPurchaseRepo.findAllByOrderByCreateTimeDesc()) {
-            if (p.materialCode == null || p.unitPrice == null || priceMap.containsKey(p.materialCode)) continue;
-            priceMap.put(p.materialCode, p.unitPrice);
+        // v7.1：回退采购价改 SQL 按物料取最新一条（原 Java 全表加载逐行比对——
+        // 采购单到几万行时配方页内存全扫；ROW_NUMBER 取每物料最新，与"倒序取首个"同语义）
+        for (var row : jdbc.queryForList("""
+                SELECT material_code AS code, unit_price AS p FROM (
+                    SELECT material_code, unit_price,
+                           ROW_NUMBER() OVER (PARTITION BY material_code ORDER BY create_time DESC, id DESC) AS rn
+                    FROM raw_material_purchase WHERE material_code IS NOT NULL AND unit_price IS NOT NULL
+                ) WHERE rn = 1
+                """)) {
+            priceMap.putIfAbsent(String.valueOf(row.get("code")), toBigDecimal(row.get("p")));
         }
-        // 回退：最近成品采购单价（v6.1.6：同上按时间倒序）
-        for (FinishedProductPurchase p : finishedPurchaseRepo.findAllByOrderByCreateTimeDesc()) {
-            if (p.materialCode == null || p.unitPrice == null || priceMap.containsKey(p.materialCode)) continue;
-            priceMap.put(p.materialCode, p.unitPrice);
+        for (var row : jdbc.queryForList("""
+                SELECT material_code AS code, unit_price AS p FROM (
+                    SELECT material_code, unit_price,
+                           ROW_NUMBER() OVER (PARTITION BY material_code ORDER BY create_time DESC, id DESC) AS rn
+                    FROM finished_product_purchase WHERE material_code IS NOT NULL AND unit_price IS NOT NULL
+                ) WHERE rn = 1
+                """)) {
+            priceMap.putIfAbsent(String.valueOf(row.get("code")), toBigDecimal(row.get("p")));
         }
         return priceMap;
     }

@@ -70,7 +70,24 @@ public class InventoryService {
         return ledgerRepo.findByMaterialCode(materialCode);
     }
 
-    /** 按仓库查所有物料库存 */
+    /** 按仓库查物料库存（v7.1：加分页与关键词——原全表返回，台账到几十万行会拖垮内存与传输） */
+    public java.util.Map<String, Object> queryByWarehousePaged(String warehouseId, String keyword, int page, int size) {
+        String k = keyword == null ? "" : keyword.trim().toLowerCase();
+        List<InventoryLedger> all = ledgerRepo.findByWarehouseId(warehouseId);
+        List<InventoryLedger> filtered = k.isEmpty() ? all : all.stream()
+                .filter(l -> (l.materialCode != null && l.materialCode.toLowerCase().contains(k))
+                        || (l.materialName != null && l.materialName.toLowerCase().contains(k))
+                        || (l.batchNo != null && l.batchNo.toLowerCase().contains(k)))
+                .toList();
+        int from = Math.max(0, (page - 1) * size);
+        int to = Math.min(filtered.size(), from + size);
+        java.util.Map<String, Object> r = new java.util.LinkedHashMap<>();
+        r.put("rows", filtered.subList(from, to));
+        r.put("total", filtered.size());
+        return r;
+    }
+
+    /** 兼容旧调用（全量，仅内部少量使用） */
     public List<InventoryLedger> queryByWarehouse(String warehouseId) {
         return ledgerRepo.findByWarehouseId(warehouseId);
     }

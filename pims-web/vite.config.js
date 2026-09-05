@@ -32,6 +32,13 @@ export default defineConfig({
   },
   build: {
     outDir: staticDir,
-    emptyOutDir: true
+    emptyOutDir: true,
+    // v7.1 分包：vendor（Element Plus/vue/router ~1MB）hash 跨版本稳定——发版只重下业务包（几十 KB）
+    rollupOptions: {
+      output: {
+        manualChunks: { vendor: ['element-plus', '@element-plus/icons-vue', 'vue', 'vue-router'] }
+      }
+    },
+    chunkSizeWarningLimit: 1600
   }
 })
