@@ -60,6 +60,14 @@
           <template #default="{ row }">{{ fmtTax(taxOf(row.unitPrice, taxRate)) }}</template>
         </el-table-column>
         <el-table-column prop="amount" label="总价" :width="cw('总价') || 110" align="right" />
+        <el-table-column label="周转天数" :width="cw('周转天数') || 100" align="center">
+          <template #default="{ row }">
+            <span v-if="row.stockDays != null" :style="stockDaysStyle(row.stockDays)">{{ row.stockDays }} 天</span>
+            <el-tooltip v-else content="近90天无出库或库存已清" placement="top">
+              <span style="color:#94a3b8">—</span>
+            </el-tooltip>
+          </template>
+        </el-table-column>
         <el-table-column label="最新入库日期" :width="cw('最新入库日期') || 110">
           <template #default="{ row }">{{ row.inboundDate || '-' }}</template>
         </el-table-column>
@@ -313,6 +321,13 @@ function rowClassName({ row }) {
 }
 
 // 可用量与库存量不一致时红色高亮，提示数据异常
+// v7.4 周转天数配色：≤45 天绿（快）、≥180 天红（呆滞预警）、中间灰
+function stockDaysStyle(d) {
+  if (d <= 45) return 'color:#16a34a;font-weight:600'
+  if (d >= 180) return 'color:#ef4444;font-weight:600'
+  return 'color:#475569'
+}
+
 function availableClass(row) {
   const q = Number(row.qty) || 0
   const a = Number(row.availableQty) || 0
