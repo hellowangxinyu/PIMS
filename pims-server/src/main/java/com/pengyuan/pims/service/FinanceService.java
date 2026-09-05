@@ -137,8 +137,25 @@ public class FinanceService {
      * 应收总表：按客户维度聚合应收账款（不分订单）
      * 返回每个客户的：应收总额、已收总额、剩余未收、单据数、状态汇总
      * v5.54：SQL GROUP BY 直出（替代 findAll 全量加载+内存分组）
+     * v7.6：加周转指标（start/end 为 yyyy-MM-dd 可空）——
+     *   期间立账 billed / 期初余额 opening / 期末余额 closing（=累计立账−累计收款）/
+     *   周转率 billed÷((期初+期末)/2) / 周转天数 365÷周转率（与库存周转同基数）；
+     *   期间外客户（期间无立账且期初期末均 0）不输出周转值
      */
-    public List<java.util.Map<String, Object>> listARTotalByCustomer() {
+    public List<java.util.Map<String, Object>> listARTotalByCustomer(String start, String end) {
+        boolean hasPeriod = start != null && !start.isBlank() && end != null && !end.isBlank();
+        String endEx = hasPeriod ? java.time.LocalDate.parse(end).plusDays(1).toString() : null;
+        java.util.Map<Long, java.math.BigDecimal> billed = hasPeriod
+                ? groupToMap(arRepo.billedByCustomer(start, endEx)) : java.util.Map.of();
+        java.util.Map<Long, java.math.BigDecimal> openBilled = hasPeriod
+                ? groupToMap(arRepo.cumBilledByCustomer(start)) : java.util.Map.of();
+        java.util.Map<Long, java.math.BigDecimal> closeBilled = hasPeriod
+                ? groupToMap(arRepo.cumBilledByCustomer(endEx)) : java.util.Map.of();
+        java.util.Map<Long, java.math.BigDecimal> openRecv = hasPeriod
+                ? groupToMap(receiptRepo.cumReceivedByCustomer(start)) : java.util.Map.of();
+        java.util.Map<Long, java.math.BigDecimal> closeRecv = hasPeriod
+                ? groupToMap(receiptRepo.cumReceivedByCustomer(endEx)) : java.util.Map.of();
+
         List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
         for (Object[] r : arRepo.totalByCustomer()) {
             java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
@@ -156,6 +173,15 @@ public class FinanceService {
             row.put("receivedRate", total.compareTo(BigDecimal.ZERO) > 0
                     ? received.multiply(new BigDecimal("100")).divide(total, 2, java.math.RoundingMode.HALF_UP)
                     : BigDecimal.ZERO);
+            if (hasPeriod) {
+                Long cid = ((Number) r[0]).longValue();
+                java.math.BigDecimal b = billed.getOrDefault(cid, BigDecimal.ZERO);
+                java.math.BigDecimal op = openBilled.getOrDefault(cid, BigDecimal.ZERO)
+                        .subtract(openRecv.getOrDefault(cid, BigDecimal.ZERO));
+                java.math.BigDecimal cl = closeBilled.getOrDefault(cid, BigDecimal.ZERO)
+                        .subtract(closeRecv.getOrDefault(cid, BigDecimal.ZERO));
+                fillTurnover(row, b, op, cl);
+            }
             result.add(row);
         }
         return result;
@@ -165,8 +191,22 @@ public class FinanceService {
      * 应付总表：按供应商维度聚合应付账款（不分订单）
      * 返回每个供应商的：应付总额、已付总额、剩余未付、单据数、状态汇总
      * v5.54：SQL GROUP BY 直出（替代 findAll 全量加载+内存分组）
+     * v7.6：加周转指标（口径同应收总表，余额=累计立账−累计付款）
      */
-    public List<java.util.Map<String, Object>> listAPTotalBySupplier() {
+    public List<java.util.Map<String, Object>> listAPTotalBySupplier(String start, String end) {
+        boolean hasPeriod = start != null && !start.isBlank() && end != null && !end.isBlank();
+        String endEx = hasPeriod ? java.time.LocalDate.parse(end).plusDays(1).toString() : null;
+        java.util.Map<Long, java.math.BigDecimal> billed = hasPeriod
+                ? groupToMap(apRepo.billedBySupplier(start, endEx)) : java.util.Map.of();
+        java.util.Map<Long, java.math.BigDecimal> openBilled = hasPeriod
+                ? groupToMap(apRepo.cumBilledBySupplier(start)) : java.util.Map.of();
+        java.util.Map<Long, java.math.BigDecimal> closeBilled = hasPeriod
+                ? groupToMap(apRepo.cumBilledBySupplier(endEx)) : java.util.Map.of();
+        java.util.Map<Long, java.math.BigDecimal> openPaid = hasPeriod
+                ? groupToMap(disbursementRepo.cumPaidBySupplier(start)) : java.util.Map.of();
+        java.util.Map<Long, java.math.BigDecimal> closePaid = hasPeriod
+                ? groupToMap(disbursementRepo.cumPaidBySupplier(endEx)) : java.util.Map.of();
+
         List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
         for (Object[] r : apRepo.totalBySupplier()) {
             java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
@@ -184,9 +224,44 @@ public class FinanceService {
             row.put("paidRate", total.compareTo(BigDecimal.ZERO) > 0
                     ? paid.multiply(new BigDecimal("100")).divide(total, 2, java.math.RoundingMode.HALF_UP)
                     : BigDecimal.ZERO);
+            if (hasPeriod) {
+                Long sid = ((Number) r[0]).longValue();
+                java.math.BigDecimal b = billed.getOrDefault(sid, BigDecimal.ZERO);
+                java.math.BigDecimal op = openBilled.getOrDefault(sid, BigDecimal.ZERO)
+                        .subtract(openPaid.getOrDefault(sid, BigDecimal.ZERO));
+                java.math.BigDecimal cl = closeBilled.getOrDefault(sid, BigDecimal.ZERO)
+                        .subtract(closePaid.getOrDefault(sid, BigDecimal.ZERO));
+                fillTurnover(row, b, op, cl);
+            }
             result.add(row);
         }
         return result;
+    }
+
+    /** v7.6 行级周转四件套：billed/opening/closing + 周转率/周转天数（平均余额≤0 或期间无立账 → null，前端显示 —） */
+    private void fillTurnover(java.util.Map<String, Object> row, java.math.BigDecimal billed,
+                              java.math.BigDecimal opening, java.math.BigDecimal closing) {
+        row.put("billedAmount", billed);
+        row.put("openingBalance", opening);
+        row.put("closingBalance", closing);
+        java.math.BigDecimal avg = opening.add(closing).divide(new BigDecimal("2"), 2, java.math.RoundingMode.HALF_UP);
+        if (avg.compareTo(BigDecimal.ZERO) > 0 && billed.compareTo(BigDecimal.ZERO) > 0) {
+            java.math.BigDecimal turnover = billed.divide(avg, 2, java.math.RoundingMode.HALF_UP);
+            row.put("turnover", turnover);
+            row.put("turnoverDays", new BigDecimal("365").divide(turnover, 1, java.math.RoundingMode.HALF_UP));
+        } else {
+            row.put("turnover", null);
+            row.put("turnoverDays", null);
+        }
+    }
+
+    /** v7.6 GROUP BY 结果（id列, 金额列）转 Map<id, 金额>（sqlite 聚合列兼容转 BigDecimal） */
+    private static java.util.Map<Long, java.math.BigDecimal> groupToMap(List<Object[]> rows) {
+        java.util.Map<Long, java.math.BigDecimal> m = new java.util.HashMap<>();
+        for (Object[] r : rows) {
+            if (r[0] != null) m.put(((Number) r[0]).longValue(), money(r[1]));
+        }
+        return m;
     }
 
     /** SQLite 聚合列兼容转金额（COALESCE(SUM,0) 可能返回 Integer/Double，统一 2 位小数） */

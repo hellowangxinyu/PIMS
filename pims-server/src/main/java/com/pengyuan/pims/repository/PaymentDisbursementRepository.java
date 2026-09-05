@@ -20,4 +20,10 @@ public interface PaymentDisbursementRepository extends JpaRepository<PaymentDisb
     @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM payment_disbursement WHERE doc_no LIKE ?1", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
+    /** v7.6 应付周转：某日零点前累计付款（按供应商），与累计立账相减得期初/期末应付余额 */
+    @Query(value = "SELECT supplier_id, COALESCE(SUM(amount),0) FROM payment_disbursement " +
+            "WHERE supplier_id IS NOT NULL AND create_time < 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "GROUP BY supplier_id", nativeQuery = true)
+    List<Object[]> cumPaidBySupplier(String dateExclusive);
+
 }

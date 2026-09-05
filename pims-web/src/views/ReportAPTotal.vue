@@ -23,11 +23,22 @@
         <div class="sc-label">整体付款率</div>
         <div class="sc-value">{{ paidRate }}%</div>
       </div>
+      <div class="summary-card">
+        <div class="sc-label">应付周转率（{{ periodLabel }}）</div>
+        <div class="sc-value" :style="turnoverStyle(overallTurnover)">{{ overallTurnover != null ? overallTurnover.toFixed(2) + ' 次' : '—' }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-label">应付周转天数</div>
+        <div class="sc-value" :style="turnoverStyle(overallTurnover)">{{ overallDays != null ? overallDays.toFixed(1) + ' 天' : '—' }}</div>
+      </div>
     </div>
 
     <div class="table-card">
       <div class="tab-toolbar">
         <span class="tab-count">共 {{ list.length }} 个供应商</span>
+        <el-date-picker v-model="range" type="daterange" size="small" value-format="YYYY-MM-DD"
+          range-separator="至" start-placeholder="开始日" end-placeholder="结束日"
+          :shortcuts="rangeShortcuts" style="width:260px" @change="load" />
       </div>
       <p-table :data="list" stripe border style="width:100%" show-summary
                 :summary-method="getSummary">
@@ -56,6 +67,29 @@
           <template #default="{ row }">
             <el-progress :percentage="Number(row.paidRate || 0)" :stroke-width="10"
                          :color="progressColor(row.paidRate)" />
+          </template>
+        </el-table-column>
+        <!-- v7.6 应付周转：周转率=期间立账÷平均余额（(期初+期末)/2），天数=365÷周转率；期间无立账或平均余额≤0 显示 — -->
+        <el-table-column prop="turnover" label="周转率" width="90" align="center" v-if="hasAmountPerm('finance-ar')">
+          <template #header>
+            <el-tooltip placement="top" content="周转率 = 期间立账金额 ÷ 平均应付余额（期初+期末)/2，所选区间口径">
+              <span>周转率<i style="font-style:normal;color:#94a3b8"> ?</i></span>
+            </el-tooltip>
+          </template>
+          <template #default="{ row }">
+            <span v-if="row.turnover != null" :style="turnoverStyle(row.turnover)">{{ Number(row.turnover).toFixed(2) }}</span>
+            <span v-else class="td-null">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="turnoverDays" label="周转天数" width="95" align="center" v-if="hasAmountPerm('finance-ar')">
+          <template #header>
+            <el-tooltip placement="top" content="周转天数 = 365 ÷ 周转率，表示一笔应付平均多少天付清（天数越长占用供应商资金越久）">
+              <span>周转天数<i style="font-style:normal;color:#94a3b8"> ?</i></span>
+            </el-tooltip>
+          </template>
+          <template #default="{ row }">
+            <span v-if="row.turnoverDays != null" :style="turnoverStyle(row.turnover)">{{ Number(row.turnoverDays).toFixed(1) }}</span>
+            <span v-else class="td-null">—</span>
           </template>
         </el-table-column>
       </p-table>
@@ -90,6 +124,33 @@ const paidRate = computed(() => {
   return (totalPaid.value * 100 / totalAmount.value).toFixed(2)
 })
 
+// v7.6 应付周转：期间筛选（默认本年初~今天），整体值=Σ行立账 ÷ ((Σ期初+Σ期末)/2)（不可对行周转率求和/平均）
+const range = ref([])
+const periodLabel = computed(() => range.value && range.value.length === 2
+  ? `${range.value[0].slice(5)}~${range.value[1].slice(5)}` : '')
+const rangeShortcuts = [
+  { text: '今年', value: () => { const y = new Date().getFullYear(); return [new Date(y, 0, 1), new Date()] } },
+  { text: '近一年', value: () => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return [d, new Date()] } },
+  { text: '近90天', value: () => { const d = new Date(); d.setDate(d.getDate() - 90); return [d, new Date()] } }
+]
+const overallTurnover = computed(() => {
+  const b = list.value.reduce((s, r) => s + Number(r.billedAmount || 0), 0)
+  const op = list.value.reduce((s, r) => s + Number(r.openingBalance || 0), 0)
+  const cl = list.value.reduce((s, r) => s + Number(r.closingBalance || 0), 0)
+  const avg = (op + cl) / 2
+  if (avg <= 0 || b <= 0) return null
+  return b / avg
+})
+const overallDays = computed(() => overallTurnover.value != null ? 365 / overallTurnover.value : null)
+// 天数≤45 绿（付款快）、≥120 红（长账期占用），中间默认色
+function turnoverStyle(turnover) {
+  if (turnover == null) return ''
+  const days = 365 / Number(turnover)
+  if (days <= 45) return 'color:#16a34a'
+  if (days >= 120) return 'color:#ef4444'
+  return ''
+}
+
 // 表尾合计
 function getSummary({ columns, data }) {
   const sums = []
@@ -102,17 +163,32 @@ function getSummary({ columns, data }) {
       sums[idx] = '¥' + fmt(data.reduce((s, r) => s + Number(r[prop] || 0), 0))
       return
     }
+    // v7.6 周转合计 = 整体口径（Σ立账 ÷ 平均Σ余额），非行值加总
+    if (prop === 'turnover' || prop === 'turnoverDays') {
+      if (overallTurnover.value == null) { sums[idx] = '—'; return }
+      sums[idx] = prop === 'turnover' ? overallTurnover.value.toFixed(2) : overallDays.value.toFixed(1)
+      return
+    }
     sums[idx] = ''
   })
   return sums
 }
 
 async function load() {
-  try { list.value = await api.get('/finance/ap/total') } catch {}
+  try {
+    const params = {}
+    if (range.value && range.value.length === 2) { params.start = range.value[0]; params.end = range.value[1] }
+    list.value = await api.get('/finance/ap/total', { params })
+  } catch {}
 }
 
 onMounted(async () => {
   try { perms.value = JSON.parse(localStorage.getItem('user') || '{}').permissions || [] } catch {}
+  // 默认本年初~今天
+  const y = new Date().getFullYear()
+  const n = new Date()
+  const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
+  range.value = [`${y}-01-01`, today]
   load()
 })
 </script>
@@ -133,4 +209,5 @@ onMounted(async () => {
 .status-chip.unpaid { background: #fee2e2; color: #b91c1c; }
 .status-chip.partial { background: #fef3c7; color: #b45309; }
 .status-chip.paid { background: #dcfce7; color: #15803d; }
+.td-null { color: #9ca3af; }
 </style>

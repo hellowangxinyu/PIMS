@@ -45,18 +45,20 @@ public class FinanceController {
         return Result.ok(list);
     }
 
-    /** 应收总表：按客户维度聚合（不分订单） */
+    /** 应收总表：按客户维度聚合（不分订单）；v7.6 可选 start/end（yyyy-MM-dd）带出周转率/周转天数 */
     @GetMapping("/ar/total")
     @SaCheckPermission(value = "finance:read")
-    public Result<?> listARTotal() {
-        return Result.ok(service.listARTotalByCustomer());
+    public Result<?> listARTotal(@RequestParam(required = false) String start,
+                                 @RequestParam(required = false) String end) {
+        return Result.ok(service.listARTotalByCustomer(start, end));
     }
 
-    /** 应付总表：按供应商维度聚合（不分订单） */
+    /** 应付总表：按供应商维度聚合（不分订单）；v7.6 可选 start/end 带出周转率/周转天数 */
     @GetMapping("/ap/total")
     @SaCheckPermission(value = "finance:read")
-    public Result<?> listAPTotal() {
-        return Result.ok(service.listAPTotalBySupplier());
+    public Result<?> listAPTotal(@RequestParam(required = false) String start,
+                                 @RequestParam(required = false) String end) {
+        return Result.ok(service.listAPTotalBySupplier(start, end));
     }
 
     @PostMapping("/ar")

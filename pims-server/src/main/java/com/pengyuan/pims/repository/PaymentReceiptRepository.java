@@ -20,4 +20,10 @@ public interface PaymentReceiptRepository extends JpaRepository<PaymentReceipt, 
     @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM payment_receipt WHERE doc_no LIKE ?1", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
+    /** v7.6 应收周转：某日零点前累计收款（按客户），与累计立账相减得期初/期末应收余额 */
+    @Query(value = "SELECT customer_id, COALESCE(SUM(amount),0) FROM payment_receipt " +
+            "WHERE customer_id IS NOT NULL AND create_time < 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "GROUP BY customer_id", nativeQuery = true)
+    List<Object[]> cumReceivedByCustomer(String dateExclusive);
+
 }

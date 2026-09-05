@@ -48,4 +48,15 @@ List<AccountsReceivable> findByCustomerId(Long customerId);
     @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM accounts_receivable WHERE doc_no LIKE ?1", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
+    // v7.6 应收周转：期间立账 / 累计立账（参数 yyyy-MM-dd，SQL 端折东八区零点毫秒，同 monthlyArSince 口径）
+    @Query(value = "SELECT customer_id, COALESCE(SUM(amount),0) FROM accounts_receivable " +
+            "WHERE customer_id IS NOT NULL AND create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "AND create_time < 1000 * (CAST(strftime('%s', ?2) AS INTEGER) - 28800) GROUP BY customer_id", nativeQuery = true)
+    List<Object[]> billedByCustomer(String startDate, String endDateExclusive);
+
+    @Query(value = "SELECT customer_id, COALESCE(SUM(amount),0) FROM accounts_receivable " +
+            "WHERE customer_id IS NOT NULL AND create_time < 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "GROUP BY customer_id", nativeQuery = true)
+    List<Object[]> cumBilledByCustomer(String dateExclusive);
+
 }
