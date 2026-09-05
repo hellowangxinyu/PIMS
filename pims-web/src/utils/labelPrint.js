@@ -103,6 +103,7 @@ export function computeBuckets(total, n, edited = {}) {
     const avg = Math.round((total / n) * 100) / 100
     const arr = Array(n).fill(avg)
     arr[n - 1] = Math.round((total - avg * (n - 1)) * 100) / 100
+    if (arr[n - 1] < 0) return null   // 极端小数均分四舍五入后尾桶可能为负（如 0.07 分 10 桶）——物理不可能，禁打
     return arr
   }
   const lockedSum = Object.values(edited).reduce((a, v) => a + Number(v), 0)
@@ -119,6 +120,7 @@ export function computeBuckets(total, n, edited = {}) {
   const lastFree = freeIdx[freeIdx.length - 1]
   const othersSum = arr.reduce((a, v, i) => i === lastFree ? a : a + v, 0)
   arr[lastFree] = Math.round((total - othersSum) * 100) / 100
+  if (arr[lastFree] < 0) return null   // 同上：尾差为负=这种分法物理不可能，走禁打而非打负数标签
   return arr
 }
 
