@@ -17,8 +17,26 @@ import java.util.Map;
 public class SampleController {
 
     private final SampleService service;
+    private final com.pengyuan.pims.repository.UserRepository userRepo;
 
-    public SampleController(SampleService service) { this.service = service; }
+    public SampleController(SampleService service, com.pengyuan.pims.repository.UserRepository userRepo) {
+        this.service = service;
+        this.userRepo = userRepo;
+    }
+
+    /** v7.7 派发人选：启用用户（username+姓名），sample:read 即可（内勤未必有 user:read） */
+    @GetMapping("/assignees")
+    @SaCheckPermission(value = "sample:read")
+    public Result<List<java.util.Map<String, String>>> assignees() {
+        List<java.util.Map<String, String>> list = new java.util.ArrayList<>();
+        for (com.pengyuan.pims.entity.User u : userRepo.findByEnabledTrue()) {
+            java.util.Map<String, String> m = new java.util.LinkedHashMap<>();
+            m.put("username", u.username);
+            m.put("realName", u.realName != null ? u.realName : u.username);
+            list.add(m);
+        }
+        return Result.ok(list);
+    }
 
     @GetMapping
     @SaCheckPermission(value = "sample:read")
@@ -42,11 +60,62 @@ public class SampleController {
     @SaCheckPermission(value = "sample:write")
     public Result<SampleRequest> update(@PathVariable Long id, @RequestBody SampleRequest s) { return Result.ok(service.update(id, s)); }
 
-    /** 开始调色（自动在研发进度建条目；ADJUST 回炉也可调用） */
+    /** 开始调色（v7.7 起前端主入口为派发+接收；本端点保留兼容，不再有页面入口） */
     @PostMapping("/{id}/coloring")
     @SaCheckPermission(value = "sample:write")
     public Result<SampleRequest> coloring(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return Result.ok(service.startColoring(id, body.get("colorist"), body.get("colorNote")));
+    }
+
+    // ==================== v7.7 打样任务/打样配方 ====================
+
+    /** 派发打样任务（选打样员，重复调用=改派） */
+    @PostMapping("/{id}/assign")
+    @SaCheckPermission(value = "sample:write")
+    public Result<SampleRequest> assign(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return Result.ok(service.assign(id, body.get("assignee")));
+    }
+
+    /** 打样员接收任务（仅 assignee 本人） */
+    @PostMapping("/{id}/accept")
+    @SaCheckPermission(value = "sample:write")
+    public Result<SampleRequest> accept(@PathVariable Long id) {
+        return Result.ok(service.accept(id));
+    }
+
+    /** 保存打样配方（首次自动生成 C 类成品物料；覆盖前旧明细快照存档） */
+    @PostMapping("/{id}/formula")
+    @SaCheckPermission(value = "sample:write")
+    public Result<java.util.Map<String, Object>> saveFormula(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return Result.ok(service.saveFormula(id, body));
+    }
+
+    /** 打样配方详情（未录过返回 null） */
+    @GetMapping("/{id}/formula")
+    @SaCheckPermission(value = "sample:read")
+    public Result<java.util.Map<String, Object>> getFormula(@PathVariable Long id) {
+        return Result.ok(service.getFormula(id));
+    }
+
+    /** 打样配方列表（转制漆下拉/管理） */
+    @GetMapping("/formulas")
+    @SaCheckPermission(value = "sample:read")
+    public Result<List<java.util.Map<String, Object>>> formulas() {
+        return Result.ok(service.listFormulas());
+    }
+
+    /** 转制漆前校验：色浆必须全部能匹配已发布制浆配方（严格拦截） */
+    @GetMapping("/formula/{formulaId}/convert-check")
+    @SaCheckPermission(value = "recipe:write")
+    public Result<java.util.Map<String, Object>> convertCheck(@PathVariable Long formulaId) {
+        return Result.ok(service.convertCheck(formulaId));
+    }
+
+    /** 打样配方一键转制漆配方（建 Recipe+V1.0 DRAFT+树预填，折算标准批量 100） */
+    @PostMapping("/formula/{formulaId}/to-recipe")
+    @SaCheckPermission(value = "recipe:write")
+    public Result<java.util.Map<String, Object>> toRecipe(@PathVariable Long formulaId, @RequestBody Map<String, Object> body) {
+        return Result.ok(service.toRecipe(formulaId, body));
     }
 
     /** 寄样 */

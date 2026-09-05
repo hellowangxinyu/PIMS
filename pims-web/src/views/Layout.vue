@@ -173,6 +173,7 @@ const NAV_GROUPS = [
       { path: '/abnormal-order', title: '异常订单处理', icon: Warning, perm: 'production:read' },
       { path: '/production-outbound', title: '生产领料', icon: List, perm: 'production:read' },
       { path: '/production-inbound', title: '生产入库', icon: Download, perm: 'production:write' },
+      { path: '/sample-task', title: '打样任务', icon: Brush, perm: 'sample:read' },
       { path: '/quality-inspection', title: '质检管理', icon: Checked, perm: 'qc:read' },
       { path: '/quality-statistics', title: '质量统计', icon: DataAnalysis, perm: 'qc:read' },
       { path: '/qc-template', title: '质检模板', icon: Files, perm: 'qc:read' }
@@ -332,7 +333,7 @@ const pageTitle = computed(() => {
     '/warehouse': '仓库', '/inventory': '库存查询', '/purchase': '采购管理',
     '/raw-material-purchase': '原料采购', '/finished-product-purchase': '成品采购',
     '/purchase-arrival': '采购到货', '/mrp-suggest': '采购建议 MRP', '/sales': '销售管理', '/outsource': '委外管理',
-    '/report-ar': '应收明细', '/report-ap': '应付明细', '/report-ar-total': '应收总表', '/report-ap-total': '应付总表', '/report-finance-trend': '趋势分析', '/payment-receipt': '收款单', '/payment-disbursement': '付款单', '/crm-pipeline': '商机管道', '/crm-contact': '联系人', '/quotation': '报价单', '/price-policy': '价格政策', '/sample': '打样样品', '/complaint': '客户投诉', '/weekly-topic': '每周议题', '/rd-progress': '研发进度', '/invoice': '发票管理', '/expense': '费用管理', '/advance': '预收预付', '/cost-accounting': '成本核算', '/report-profit-trial': '利润试算', '/customer-statement': '客户对账单', '/bank-reconciliation': '银行对账', '/supplier-statement': '供应商对账单', '/users': '用户管理', '/roles': '角色权限', '/dict': '数据字典', '/ai': 'AI 智能助手', '/ai-settings': 'AI 设置', '/logs': '操作日志', '/coding-rule': '编码规则',
+    '/report-ar': '应收明细', '/report-ap': '应付明细', '/report-ar-total': '应收总表', '/report-ap-total': '应付总表', '/report-finance-trend': '趋势分析', '/payment-receipt': '收款单', '/payment-disbursement': '付款单', '/crm-pipeline': '商机管道', '/crm-contact': '联系人', '/quotation': '报价单', '/price-policy': '价格政策', '/sample': '打样样品', '/sample-task': '打样任务', '/complaint': '客户投诉', '/weekly-topic': '每周议题', '/rd-progress': '研发进度', '/invoice': '发票管理', '/expense': '费用管理', '/advance': '预收预付', '/cost-accounting': '成本核算', '/report-profit-trial': '利润试算', '/customer-statement': '客户对账单', '/bank-reconciliation': '银行对账', '/supplier-statement': '供应商对账单', '/users': '用户管理', '/roles': '角色权限', '/dict': '数据字典', '/ai': 'AI 智能助手', '/ai-settings': 'AI 设置', '/logs': '操作日志', '/coding-rule': '编码规则',
     '/stock-check': '盘库管理', '/schedule': '排产中心', '/production-order': '生产订单', '/abnormal-order': '异常订单处理', '/production-outbound': '生产出库', '/production-inbound': '生产入库', '/sales-outbound': '销售出库',
     '/outsource-outbound': '委外出库', '/outsource-inbound': '委外入库', '/other-outbound': '其他出库', '/other-inbound': '其他入库', '/return-order': '采购退货单', '/supplier-quality-trace': '质量追溯（供应商）', '/sales-return': '销售退货', '/tailing-return': '油尾退回',
     '/report-purchase': '采购报表', '/report-inventory': '库存报表', '/report-production': '生产报表', '/production-progress': '生产进度表',

@@ -21,7 +21,9 @@
           <el-tag size="small" :type="statusType(row.status)">{{ STATUS[row.status] || row.status }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="colorist" label="调色员" :width="cw('调色员') || 80" />
+      <el-table-column label="打样员" :width="cw('打样员') || 80">
+        <template #default="{ row }">{{ row.assignee || row.colorist || '—' }}</template>
+      </el-table-column>
       <el-table-column label="轮次" :width="cw('轮次') || 60" align="center">
         <template #default="{ row }">{{ (row.adjustCount || 0) + 1 }}</template>
       </el-table-column>
@@ -30,8 +32,9 @@
       <el-table-column prop="applyDate" label="申请日期" :width="cw('申请日期') || 96" />
       <el-table-column label="操作" width="230" v-if="hasPerm('sample:write')">
         <template #default="{ row }">
-          <button class="op-btn op-btn-primary" v-if="row.status === 'APPLIED' || row.status === 'ADJUST'" @click="openColoring(row)">调色</button>
-          <button class="op-btn op-btn-primary" v-if="row.status === 'COLORING'" @click="openSend(row)">寄样</button>
+          <!-- v7.7：【调色】改【派发】（选打样员，自己打派给自己）；ASSIGNED 重派=改派。接收/录配方在打样任务页 -->
+          <button class="op-btn op-btn-primary" v-if="['APPLIED','ADJUST','ASSIGNED'].includes(row.status)" @click="openAssign(row)">{{ row.status === 'ASSIGNED' ? '改派' : '派发' }}</button>
+          <button class="op-btn op-btn-primary" v-if="row.status === 'COLORING' || row.status === 'FORMULATED'" @click="openSend(row)">寄样</button>
           <button class="op-btn op-btn-primary" v-if="row.status === 'SENT'" @click="openFeedback(row)">反馈</button>
           <button class="op-btn op-btn-success" v-if="row.status === 'SATISFIED'" @click="openWin(row)">转单</button>
           <button class="op-btn" @click="openDetail(row)">详情</button>
@@ -73,15 +76,19 @@
     </el-dialog>
 
     <!-- 调色 -->
-    <el-dialog :title="'开始调色 ' + (opRow?.sampleNo || '')" v-model="coloringVisible" width="min(1100px, 96vw)">
+    <!-- v7.7 派发打样任务（原调色对话框改为派发：打样员在打样任务页接收后才开始调色） -->
+    <el-dialog :title="'派发打样任务 ' + (opRow?.sampleNo || '')" v-model="assignVisible" width="460px">
       <el-form label-width="80px">
-        <el-form-item label="调色员"><el-input v-model="coloring.colorist" placeholder="研发调色负责人" /></el-form-item>
-        <el-form-item label="调色说明"><el-input v-model="coloring.colorNote" type="textarea" :rows="2" placeholder="基料选择/颜色方向等" /></el-form-item>
+        <el-form-item label="打样员" required>
+          <el-select v-model="assignForm.assignee" filterable placeholder="选择打样员（自己打就选自己）" style="width:100%">
+            <el-option v-for="u in assignees" :key="u.username" :label="u.realName + '（' + u.username + '）'" :value="u.username" />
+          </el-select>
+        </el-form-item>
       </el-form>
-      <div class="flow-tip">首次调色会自动在「研发进度」创建一条分类=调色的跟进条目，研发在自己页面同步进展。</div>
+      <div class="flow-tip">派发后打样员工作台出现「待接收打样任务」提醒；打样员接收 → 打样 → 在打样任务页录入配方（自动生成成品编码）。</div>
       <template #footer>
-        <el-button @click="coloringVisible=false">取消</el-button>
-        <el-button type="primary" @click="submitColoring">开始调色</el-button>
+        <el-button @click="assignVisible=false">取消</el-button>
+        <el-button type="primary" @click="submitAssign">派发</el-button>
       </template>
     </el-dialog>
 
@@ -158,7 +165,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useColumnResize } from '../composables/useColumnResize'
 
-const STATUS = { APPLIED: '已申请', COLORING: '调色中', SENT: '已寄样', SATISFIED: '客户满意', ADJUST: '需调整', WON: '已转单', LOST: '未成交' }
+const STATUS = { APPLIED: '已申请', ASSIGNED: '已派发', COLORING: '调色中', FORMULATED: '已录配方', SENT: '已寄样', SATISFIED: '客户满意', ADJUST: '需调整', WON: '已转单', LOST: '未成交' }
 
 const list = ref([])
 const customers = ref([])
@@ -168,8 +175,9 @@ const dialogVisible = ref(false)
 const editing = ref(null)
 const form = ref({})
 const opRow = ref(null)
-const coloringVisible = ref(false)
-const coloring = ref({})
+const assignVisible = ref(false)
+const assignForm = ref({ assignee: '' })
+const assignees = ref([])
 const sendVisible = ref(false)
 const send = ref({})
 const feedbackVisible = ref(false)
@@ -184,7 +192,7 @@ const { cw, onHeaderDragend } = useColumnResize('sample_request')
 
 function hasPerm(code) { return perms.value.includes(code) }
 // v6.4 状态色统一：全局 + 打样域局部
-const statusType = (s) => globalStatusType(s, { APPLIED: 'info', COLORING: 'primary', SENT: 'primary', SATISFIED: 'success', ADJUST: 'warning', WON: 'success', LOST: 'danger' })
+const statusType = (s) => globalStatusType(s, { APPLIED: 'info', ASSIGNED: 'warning', COLORING: 'primary', FORMULATED: 'success', SENT: 'primary', SATISFIED: 'success', ADJUST: 'warning', WON: 'success', LOST: 'danger' })
 
 async function fetch() {
   const params = {}
@@ -224,14 +232,22 @@ async function save() {
   } catch (e) { if (e && e.message) ElMessage.error(e.message) }
 }
 
-function openColoring(row) { opRow.value = row; coloring.value = { colorist: row.colorist || '', colorNote: '' }; coloringVisible.value = true }
-async function submitColoring() {
+async function openAssign(row) {
+  opRow.value = row
+  if (!assignees.value.length) {
+    try { assignees.value = await api.get('/sample/assignees') } catch { /* ignore */ }
+  }
+  assignForm.value = { assignee: row.assignee || '' }
+  assignVisible.value = true
+}
+async function submitAssign() {
+  if (!assignForm.value.assignee) { ElMessage.warning('请选择打样员'); return }
   try {
-    await api.post(`/sample/${opRow.value.id}/coloring`, coloring.value)
-    ElMessage.success('已进入调色中（研发进度已同步）')
-    coloringVisible.value = false
+    await api.post(`/sample/${opRow.value.id}/assign`, assignForm.value)
+    ElMessage.success('已派发（打样员接收后开始打样）')
+    assignVisible.value = false
     fetch()
-  } catch (e) { if (e && e.message) ElMessage.error(e.message) }
+  } catch (e) { ElMessage.error(e.response?.data?.msg || e.message || '派发失败') }
 }
 
 function openSend(row) { opRow.value = row; send.value = { sendDate: '', expressNo: '' }; sendVisible.value = true }

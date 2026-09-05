@@ -19,4 +19,9 @@ public interface SampleRequestRepository extends JpaRepository<SampleRequest, Lo
     /** v5.24 口径：取指定前缀最大单号序号（防并发撞号 + 删除不错位） */
     @Query(value = "SELECT MAX(CAST(SUBSTR(sample_no, -4) AS INTEGER)) FROM sample_request WHERE sample_no LIKE ?1", nativeQuery = true)
     Integer findMaxSeq(String prefix);
+
+    // v7.7 打样任务：按打样员查名下任务（待接收/进行中）+ 工作台待办计数
+    List<SampleRequest> findByAssigneeOrderByCreateTimeDescIdDesc(String assignee);
+
+    long countByAssigneeAndStatus(String assignee, String status);
 }

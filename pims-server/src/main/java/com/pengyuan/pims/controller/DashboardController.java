@@ -40,6 +40,7 @@ public class DashboardController {
     private final com.pengyuan.pims.service.CrmService crmService;
     private final com.pengyuan.pims.service.TaskService taskService;
     private final com.pengyuan.pims.service.UserService userService;
+    private final com.pengyuan.pims.repository.SampleRequestRepository sampleRepo;
 
     private final ReportService reportService;
     private final InventoryLedgerRepository ledgerRepo;
@@ -64,7 +65,8 @@ public class DashboardController {
                                com.pengyuan.pims.service.BackupService backupService,
                                com.pengyuan.pims.service.CrmService crmService,
                                com.pengyuan.pims.service.TaskService taskService,
-                               com.pengyuan.pims.service.UserService userService) {
+                               com.pengyuan.pims.service.UserService userService,
+                               com.pengyuan.pims.repository.SampleRequestRepository sampleRepo) {
         this.purchaseService = purchaseService;
         this.reportService = reportService;
         this.ledgerRepo = ledgerRepo;
@@ -86,6 +88,7 @@ public class DashboardController {
         this.crmService = crmService;
         this.taskService = taskService;
         this.userService = userService;
+        this.sampleRepo = sampleRepo;
     }
 
     @GetMapping
@@ -112,6 +115,10 @@ public class DashboardController {
         todos.put("dueArAmount", dueAmount);
         todos.put("overdueTopics", topicRepo.countByClosedDateIsNullAndPlanDateBefore(today));
         todos.put("dueFollowUp", crmService.dueFollowUpCount());  // v5.50 今日该跟进
+        // v7.7 打样任务：派发给我且待接收的数量（打样员工作台提醒，接收后消失）
+        try {
+            todos.put("sampleToAccept", sampleRepo.countByAssigneeAndStatus(userService.currentUsername(), "ASSIGNED"));
+        } catch (Exception ignored) { }
         // v5.67 任务督办：我的待办任务 + 逾期任务
         try {
             var myTasks = taskService.myTaskCount(userService.currentUsername());

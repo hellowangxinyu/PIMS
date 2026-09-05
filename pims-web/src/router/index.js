@@ -23,6 +23,7 @@ const routes = [
       { path: 'sales-outbound', name: 'SalesOutbound', component: () => import('../views/SalesOutbound.vue') },
       { path: 'quotation', name: 'QuotationList', component: () => import('../views/QuotationList.vue') },
       { path: 'sample', name: 'SampleRequestList', component: () => import('../views/SampleRequestList.vue') },
+      { path: 'sample-task', name: 'SampleTaskList', component: () => import('../views/SampleTaskList.vue') },
       { path: 'complaint', name: 'ComplaintList', component: () => import('../views/ComplaintList.vue') },
       { path: 'outsource-outbound', name: 'OutsourceOutbound', component: () => import('../views/OutsourceOutbound.vue') },
       { path: 'outsource-inbound', name: 'OutsourceInbound', component: () => import('../views/OutsourceInbound.vue') },

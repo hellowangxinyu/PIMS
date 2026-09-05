@@ -55,6 +55,7 @@
         <router-link v-if="todos.overdueTopics" to="/weekly-topic" class="todo-chip danger">会议议题逾期 <b>{{ todos.overdueTopics }}</b></router-link>
         <router-link v-if="todos.dueFollowUp" to="/crm-pipeline" class="todo-chip warn">今日待跟进 <b>{{ todos.dueFollowUp }}</b></router-link>
         <router-link v-if="todos.myOpenTasks" to="/task" class="todo-chip warn">我的任务 <b>{{ todos.myOpenTasks }}</b></router-link>
+        <router-link v-if="todos.sampleToAccept" to="/sample-task" class="todo-chip warn">待接收打样任务 <b>{{ todos.sampleToAccept }}</b></router-link>
         <router-link v-if="todos.overdueTasks" to="/task" class="todo-chip danger">任务逾期 <b>{{ todos.overdueTasks }}</b></router-link>
         <span v-if="todos.backupStale" class="todo-chip danger" title="每日 04:30 自动备份；长时间未备份请检查服务运行">数据库备份异常（上次：{{ todos.lastBackup ? todos.lastBackup.substring(0,16) : '从未' }}）</span>
       </div>

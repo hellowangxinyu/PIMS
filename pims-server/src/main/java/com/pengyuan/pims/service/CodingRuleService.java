@@ -111,8 +111,8 @@ public class CodingRuleService {
     }
 
     /**
-     * 半成品（色浆）取号：色浆小类(2) + 主材(1) + 流水(4) = 7 位，如 BWF0001 = 白浆/氟碳系。
-     * 流水按「小类+主材」前缀分组独立（0001 起），与原料全局序号无关。
+     * 半成品（色浆）取号：色浆小类(2) + 主材(1) + 流水(5) = 8 位，如 BWFT00010 = 白浆/氟碳系。
+     * v5.89 起序号 5 位全局池（v5.65 原为 4 位 7 位码，扩位后此注释同步修正）。
      */
     @Transactional
     public String generateSemiCode(String subCategoryCode, String mainMaterial) {
@@ -126,8 +126,8 @@ public class CodingRuleService {
     }
 
     /**
-     * 成品取号：漆型(2) + 主材(1) + 色系(1) + 流水(4) = 8 位，如 CWZH0001 = 面漆/聚酯/白。
-     * 流水按「漆型+主材+色系」前缀分组独立（112 组合各 9999 容量），与原料全局序号无关。
+     * 成品取号：漆型(2) + 主材(1) + 色系(1) + 流水(5) = 9 位，如 CWTH00010 = 面漆/聚酯/白。
+     * v5.89 起序号 5 位全局池（v5.65 原为 4 位 8 位码，扩位后此注释同步修正）。
      */
     @Transactional
     public String generateProductCode(String subCategoryCode, String mainMaterial, String colorSeries) {

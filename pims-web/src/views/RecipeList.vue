@@ -346,6 +346,15 @@
             <el-radio value="TINTING">调色（制漆）</el-radio>
           </el-radio-group>
         </el-form-item>
+        <!-- v7.7 从打样配方导入：选后自动带出成品物料/分类并预填配方树（折算标准批量 100，保存后可微调） -->
+        <el-form-item label="打样配方" v-if="recipeForm.recipeType === 'TINTING' && !editRecipeId">
+          <el-select v-model="sampleFormulaId" clearable filterable placeholder="（可选）选打样配方自动带入物料与配方树" style="width:100%" @change="onSampleFormulaChange">
+            <el-option v-for="f in sampleFormulas" :key="f.id"
+              :label="f.formulaNo + ' ' + (f.materialName || '') + (f.convertedRecipeId ? '（已转）' : '')" :value="f.id"
+              :disabled="!!f.convertedRecipeId" />
+          </el-select>
+          <div class="form-tip" v-if="sampleFormulaId">保存时自动按标准批量 100 折算配方树（打样用量 × 100÷打样总量），保存后可微调；色浆需有已发布制浆配方</div>
+        </el-form-item>
         <el-form-item label="工艺路线" required>
           <el-select v-model="recipeForm.processTemplateId" placeholder="选择工艺路线" style="width:100%">
             <el-option v-for="r in processRoutes" :key="r.id" :label="r.name + (r.isDefault ? ' ★' : '')" :value="r.id" />
@@ -591,10 +600,30 @@ function onSelectRecipe(row) {
 // ==================== 配方 CRUD ====================
 async function openCreateRecipe() {
   editRecipeId.value = null
+  sampleFormulaId.value = null
   recipeForm.value = { productName: '', productCode: '', recipeType: activeType.value, category: '', description: '', processTemplateId: null, qcTemplateId: null, packagingStandardId: null }
   await fetchProcessRoutes(recipeForm.value.recipeType)
   autoSelectDefaultRoute()
   recipeDialogVisible.value = true
+  if (!sampleFormulas.value.length) {
+    try { sampleFormulas.value = await api.get('/sample/formulas') } catch { /* 无打样权限时忽略 */ }
+  }
+}
+
+// v7.7 从打样配方导入：自动选中成品物料并带出分类/描述
+const sampleFormulaId = ref(null)
+const sampleFormulas = ref([])
+function onSampleFormulaChange(fid) {
+  if (!fid) return
+  const f = sampleFormulas.value.find(x => x.id === fid)
+  if (!f) return
+  // 打样生成的物料可能不在已缓存的 materials 里（如缓存早于物料创建），补进去保证下拉能选中
+  if (f.materialCode && !materials.value.some(m => m.code === f.materialCode)) {
+    materials.value.push({ code: f.materialCode, name: f.materialName, category: 'C', subCategory: f.subCategory, unit: 'kg' })
+  }
+  recipeForm.value.productCode = f.materialCode || ''
+  onProductChange(f.materialCode)
+  if (!recipeForm.value.description) recipeForm.value.description = '打样配方转入 ' + f.formulaNo
 }
 
 const productMaterials = computed(() => {
@@ -647,6 +676,30 @@ async function submitRecipe() {
   try {
     if (editRecipeId.value) {
       await api.put(`/recipe/${editRecipeId.value}`, recipeForm.value)
+    } else if (sampleFormulaId.value) {
+      // v7.7 打样配方一键转制漆：先严格校验色浆（缺制浆配方直接拦截提示清单）
+      try {
+        const chk = await api.get(`/sample/formula/${sampleFormulaId.value}/convert-check`)
+        if (!chk.ok) {
+          const names = (chk.missing || []).map(m => m.materialCode + ' ' + m.materialName).join('、')
+          ElMessage.error('以下色浆没有已发布的制浆配方，请先在制浆配方中建立：' + names)
+          saving.value = false
+          return
+        }
+      } catch (e) { ElMessage.error(e.response?.data?.msg || '校验失败'); saving.value = false; return }
+      const r = await api.post(`/sample/formula/${sampleFormulaId.value}/to-recipe`, {
+        processTemplateId: recipeForm.value.processTemplateId,
+        qcTemplateId: recipeForm.value.qcTemplateId,
+        packagingStandardId: recipeForm.value.packagingStandardId,
+        category: recipeForm.value.category
+      })
+      ElMessage.success(`已从打样配方创建制漆配方 ${r.recipeNo}（V1.0 草稿，配方树已按标准批量 100 预填，可微调）`)
+      recipeDialogVisible.value = false
+      await fetchList()
+      const created = recipeList.value.find(x => x.id === r.recipeId)
+      if (created) current.value = created
+      saving.value = false
+      return
     } else {
       await api.post('/recipe', recipeForm.value)
     }

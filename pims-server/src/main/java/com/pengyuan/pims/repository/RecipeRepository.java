@@ -12,6 +12,9 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
     /** v5.27：按产品编码查配方（销售订单转生产/转委外时自动匹配配方用） */
     Optional<Recipe> findFirstByProductCode(String productCode);
 
+    /** v7.7 打样配方转制漆：按物料编码取全部配方记录（多条时 findFirst 首条无 RELEASED 会误判缺失） */
+    java.util.List<Recipe> findByProductCode(String productCode);
+
     /** 按品名查配方（名称唯一性校验用；返回 List 以兼容历史同名数据，避免 Optional 多结果报错） */
     List<Recipe> findByProductName(String productName);
 

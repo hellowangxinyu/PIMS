@@ -38,6 +38,15 @@ const MAP = {
   RECEIVED: 'success',      // 到齐/收货完成（v6.6 补：采购页在用）
   REJECTED: 'danger',       // 已拒（质检拒收变体，与 REJECT 同义）
   PENDING_QC: 'warning',    // 待质检（待办）
+  // 打样（v7.7：ASSIGNED 派发待接收=橙、FORMULATED 已录配方=绿；APPLIED/COLORING 顺手补齐）
+  APPLIED: 'info',
+  ASSIGNED: 'warning',
+  COLORING: 'primary',
+  FORMULATED: 'success',
+  SATISFIED: 'success',
+  ADJUST: 'warning',
+  WON: 'success',
+  LOST: 'info',
   // 库存
   PASS_QUALIFIED: 'success',
 }

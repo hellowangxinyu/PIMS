@@ -7,7 +7,8 @@ import java.time.LocalDateTime;
 
 /**
  * v5.53 打样/样品申请。状态机（涂料打样链路）：
- * APPLIED 已申请 → COLORING 调色中（自动在研发进度建条目）→ SENT 已寄样
+ * APPLIED 已申请 → ASSIGNED 已派发（v7.7 选打样员）→ COLORING 调色中（自动在研发进度建条目）
+ * → FORMULATED 已录配方（v7.7 打样配方保存，自动生成成品物料）→ SENT 已寄样
  * → 反馈：SATISFIED 客户满意 / ADJUST 需调整（adjustCount+1，回到调色）
  * → WON 已转单（填订单号，研发进度结案）/ LOST 未成交（研发进度结案）
  */
@@ -42,6 +43,11 @@ public class SampleRequest {
     @Column(length = 200) public String lossReason;
     /** 联动的研发进度条目 id（COLORING 时自动创建） */
     public Long rdProgressId;
+    /** v7.7 派发的打样员（账号名）；打样任务页只看自己名下的单 */
+    @Column(length = 50) public String assignee;
+    /** 派发时间 / 打样员接收时间 */
+    public LocalDateTime assignTime;
+    public LocalDateTime receiveTime;
     @Column(length = 500) public String remark;
     public LocalDateTime createTime = LocalDateTime.now();
     public LocalDateTime updateTime;
