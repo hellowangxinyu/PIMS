@@ -157,21 +157,25 @@ public interface InventoryLedgerRepository extends JpaRepository<InventoryLedger
     @Query(value = "SELECT l.material_code, COALESCE(MAX(l.material_name),''), COALESCE(MAX(l.unit),''), COUNT(DISTINCT l.batch_no), " +
             "COALESCE(SUM(l.qty),0), COALESCE(SUM(l.available_qty),0), " +
             "CASE WHEN SUM(l.qty)=0 THEN 0 ELSE COALESCE(SUM(l.amount), SUM(l.qty*l.unit_price))/SUM(l.qty) END, " +
-            "COALESCE(SUM(l.amount), SUM(l.qty*l.unit_price)), MAX(l.inbound_date) " +
-            "FROM inventory_ledger l " +
+            "COALESCE(SUM(l.amount), SUM(l.qty*l.unit_price)), MAX(l.inbound_date), " +
+            "COALESCE(MAX(m.category),''), COALESCE(MAX(m.sub_category),'') " +
+            "FROM inventory_ledger l LEFT JOIN material m ON m.code = l.material_code " +
             "WHERE (:kw = '' OR l.material_code LIKE %:kw% OR l.material_name LIKE %:kw%) " +
             "AND (:wh = '' OR l.warehouse_id = :wh) " +
+            "AND (:zone = '' OR l.location_id IN (SELECT CAST(wl.id AS TEXT) FROM warehouse_location wl WHERE wl.zone_id = CAST(:zone AS INTEGER)) OR (l.location_id IS NULL AND :zone = '-')) " +
             "AND (:wh <> '' OR l.qc_status IS NULL OR l.qc_status NOT IN ('REJECT','TAILING','EXPIRED')) " +
             "GROUP BY l.material_code HAVING SUM(l.qty) > 0 ORDER BY l.material_code",
             countQuery = "SELECT COUNT(*) FROM (SELECT 1 FROM inventory_ledger l " +
                     "WHERE (:kw = '' OR l.material_code LIKE %:kw% OR l.material_name LIKE %:kw%) " +
                     "AND (:wh = '' OR l.warehouse_id = :wh) " +
+                    "AND (:zone = '' OR l.location_id IN (SELECT CAST(wl.id AS TEXT) FROM warehouse_location wl WHERE wl.zone_id = CAST(:zone AS INTEGER)) OR (l.location_id IS NULL AND :zone = '-')) " +
                     "AND (:wh <> '' OR l.qc_status IS NULL OR l.qc_status NOT IN ('REJECT','TAILING','EXPIRED')) " +
                     "GROUP BY l.material_code HAVING SUM(l.qty) > 0)",
             nativeQuery = true)
     org.springframework.data.domain.Page<Object[]> sumByCode(
             @org.springframework.data.repository.query.Param("kw") String kw,
             @org.springframework.data.repository.query.Param("wh") String wh,
+            @org.springframework.data.repository.query.Param("zone") String zone,
             org.springframework.data.domain.Pageable pageable);
 
     /** 按编码+批次聚合（同批次跨库位合计）：编码/品名/批号/单位/库存量/可用量/单价/总价/最早入库日期/最晚过期日期/库位/质检状态/质检单号/检测结果/检验员/检验日期 */
@@ -181,20 +185,24 @@ public interface InventoryLedgerRepository extends JpaRepository<InventoryLedger
             "COALESCE(SUM(l.amount), SUM(l.qty*l.unit_price)), MIN(l.inbound_date), MAX(l.expiry_date), " +
             "COALESCE(GROUP_CONCAT(DISTINCT COALESCE(NULLIF(l.location_name,''),'')),''), " +
             "COALESCE(MAX(l.qc_status),''), " +
-            "COALESCE(MAX(l.qc_inspection_no),''), COALESCE(MAX(l.qc_result),''), COALESCE(MAX(l.qc_inspector),''), MAX(l.qc_date) " +
-            "FROM inventory_ledger l " +
+            "COALESCE(MAX(l.qc_inspection_no),''), COALESCE(MAX(l.qc_result),''), COALESCE(MAX(l.qc_inspector),''), MAX(l.qc_date), " +
+            "COALESCE(MAX(m.category),''), COALESCE(MAX(m.sub_category),'') " +
+            "FROM inventory_ledger l LEFT JOIN material m ON m.code = l.material_code " +
             "WHERE (:kw = '' OR l.material_code LIKE %:kw% OR l.material_name LIKE %:kw% OR l.batch_no LIKE %:kw%) " +
             "AND (:wh = '' OR l.warehouse_id = :wh) " +
+            "AND (:zone = '' OR l.location_id IN (SELECT CAST(wl.id AS TEXT) FROM warehouse_location wl WHERE wl.zone_id = CAST(:zone AS INTEGER)) OR (l.location_id IS NULL AND :zone = '-')) " +
             "AND (:wh <> '' OR l.qc_status IS NULL OR l.qc_status NOT IN ('REJECT','TAILING','EXPIRED')) " +
             "GROUP BY l.material_code, l.batch_no HAVING SUM(l.qty) > 0 ORDER BY l.material_code, l.batch_no",
             countQuery = "SELECT COUNT(*) FROM (SELECT 1 FROM inventory_ledger l " +
                     "WHERE (:kw = '' OR l.material_code LIKE %:kw% OR l.material_name LIKE %:kw% OR l.batch_no LIKE %:kw%) " +
                     "AND (:wh = '' OR l.warehouse_id = :wh) " +
+                    "AND (:zone = '' OR l.location_id IN (SELECT CAST(wl.id AS TEXT) FROM warehouse_location wl WHERE wl.zone_id = CAST(:zone AS INTEGER)) OR (l.location_id IS NULL AND :zone = '-')) " +
                     "AND (:wh <> '' OR l.qc_status IS NULL OR l.qc_status NOT IN ('REJECT','TAILING','EXPIRED')) " +
                     "GROUP BY l.material_code, l.batch_no HAVING SUM(l.qty) > 0)",
             nativeQuery = true)
     org.springframework.data.domain.Page<Object[]> sumByBatch(
             @org.springframework.data.repository.query.Param("kw") String kw,
             @org.springframework.data.repository.query.Param("wh") String wh,
+            @org.springframework.data.repository.query.Param("zone") String zone,
             org.springframework.data.domain.Pageable pageable);
 }

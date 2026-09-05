@@ -28,10 +28,27 @@
         </div>
       </div>
 
+      <!-- v7.5：仓库→分库两级筛选（选中仓库后展示其分库；「全部」=整仓汇总，「未分库位」=台账未落库位的历史行） -->
+      <div class="zone-bar" v-if="zones.length">
+        <span class="zone-label">分库</span>
+        <button :class="['zone-btn', { active: currentZone === '' }]" @click="switchZone('')">全部</button>
+        <button v-for="z in zones" :key="z.id"
+          :class="['zone-btn', { active: currentZone === String(z.id) }]"
+          @click="switchZone(String(z.id))">{{ z.name }}</button>
+        <button :class="['zone-btn', { active: currentZone === '-' }]" @click="switchZone('-')">未分库位</button>
+      </div>
+
       <!-- v5.22 视图一：按编码聚合（同一编码跨批次/库位合计总量） -->
       <p-table v-if="view === 'code'" :data="rows" stripe border style="width:100%" @header-dragend="onHeaderDragend">
         <el-table-column prop="materialCode" label="编码" :width="cw('编码') || 140" />
         <el-table-column prop="materialName" label="品名" :width="cw('品名') || 160" show-overflow-tooltip />
+        <!-- v7.5：大类/小类（material 档案带出，字典转义；无档案的历史编码显示原码） -->
+        <el-table-column label="大类" :width="cw('大类') || 80" align="center">
+          <template #default="{ row }">{{ row.category ? dictLabel('material_category', row.category) : '—' }}</template>
+        </el-table-column>
+        <el-table-column label="小类" :width="cw('小类') || 110" align="center" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.subCategory ? dictLabel('material_sub_category', row.subCategory) : '—' }}</template>
+        </el-table-column>
         <el-table-column prop="unit" label="单位" :width="cw('单位') || 70" align="center">
           <template #default="{ row }">{{ row.unit || 'kg' }}</template>
         </el-table-column>
@@ -77,6 +94,13 @@
       <p-table v-else :data="rows" stripe border style="width:100%" @header-dragend="onHeaderDragend" :row-class-name="rowClassName">
         <el-table-column prop="materialCode" label="编码" :width="cw('编码') || 140" />
         <el-table-column prop="materialName" label="品名" :width="cw('品名') || 160" show-overflow-tooltip />
+        <!-- v7.5：大类/小类（同 code 视图） -->
+        <el-table-column label="大类" :width="cw('大类') || 80" align="center">
+          <template #default="{ row }">{{ row.category ? dictLabel('material_category', row.category) : '—' }}</template>
+        </el-table-column>
+        <el-table-column label="小类" :width="cw('小类') || 110" align="center" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.subCategory ? dictLabel('material_sub_category', row.subCategory) : '—' }}</template>
+        </el-table-column>
         <el-table-column prop="batchNo" label="批号" :width="cw('批号') || 130" show-overflow-tooltip />
         <!-- v5.31：批次所在库位（不合格品也精确到库位） -->
         <el-table-column label="库位" :width="cw('库位') || 110" show-overflow-tooltip>
@@ -200,6 +224,29 @@ const rows = ref([])
 const total = ref(0)
 const warehouses = ref([])
 const exporting = ref(false)
+// v7.5：仓库→分库二级筛选
+const zones = ref([])
+const currentZone = ref('')
+// v7.5：大类/小类列字典（material_category / material_sub_category 码转中文）
+const dicts = ref({})
+
+function dictLabel(type, value) {
+  const items = dicts.value[type] || []
+  const found = items.find(d => d.value === value)
+  return found ? found.label : (value || '—')
+}
+
+async function fetchDicts() {
+  try {
+    const all = await api.get('/dict')
+    const map = {}
+    for (const item of all) {
+      if (!map[item.type]) map[item.type] = []
+      map[item.type].push(item)
+    }
+    dicts.value = map
+  } catch (e) { /* 字典拉不到时大类/小类显示原码 */ }
+}
 
 // v5.22：显示视图——code=按编码聚合总量 / batch=按批次聚合余量（默认按批次，与原有明细口径最接近）
 const view = ref('batch')
@@ -211,6 +258,7 @@ async function doExport() {
     const params = { view: view.value }
     if (currentWh.value) params.warehouseId = currentWh.value
     if (keyword.value.trim()) params.keyword = keyword.value.trim()
+    if (currentZone.value) params.zoneId = currentZone.value
     await downloadFile('/inventory/export', params, `库存-${view.value === 'code' ? '按编码' : '按批次'}-${new Date().toISOString().slice(0, 10)}.xlsx`)
   } catch (e) { /* downloadFile 内已提示 */ }
   finally { exporting.value = false }
@@ -338,8 +386,9 @@ function availableClass(row) {
 // v5.9：后端分页查询（仓库 + 关键字），切换仓库/搜索/视图时重新请求
 // v5.22：改调 /inventory/summary（按编码聚合 或 按编码+批次聚合）
 async function fetchInventory() {
-  const params = { view: view.value, page: page.value, pageSize: pageSize.value, warehouseId: currentWh.value }
-  if (keyword.value.trim()) params.keyword = keyword.value.trim()
+    const params = { view: view.value, page: page.value, pageSize: pageSize.value, warehouseId: currentWh.value }
+    if (keyword.value.trim()) params.keyword = keyword.value.trim()
+    if (currentZone.value) params.zoneId = currentZone.value
   try {
     const res = await api.get('/inventory/summary', { params })
     rows.value = res.rows
@@ -377,14 +426,32 @@ function printQcReport() {
   if (frame && frame.contentWindow) { frame.contentWindow.focus(); frame.contentWindow.print() }
 }
 
-function switchWarehouse(w) {
+// v7.5：切换仓库→重置分库并拉取该仓分库列表（无分库的老仓不显示二级条）
+async function loadZones(warehouseId) {
+  currentZone.value = ''
+  zones.value = []
+  if (!warehouseId) return
+  try {
+    zones.value = (await api.get(`/warehouse/${warehouseId}/zone`)).filter(z => z.enabled !== false)
+  } catch (e) { /* ignore */ }
+}
+
+function switchZone(z) {
+  currentZone.value = z
+  page.value = 1
+  fetchInventory()
+}
+
+async function switchWarehouse(w) {
   currentWh.value = String(w.id)
+  await loadZones(currentWh.value)
   page.value = 1
   fetchInventory()
 }
 
 onMounted(async () => {
   loadTaxRate(api).then(r => { taxRate.value = r })
+  fetchDicts()
   try {
     // v5.32：只显示启用中的仓库（已禁用旧仓不再出现，避免误以为还有库存）
     warehouses.value = (await api.get('/warehouse')).filter(w => w.enabled !== false)
@@ -392,6 +459,7 @@ onMounted(async () => {
   // 默认选中第一个仓库
   if (warehouses.value.length) {
     currentWh.value = String(warehouses.value[0].id)
+    await loadZones(currentWh.value)
     fetchInventory()
   }
 })
@@ -455,6 +523,44 @@ async function showPriceTrend(row) {
   color: #15803d;
 }
 .filter-btn.active {
+  background: #f0fdf4;
+  border-color: #22c55e;
+  color: #15803d;
+  font-weight: 600;
+}
+/* v7.5：分库二级筛选条（比仓库按钮小一号，虚线框区分层级） */
+.zone-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 16px 0;
+  padding: 8px 14px;
+  background: #fff;
+  border: 1px dashed #e2e8f0;
+  border-radius: 6px;
+}
+.zone-label {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+.zone-btn {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #64748b;
+  border-radius: 4px;
+  padding: 3px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
+}
+.zone-btn:hover {
+  border-color: #22c55e;
+  color: #15803d;
+}
+.zone-btn.active {
   background: #f0fdf4;
   border-color: #22c55e;
   color: #15803d;

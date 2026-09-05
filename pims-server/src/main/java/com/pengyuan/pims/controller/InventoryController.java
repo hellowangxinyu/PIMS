@@ -116,12 +116,14 @@ public class InventoryController {
                              @RequestParam(defaultValue = "1") int page,
                              @RequestParam(defaultValue = "25") int pageSize,
                              @RequestParam(defaultValue = "") String keyword,
-                             @RequestParam(required = false) String warehouseId) {
+                             @RequestParam(required = false) String warehouseId,
+                             @RequestParam(required = false) String zoneId) {
         String kw = keyword == null ? "" : keyword.trim();
         String wh = warehouseId == null ? "" : warehouseId.trim();
+        String zn = zoneId == null ? "" : zoneId.trim();   // v7.5 分库过滤（空=全库）
         var pr = org.springframework.data.domain.PageRequest.of(page - 1, pageSize);
         if ("batch".equals(view)) {
-            var rows = ledgerRepo.sumByBatch(kw, wh, pr);
+            var rows = ledgerRepo.sumByBatch(kw, wh, zn, pr);
             List<Map<String, Object>> list = new ArrayList<>();
             for (Object[] r : rows.getContent()) {
                 Map<String, Object> m = new LinkedHashMap<>();
@@ -145,13 +147,15 @@ public class InventoryController {
                 m.put("qcResult", r.length > 13 && r[13] != null && !r[13].toString().isEmpty() ? r[13].toString() : null);
                 m.put("qcInspector", r.length > 14 && r[14] != null && !r[14].toString().isEmpty() ? r[14].toString() : null);
                 m.put("qcDate", r.length > 15 ? msToDate(r[15]) : null);
+                m.put("category", r.length > 16 ? nz(r[16]) : null);         // v7.5 大类
+                m.put("subCategory", r.length > 17 ? nz(r[17]) : null);     // v7.5 小类
                 list.add(m);
             }
             enrichQcForMaps(list);
             return Result.ok(java.util.Map.of("rows", list, "total", rows.getTotalElements()));
         }
         // view=code
-        var rows = ledgerRepo.sumByCode(kw, wh, pr);
+        var rows = ledgerRepo.sumByCode(kw, wh, zn, pr);
         List<Map<String, Object>> list = new ArrayList<>();
         for (Object[] r : rows.getContent()) {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -165,6 +169,8 @@ public class InventoryController {
             m.put("amount", r[7]);
             m.put("inboundDate", msToDate(r[8]));
             m.put("stockDays", stockDays().get(r[0]));   // v7.4 周转天数（null=无出库/无库存）
+            m.put("category", r.length > 9 ? nz(r[9]) : null);         // v7.5 大类
+            m.put("subCategory", r.length > 10 ? nz(r[10]) : null);    // v7.5 小类
             list.add(m);
         }
         return Result.ok(java.util.Map.of("rows", list, "total", rows.getTotalElements()));
@@ -208,6 +214,11 @@ public class InventoryController {
             result.put(e.getKey(), Math.round(365.0 / annualTurnover));
         }
         return result;
+    }
+
+    /** 空串归一 null（SQL COALESCE('') 防类型推断的回转） */
+    private String nz(Object v) {
+        return v == null || v.toString().isEmpty() ? null : v.toString();
     }
 
     /** 毫秒时间戳转 yyyy-MM-dd（native SQL 日期列返回毫秒，与实体 LocalDate 序列化格式保持一致） */
@@ -313,12 +324,14 @@ public class InventoryController {
     public void export(@RequestParam(defaultValue = "code") String view,
                        @RequestParam(defaultValue = "") String keyword,
                        @RequestParam(required = false) String warehouseId,
+                       @RequestParam(required = false) String zoneId,
                        jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
         String kw = keyword == null ? "" : keyword.trim();
         String wh = warehouseId == null ? "" : warehouseId.trim();
+        String zn = zoneId == null ? "" : zoneId.trim();
         var pr = org.springframework.data.domain.PageRequest.of(0, 100000);
         if ("batch".equals(view)) {
-            var rows = ledgerRepo.sumByBatch(kw, wh, pr);
+            var rows = ledgerRepo.sumByBatch(kw, wh, zn, pr);
             List<Map<String, Object>> list = new ArrayList<>();
             for (Object[] r : rows.getContent()) {
                 Map<String, Object> m = new LinkedHashMap<>();
@@ -332,6 +345,8 @@ public class InventoryController {
                 m.put("amount", r[7]);
                 m.put("inboundDate", msToDate(r[8]));
                 m.put("expiryDate", msToDate(r[9]));
+                m.put("category", r.length > 16 ? nz(r[16]) : null);
+                m.put("subCategory", r.length > 17 ? nz(r[17]) : null);
                 list.add(m);
             }
             enrichQcForMaps(list);
@@ -341,23 +356,25 @@ public class InventoryController {
                         m.get("materialCode"), m.get("materialName"), m.get("batchNo"), m.get("unit"),
                         m.get("qty"), m.get("availableQty"), m.get("unitPrice"), m.get("amount"),
                         m.get("inboundDate"), m.get("expiryDate"), qcStatusText((String) m.get("qcStatus")),
-                        m.get("qcInspectionNo"), m.get("qcResult"), m.get("qcInspector"), m.get("qcDate")
+                        m.get("qcInspectionNo"), m.get("qcResult"), m.get("qcInspector"), m.get("qcDate"),
+                        m.get("category"), m.get("subCategory")
                 });
             }
             com.pengyuan.pims.common.ExcelUtil.export(response, "库存-按批次-" + java.time.LocalDate.now(), "库存按批次",
                     new String[]{"物料编码", "品名", "批号", "单位", "库存量", "可用量", "单价", "总价",
-                            "最早入库日期", "过期日期", "质检状态", "质检单号", "检测结果", "检验员", "检验日期"},
+                            "最早入库日期", "过期日期", "质检状态", "质检单号", "检测结果", "检验员", "检验日期", "大类", "小类"},
                     out);
             return;
         }
         // view=code
-        var rows = ledgerRepo.sumByCode(kw, wh, pr);
+        var rows = ledgerRepo.sumByCode(kw, wh, zn, pr);
         List<Object[]> out = new ArrayList<>();
         for (Object[] r : rows.getContent()) {
-            out.add(new Object[]{r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], msToDate(r[8])});
+            out.add(new Object[]{r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], msToDate(r[8]),
+                    r.length > 9 ? nz(r[9]) : null, r.length > 10 ? nz(r[10]) : null});
         }
         com.pengyuan.pims.common.ExcelUtil.export(response, "库存-按编码-" + java.time.LocalDate.now(), "库存按编码",
-                new String[]{"物料编码", "品名", "单位", "批次数量", "库存总量", "可用总量", "均价", "总价", "最新入库日期"},
+                new String[]{"物料编码", "品名", "单位", "批次数量", "库存总量", "可用总量", "均价", "总价", "最新入库日期", "大类", "小类"},
                 out);
     }
 
