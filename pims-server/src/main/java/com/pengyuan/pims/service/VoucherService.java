@@ -16,6 +16,8 @@ import java.util.*;
 @Service
 public class VoucherService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(VoucherService.class);
+
     private final VoucherRepository repo;
     private final VoucherEntryRepository entryRepo;
     private final AccountPeriodRepository periodRepo;
@@ -467,6 +469,92 @@ public class VoucherService {
             p.closeTime = LocalDateTime.now();
             periodRepo.save(p);
         });
+    }
+
+    /**
+     * v7.0 年结检查+执行（12 月月结时的年度收尾）：
+     * 前置：① 12 月损益已全部结转（PL 余额零）② 1-11 月全部已结账 ③ 12 月无草稿凭证。
+     * 执行：① 结平 3104 本年利润 → 3105 利润分配（未分配利润）转账凭证（有余额时）
+     *      ② 12 月月结（复用 closePeriod）。
+     * 次年开账无需任何操作——期初即各科目当前余额（continuity 口径），报表按年区间自然切分。
+     */
+    @Transactional
+    public Map<String, Object> yearEndClose(String year, String operator) {
+        if (year == null || !year.matches("\\d{4}")) throw new IllegalArgumentException("年份格式应为 YYYY");
+        String dec = year + "-12";
+        // ① 1-11 月全部结账
+        for (int m = 1; m <= 11; m++) {
+            String pm = String.format("%s-%02d", year, m);
+            if (periodRepo.findAll().stream().noneMatch(x -> x.period.equals(pm) && Boolean.TRUE.equals(x.closed))) {
+                // 无凭证的空月不算阻塞（没做账的月份跳过），有凭证未结才拦
+                if (repo.existsByPeriodAndStatus(pm, "DRAFT") || repo.existsByPeriodAndStatus(pm, "POSTED")) {
+                    throw new IllegalArgumentException(pm + " 存在凭证但未结账，请先完成 1-12 月全部月结");
+                }
+            }
+        }
+        // ② 12 月损益已结转
+        if (plBalance(dec).compareTo(BigDecimal.ZERO) != 0) {
+            throw new IllegalArgumentException(dec + " 损益类科目尚有余额，请先生成结转凭证并记账");
+        }
+        // ③ 结平本年利润 → 未分配利润
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        var acc3104 = subjectRepo.findByCode("3104").orElse(null);
+        if (acc3104 == null) throw new IllegalArgumentException("科目 3104 本年利润不存在");
+        BigDecimal bal = signedBalanceOf("3104", year);
+        Voucher transfer = null;
+        if (bal.compareTo(BigDecimal.ZERO) != 0) {
+            transfer = writeQueue.executeTx(() -> {
+                Voucher v = new Voucher();
+                v.voucherDate = LocalDate.of(Integer.parseInt(year), 12, 31);
+                v.source = "YEAR_END";
+                v.refDocNo = year;
+                v.remark = year + " 年结：本年利润结转未分配利润";
+                List<VoucherEntry> entries = new java.util.ArrayList<>();
+                VoucherEntry e1 = new VoucherEntry();
+                e1.subjectCode = bal.compareTo(BigDecimal.ZERO) > 0 ? "3104" : "3105";
+                e1.subjectName = subjectName(e1.subjectCode);
+                e1.digest = "年结结转";
+                if (bal.compareTo(BigDecimal.ZERO) > 0) { e1.debit = bal; e1.credit = BigDecimal.ZERO; }
+                else { e1.debit = BigDecimal.ZERO; e1.credit = bal.negate(); }
+                entries.add(e1);
+                VoucherEntry e2 = new VoucherEntry();
+                e2.subjectCode = bal.compareTo(BigDecimal.ZERO) > 0 ? "3105" : "3104";
+                e2.subjectName = subjectName(e2.subjectCode);
+                e2.digest = "年结结转";
+                if (bal.compareTo(BigDecimal.ZERO) > 0) { e2.debit = BigDecimal.ZERO; e2.credit = bal; }
+                else { e2.debit = bal.negate(); e2.credit = BigDecimal.ZERO; }
+                entries.add(e2);
+                v.entries = entries;
+                // 记账态直接生成（年结凭证无需人工审核——前置校验已保证合法性）
+                Voucher saved = repo.save(v);
+                saveEntries(saved);
+                saved.status = "POSTED";
+                saved.postedBy = operator;
+                saved.postedTime = LocalDateTime.now();
+                return repo.save(saved);
+            });
+            result.put("transferVoucher", transfer.docNo);
+            result.put("profitTransferred", bal);
+        }
+        // ④ 12 月月结
+        closePeriod(dec, operator);
+        result.put("year", year);
+        result.put("decPeriod", dec);
+        result.put("status", "已年结");
+        log.info("年结完成: {} 转账凭证={} 本年利润结转={}", year, transfer != null ? transfer.docNo : "无", bal);
+        return result;
+    }
+
+    /** 3104 科目年初至今带方向余额 */
+    private BigDecimal signedBalanceOf(String code, String year) {
+        var rows = jdbc.queryForList("""
+                SELECT SUM(ve.debit) AS d, SUM(ve.credit) AS c
+                FROM voucher_entry ve JOIN voucher v ON ve.voucher_id = v.id
+                WHERE v.status = 'POSTED' AND ve.subject_code = ? AND v.period >= ? AND v.period <= ?
+                """, code, year + "-01", year + "-12");
+        BigDecimal d = rows.isEmpty() || rows.get(0).get("d") == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(rows.get(0).get("d")));
+        BigDecimal c = rows.isEmpty() || rows.get(0).get("c") == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(rows.get(0).get("c")));
+        return d.subtract(c);
     }
 
     /** 反结账：仅允许从最近已结期间逐月往前 */

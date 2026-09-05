@@ -151,7 +151,7 @@ public class QualityInspectionService {
         java.util.List<Number> mTotal = new java.util.ArrayList<>(), mReject = new java.util.ArrayList<>();
         java.util.List<java.math.BigDecimal> mRate = new java.util.ArrayList<>();
         for (var row : jdbc.queryForList(
-                "SELECT strftime('%Y-%m', create_time/1000, 'unixepoch', 'localtime') AS m, COUNT(*) AS total, " +
+                "SELECT strftime('%Y-%m', create_time/1000, 'unixepoch', '+8 hours') AS m, COUNT(*) AS total, " +
                 "SUM(CASE WHEN status='REJECT' THEN 1 ELSE 0 END) AS reject " +
                 "FROM quality_inspection WHERE " + judged + " AND create_time >= ? AND create_time < ? " +
                 "GROUP BY m ORDER BY m", startTimeOf(from), endTimeOf(to))) {

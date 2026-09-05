@@ -80,7 +80,7 @@ public class FinanceReportService {
     /** 近 12 个月收入/成本/净利走势 */
     private List<Map<String, Object>> trend() {
         // 近 11 个月首月零点毫秒（常量表达式，裸列比较可走索引）
-        String sinceMs = "1000 * (CAST(strftime('%s', strftime('%Y-%m','now','localtime','-11 months') || '-01') AS INTEGER) - 28800)";
+        String sinceMs = "1000 * (CAST(strftime('%s', strftime('%Y-%m','now','+8 hours','-11 months') || '-01') AS INTEGER) - 28800)";
         Map<String, Object> rev = monthSum("SELECT " + tsMonth("create_time") + " AS m, SUM(amount) AS v FROM accounts_receivable WHERE create_time >= " + sinceMs + " GROUP BY m");
         Map<String, Object> cogsMap = monthSum("SELECT " + tsMonth("create_time") + " AS m, SUM(cost) AS v FROM sales_outbound WHERE status='CONFIRMED' AND create_time >= " + sinceMs + " GROUP BY m");
         Map<String, Object> expMap = monthSum("SELECT m, SUM(v) AS v FROM (SELECT " + tsMonth("create_time") + " AS m, amount AS v FROM expense WHERE direction='EXPENSE' AND create_time >= " + sinceMs +

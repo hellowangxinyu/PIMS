@@ -93,6 +93,13 @@ public class VoucherController {
     @SaCheckPermission("finance:read")
     public Result<?> periodStatus() { return Result.ok(service.periodStatus()); }
 
+    /** v7.0 年结：结平本年利润→未分配利润 + 12 月月结（前置校验 1-11 月已结/损益已转） */
+    @PostMapping("/year-end-close")
+    @SaCheckPermission("finance:audit")
+    public Result<Map<String, Object>> yearEndClose(@RequestParam String year) {
+        return Result.ok(service.yearEndClose(year, userService.currentOperatorName()));
+    }
+
     @PutMapping("/close-period")
     @SaCheckPermission("finance:write")
     public Result<?> closePeriod(@RequestBody Map<String, String> body) {

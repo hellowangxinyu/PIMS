@@ -111,7 +111,7 @@ public interface InventoryLedgerRepository extends JpaRepository<InventoryLedger
     /** 批次库龄分层（0-30/31-90/91-180/180+，数量+金额）；inbound_date 为毫秒，julianday 换算天数 */
     @Query(value = "SELECT CASE WHEN d <= 30 THEN 0 WHEN d <= 90 THEN 1 WHEN d <= 180 THEN 2 ELSE 3 END AS bucket, " +
             "COALESCE(SUM(qty),0), COALESCE(SUM(amount),0) FROM (" +
-            "SELECT qty, amount, CAST(julianday('now','localtime') - julianday(date(inbound_date/1000,'unixepoch','+8 hours')) AS INTEGER) AS d " +
+            "SELECT qty, amount, CAST(julianday('now','+8 hours') - julianday(date(inbound_date/1000,'unixepoch','+8 hours')) AS INTEGER) AS d " +
             "FROM inventory_ledger WHERE qty > 0 AND (qc_status IS NULL OR qc_status NOT IN ('REJECT','TAILING','EXPIRED'))) " +
             "GROUP BY bucket ORDER BY bucket", nativeQuery = true)
     List<Object[]> ageDistGroup();
@@ -125,7 +125,7 @@ public interface InventoryLedgerRepository extends JpaRepository<InventoryLedger
     /** 呆滞批次 TOP20：库龄天数 × 库存金额 降序 */
     @Query(value = "SELECT material_code, material_name, batch_no, d AS days, qty, amount, warehouse_id FROM (" +
             "SELECT material_code, material_name, batch_no, qty, COALESCE(amount, qty * unit_price) AS amount, warehouse_id, " +
-            "CAST(julianday('now','localtime') - julianday(date(inbound_date/1000,'unixepoch','+8 hours')) AS INTEGER) AS d " +
+            "CAST(julianday('now','+8 hours') - julianday(date(inbound_date/1000,'unixepoch','+8 hours')) AS INTEGER) AS d " +
             "FROM inventory_ledger WHERE qty > 0 AND amount > 0 AND inbound_date IS NOT NULL " +
             "AND (qc_status IS NULL OR qc_status NOT IN ('REJECT','TAILING','EXPIRED'))) " +
             "WHERE d > 0 ORDER BY d * amount DESC LIMIT 20", nativeQuery = true)

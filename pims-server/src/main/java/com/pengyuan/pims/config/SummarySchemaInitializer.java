@@ -408,7 +408,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_finance_summary SET
                     ar_total = ar_total + COALESCE(NEW.amount, 0),
                     ar_received = ar_received + COALESCE(NEW.received_amount, 0),
-                    update_time = datetime('now', 'localtime')
+                    update_time = datetime('now', '+8 hours')
                 WHERE id = 1;
             END
         """);
@@ -420,7 +420,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_finance_summary SET
                     ar_total = ar_total + (COALESCE(NEW.amount, 0) - COALESCE(OLD.amount, 0)),
                     ar_received = ar_received + (COALESCE(NEW.received_amount, 0) - COALESCE(OLD.received_amount, 0)),
-                    update_time = datetime('now', 'localtime')
+                    update_time = datetime('now', '+8 hours')
                 WHERE id = 1;
             END
         """);
@@ -433,7 +433,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_finance_summary SET
                     ap_total = ap_total + COALESCE(NEW.amount, 0),
                     ap_paid = ap_paid + COALESCE(NEW.paid_amount, 0),
-                    update_time = datetime('now', 'localtime')
+                    update_time = datetime('now', '+8 hours')
                 WHERE id = 1;
             END
         """);
@@ -445,7 +445,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_finance_summary SET
                     ap_total = ap_total + (COALESCE(NEW.amount, 0) - COALESCE(OLD.amount, 0)),
                     ap_paid = ap_paid + (COALESCE(NEW.paid_amount, 0) - COALESCE(OLD.paid_amount, 0)),
-                    update_time = datetime('now', 'localtime')
+                    update_time = datetime('now', '+8 hours')
                 WHERE id = 1;
             END
         """);
@@ -496,7 +496,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             BEGIN
                 INSERT INTO stat_inventory_daily (stat_date, material_code, warehouse_id, in_qty, out_qty, in_amount)
                 VALUES (
-                    COALESCE(date(CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch'), date('now', 'localtime')),
+                    COALESCE(date(CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch'), date('now', '+8 hours')),
                     NEW.material_code,
                     NEW.warehouse_id,
                     CASE WHEN NEW.direction = 'IN' THEN NEW.qty ELSE 0 END,
@@ -522,7 +522,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 INSERT INTO stat_material_usage (material_code, period, warehouse_id, out_qty, usage_days)
                 VALUES (
                     NEW.material_code,
-                    COALESCE(strftime('%Y-%m', CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch'), strftime('%Y-%m', 'now', 'localtime')),
+                    COALESCE(strftime('%Y-%m', CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch'), strftime('%Y-%m', 'now', '+8 hours')),
                     COALESCE(NEW.warehouse_id, ''),
                     ABS(NEW.qty),
                     1
@@ -630,7 +630,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
         Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM stat_finance_summary", Integer.class);
         if (count == null || count == 0) {
             jdbc.update("INSERT INTO stat_finance_summary (id, ar_total, ar_received, ap_total, ap_paid, update_time) " +
-                    "VALUES (1, 0, 0, 0, 0, datetime('now','localtime'))");
+                    "VALUES (1, 0, 0, 0, 0, datetime('now','+8 hours'))");
         }
     }
 
@@ -657,7 +657,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                    COALESCE(
                        strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch'),
                        strftime('%Y-%m', CAST(create_time AS INTEGER) / 1000, 'unixepoch'),
-                       strftime('%Y-%m', 'now', 'localtime')
+                       strftime('%Y-%m', 'now', '+8 hours')
                    ),
                    COALESCE(warehouse_id, ''),
                    COALESCE(SUM(ABS(qty)), 0),
@@ -672,7 +672,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                      COALESCE(
                          strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch'),
                          strftime('%Y-%m', CAST(create_time AS INTEGER) / 1000, 'unixepoch'),
-                         strftime('%Y-%m', 'now', 'localtime')
+                         strftime('%Y-%m', 'now', '+8 hours')
                      )
         """);
         log.info("物料用量汇总回填完成（含仓库维度）: {} 条", n);
@@ -717,7 +717,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             SELECT COALESCE(
                        date(create_time),
                        date(CAST(create_time AS INTEGER) / 1000, 'unixepoch'),
-                       date('now', 'localtime')
+                       date('now', '+8 hours')
                    ),
                    material_code, warehouse_id,
                    COALESCE(SUM(CASE WHEN direction = 'IN' THEN qty ELSE 0 END), 0),
@@ -727,7 +727,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             GROUP BY COALESCE(
                        date(create_time),
                        date(CAST(create_time AS INTEGER) / 1000, 'unixepoch'),
-                       date('now', 'localtime')
+                       date('now', '+8 hours')
                      ), material_code, warehouse_id
         """);
 
@@ -741,7 +741,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 ar_received = (SELECT COALESCE(SUM(received_amount), 0) FROM accounts_receivable),
                 ap_total = (SELECT COALESCE(SUM(amount), 0) FROM accounts_payable),
                 ap_paid = (SELECT COALESCE(SUM(paid_amount), 0) FROM accounts_payable),
-                update_time = datetime('now', 'localtime')
+                update_time = datetime('now', '+8 hours')
             WHERE id = 1
         """);
 
