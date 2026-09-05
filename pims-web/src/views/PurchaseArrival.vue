@@ -195,6 +195,7 @@ import api from '../api'
 import { usePaging } from '../composables/usePaging'
 import { useColumnResize } from '../composables/useColumnResize'
 import { printLabels } from '../utils/labelPrint'
+import { useBucketPrint } from '../composables/useBucketPrint'
 
 // v5.79.1 打印标签前带出质检结果/检验员：批号精确优先（模糊 LIKE 会撞前缀批号），
 // 多条时优先取已判定的（PASS/CONCESSION/REJECT），查不到再按 合同号+批号 兜底
@@ -220,15 +221,17 @@ async function pickQc(row) {
 }
 
 async function printLabelsWithQc(rows) {
+  // v7.3：质检带出在前 → 分桶对话框在后 → 打印（顺序不可倒：分桶不能跳过 QC 回填）
   const list = rows.map(r => ({ ...r }))
   for (const row of list) {
     const q = await pickQc(row)
     if (q) { row.qcStatus = q.status; row.qcInspector = q.inspector }
   }
-  printLabels(list)
+  await printWithBuckets(list)
 }
 
 const { cw, onHeaderDragend } = useColumnResize('purchase_arrival')
+const { printWithBuckets } = useBucketPrint()
 
 const taxRate = ref(13)
 const list = ref([])

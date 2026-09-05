@@ -2,17 +2,39 @@
  * 入库标签打印（v5.27）：8cm × 10cm 标签纸，每张标签一页
  * 通用字段兼容：品名 materialName/productName，编码 materialCode/productCode，
  * 批号 batchNo，数量 qty，单位 unit，日期 createTime/arrivalDate
- * @param {Array} rows 选中的入库/到货记录
- * @param {Object} opts { company: 公司名（默认广东芃远新材料有限公司） }
+ * v7.3 分桶打印：records 数组元素为 {row, split, adjust}——split>1 时该行拆 N 张
+ * （每桶可微调、合计守恒由调用方/computeBuckets 保证），标签带「第 N/M 桶」与批量合计行。
  */
-export function printLabels(rows, opts = {}) {
-  const list = (rows || []).filter(r => r && r.batchNo)
-  if (!list.length) return false
+export function printLabels(records, opts = {}) {
   const company = opts.company || '广东芃远新材料有限公司'
-  const labels = list.map(r => {
+  // 兼容旧签名：直接传行数组（无 split）
+  const items = (records || []).map(item => {
+    if (item && item.row) return item
+    return { row: item }
+  }).filter(it => it.row && it.row.batchNo)
+  if (!items.length) return false
+
+  const rowsToPrint = []
+  for (const it of items) {
+    const r = it.row
+    if (it.split && it.split > 1) {
+      const n = Math.min(200, Math.max(1, Math.floor(it.split)))
+      for (let i = 0; i < n; i++) {
+        rowsToPrint.push({
+          ...r,
+          _bucketQty: it.adjust && it.adjust[i] != null ? it.adjust[i] : r.qty,
+          _bucketNo: i + 1, _bucketTotal: n
+        })
+      }
+    } else {
+      rowsToPrint.push(r)
+    }
+  }
+
+  const labels = rowsToPrint.map(r => {
     const name = r.materialName || r.productName || '-'
     const code = r.materialCode || r.productCode || '-'
-    const qty = r.qty != null ? r.qty : '-'
+    const qty = r._bucketQty != null ? r._bucketQty : (r.qty != null ? r.qty : '-')
     const unit = r.unit || 'kg'
     const date = fmt(r.createTime || r.arrivalDate || r.inboundDate)
     // v5.79：编码为主视觉（防错核心），质检结果/质检人随标签
@@ -28,9 +50,10 @@ export function printLabels(rows, opts = {}) {
       <div class="name">${esc(name)}</div>
       <div class="row"><span>批号：${esc(r.batchNo)}</span></div>
       <div class="row"><span>数量：${qty} ${unit}</span></div>
+      ${r._bucketNo ? `<div class="bucket">第 ${r._bucketNo} / ${r._bucketTotal} 桶</div>` : ''}
       <div class="qc" style="color:${qcColor};font-weight:700">质检：${esc(qc)}</div>
       ${inspector ? `<div class="row"><span>质检员：${esc(inspector)}</span></div>` : ''}
-      <div class="date">${date}</div>
+      <div class="date">${date}${r._bucketTotal ? ` · 批量合计 ${esc(String(r.qty))} ${unit}` : ''}</div>
     </div>`
   }).join('')
 
@@ -56,13 +79,47 @@ export function printLabels(rows, opts = {}) {
   .code-big { font-size: 24pt; font-weight: 900; font-family: 'Consolas', 'Courier New', monospace; letter-spacing: 1px; margin-bottom: 3mm; word-break: break-all; border: 0.6mm solid #000; padding: 2mm 3mm; }
   .name { font-size: 11pt; font-weight: 500; margin-bottom: 4mm; word-break: break-all; }
   .row { font-size: 12pt; margin-bottom: 3mm; }
+  .bucket { font-size: 13pt; font-weight: 700; margin: 1mm 0; border: 0.4mm solid #000; padding: 1mm 3mm; border-radius: 2mm; }
   .qc { font-size: 14pt; margin: 2mm 0; }
-  .date { font-size: 9pt; margin-top: 5mm; color: #333; }
+  .date { font-size: 9pt; margin-top: 3mm; color: #333; }
 </style></head><body>${labels}</body></html>`)
   win.document.close()
   win.focus()
   setTimeout(() => { win.print(); win.close() }, 200)
   return true
+}
+
+/**
+ * v7.3 分桶算法（均分+微调+尾差守恒）：
+ * - edited 按桶序号（0 起）记锁定（用户改过的桶）；未动桶 =（总量−Σ锁定）÷ 剩余桶数，保留 2 位小数
+ * - 尾差归最后一个**未锁定**桶（末桶被手改时顺延到倒数第二个未动桶）
+ * - Σ锁定 > 总量 → 返回 null（调用方据此禁用确认：标签是物理事实，合计必须守恒）
+ * @param total 总量 @param n 桶数 @param edited {index→qty} 手改桶 @returns 每桶量数组或 null
+ */
+export function computeBuckets(total, n, edited = {}) {
+  total = Number(total) || 0
+  n = Math.max(1, Math.floor(n))
+  if (Object.keys(edited).length === 0) {
+    const avg = Math.round((total / n) * 100) / 100
+    const arr = Array(n).fill(avg)
+    arr[n - 1] = Math.round((total - avg * (n - 1)) * 100) / 100
+    return arr
+  }
+  const lockedSum = Object.values(edited).reduce((a, v) => a + Number(v), 0)
+  const freeIdx = []
+  for (let i = 0; i < n; i++) if (!(i in edited)) freeIdx.push(i)
+  if (lockedSum > total + 1e-9) return null   // 锁定合计超总量——物理不可能，禁打
+  const freeCount = freeIdx.length
+  const arr = Array(n)
+  for (const [i, v] of Object.entries(edited)) arr[Number(i)] = Number(v)
+  if (freeCount === 0) return arr              // 全部锁定且 Σ≤total（守恒由禁用守卫保证）
+  const freeAvg = Math.round(((total - lockedSum) / freeCount) * 100) / 100
+  for (const i of freeIdx) arr[i] = freeAvg
+  // 尾差归最后一个未锁定桶
+  const lastFree = freeIdx[freeIdx.length - 1]
+  const othersSum = arr.reduce((a, v, i) => i === lastFree ? a : a + v, 0)
+  arr[lastFree] = Math.round((total - othersSum) * 100) / 100
+  return arr
 }
 
 function fmt(t) {

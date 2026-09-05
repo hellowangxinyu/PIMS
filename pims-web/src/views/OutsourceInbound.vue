@@ -8,7 +8,7 @@
       <div class="type-tabs">
         <span class="type-count">共 {{ total }} 条记录</span>
         <!-- v5.27：选中行打印 8×10 入库标签 -->
-        <el-button size="small" type="primary" :disabled="!selectedRows.length" @click="printLabels(selectedRows)">打印标签（{{ selectedRows.length }}）</el-button>
+        <el-button size="small" type="primary" :disabled="!selectedRows.length" @click="onPrintLabels">打印标签（{{ selectedRows.length }}）</el-button>
           <el-input v-model="searchText" placeholder="搜索品名/编码/批号" clearable size="small" style="width:220px;margin-left:auto"  @keyup.enter="onSearch" @clear="onSearch" />
       </div>
       <p-table :data="rows" stripe border style="width:100%" @selection-change="sel => selectedRows = sel">
@@ -170,10 +170,15 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { printLabels } from '../utils/labelPrint'
+import { useBucketPrint } from '../composables/useBucketPrint'
 
 const rows = ref([])
 // v5.27：多选行（打印标签用）
 const selectedRows = ref([])
+
+// v7.3 分桶打印：逐行弹桶数/微调（Σ守恒禁打），不拆分则保持整单一张
+const { printWithBuckets } = useBucketPrint()
+async function onPrintLabels() { await printWithBuckets(selectedRows.value) }
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(25)
