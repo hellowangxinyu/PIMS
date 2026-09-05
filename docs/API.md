@@ -1,10 +1,16 @@
 # 芃远综合管理系统（PIMS）外部系统对接接口文档
 
-> **版本**: v1.2（对应 PRD v5.28）
-> **日期**: 2026-08-12
+> **版本**: v2.0（对应系统 v7.3，git tag v7.3-bucket-labels）
+> **日期**: 2026-09-05
 > **适用对象**: 需要与本系统做数据对接的外部系统（ERP、MES、WMS、客户门户等）的开发者
 > **对接方式**: HTTP RESTful API，JSON 数据格式
-> **v1.2 变更**: 新增 9 端点——`GET /api/recipe/material-prices`（物料价格映射，库存加权→采购价回退）；标准工艺模块 `GET/PUT /api/process/template/{recipeType}`（权限 process:*）；生产订单 `POST /{id}/auto-outbound`（确认即出库·自动先进先出）、`GET /{id}/outbounds`（出库记录明细）、`GET /{id}/stock-check`（出库前库存预检，生产=自有仓）；委外订单同 3 端点（auto-outbound/outbounds/stock-check，委外=代工厂仓）；`POST /api/stock-check/location-adjust` 新增 `toWarehouseId` 参数支持跨仓库调整；接口总数 256→**265**。生产/委外出库逻辑重构：确认即自动出库（先进先出、按库位拆行记录、批次不足自动补下一批），委外加工费改由代工厂档案（supplier.processing_fee）维护、下单自动带出
+> **v2.0 变更**（v5.28→v7.3 累计，接口总数 265→**513**，55 个 Controller）：
+> - **新增模块**：出纳银行对账（/api/bank 10 端点）、MRP 采购建议（/api/mrp）、价格政策（/api/price-policy）、任务督办（/api/task）、供应商质量追溯（/api/quality-trace）、质检模板（/api/qc-template）、包装标准（/api/packaging-standard）、账号级 UI 配置（/api/ui-config）、异常订单处置（/api/abnormal-order）
+> - **请购单闭环**：POST 支持明细、PUT /{id}/header（补供应商）、POST /{id}/audit、POST /{id}/to-purchase（转采购）、DELETE（草稿）
+> - **新报表端点**：GET /api/qc/statistics（不良率统计）、GET /api/report/turnover（周转率）、GET /api/finance-report/supplier-statement（供应商对账单）、POST /api/voucher/year-end-close（年结）、GET /api/recipe/{id}/changes（配方变更日志）
+> - **安全**：Token 改 HttpOnly Cookie（header 兼容）、登录 5 次锁定 10 分钟、must_change_pwd 强制改密、AI 查询敏感表黑名单
+> - **口径**：对账单/调节表时点口径（未达账项截至对账日全量）、REWORK_OUT 返工不计用量、时区统一 +8 hours、物料/大类阶梯价
+> - 详见 §4.26~§4.35 新章节
 
 ---
 
@@ -576,6 +582,141 @@ pims-token: <token>
 - **物流运费（v5.66，权限 sales:read/write + finance:amount 脱敏）**：`GET/POST/PUT/DELETE /api/shipping`（SHIP-YYYY-NNNN；salesOrderNo 必填、freight>0；borne=COMPANY 公司承担进成本 / CUSTOMER 客户到付仅记录）；`GET /shipping/resolve-outbound?outboundDocNo=` 发货单带出订单/客户。**归集口径**：订单列表 freightTotal=Σ公司承担；毛利分析月度/客户维度 cost 含运费（两层聚合防多行出库重复计），产品维度不含运费（订单级费用不按产品摊分）；利润试算费用追加当月公司承担运费（与 expense 的 FREIGHT 散运费互斥使用防双算）。销售订单列表带「运费」列；销售出库确认行有「运费」快捷登记；送货单打印带收货地址。
 - **物料编码三体系（v5.65，历史编码零变动仅新增生效）**：原料 A/P/F/R/S 不变（小类 2+流水 4 全局连续）；**半成品 B = 色浆小类(2)+主材(1)+流水(4) 共 7 位**（BWF0001=白浆/氟碳系）；**成品 C = 漆型(2)+主材(1)+色系(1)+流水(4) 共 8 位**（CWZH0001=面漆/聚酯/白）。主材 CZ→Z/CF→F/CE→E/CA→A；色系 BK→K/WH→H/BU→U/GN→N/GY→Y/RD→R/YW→W；流水按属性前缀分组独立（同款连号、容量百万级）。易混字符约束：新码字母段禁 I/L/O（蓝浆 BL 新码自动映射 BU；原料小类含 I/L/O 拒绝自动取号）；流水数字 0/1 正常（无字母对照物）。取号入口：POST /api/material（code 留空自动取，C 类需 mainMaterial+colorSeries、B 类需 mainMaterial，缺失报错）；Excel 导入同口径。手填 code 优先。
 - **领料差异分析** `GET /api/report/material-variance`（+ /export）：实际净领料 vs 配方计划用量——按配方/按原料聚合（订单数、多领/少领/相符行数、金额加权差异率、差异金额）+ 订单×物料明细；|加权差异率|≥5% 触发配方预警（持续多领=配方用量偏低应补损耗率，持续少领=用量偏高可降本）；单行 ±2% 内视为相符；差异率按金额加权（Σ实际金额/Σ计划金额−1，计划金额=计划量×净领料加权单价，跨物料单位可加总）；60 秒缓存
+
+### 4.26 质检模板（v5.32，权限 qc:read/write）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /api/qc-template/list | 全部模板（含检测项） |
+| GET | /api/qc-template/{id} | 模板详情 |
+| POST | /api/qc-template | 新建（主表+检测项聚合保存） |
+| PUT | /api/qc-template/{id} | 更新（检测项先删后插） |
+| DELETE | /api/qc-template/{id} | 删除（默认模板拦截） |
+| POST | /api/qc-template/{id}/set-default | 同类互斥设默认 |
+
+> 按物料大类三维匹配（小类/主材/色系打分制）→ 质检单快照检测项（改模板不影响历史单）。
+
+### 4.27 供应商质量追溯（v5.59，权限 strace:read/write）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /api/quality-trace?supplierId=&status= | 追溯单列表 |
+| GET | /api/quality-trace/{id} | 详情 |
+| GET | /api/quality-trace/batches?keyword= | 搜台账批次（含不合格/油尾） |
+| GET | /api/quality-trace/purchase-info?materialCode=&batchNo= | 批号带出原采购链 |
+| POST | /api/quality-trace | 创建追溯单 |
+| PUT | /api/quality-trace/{id} | 更新 |
+| POST | /api/quality-trace/{id}/resolve | 处理完毕（结果类型+说明必填，赔款时金额必填） |
+| DELETE | /api/quality-trace/{id} | 删除（未处理拦截） |
+| GET | /api/quality-trace/{id}/trace | 批次全出入库流水（主表+归档合并） |
+| GET/POST/PUT/DELETE | /api/quality-trace/templates | 损失沟通函模板 CRUD |
+| PUT | /api/quality-trace/templates/{id}/default | 设默认模板 |
+
+### 4.28 任务督办（v5.67，权限 task:read/write）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /api/task | 列表（有 task:write 看全部，普通员工看自己相关） |
+| GET | /api/task/users | 可选执行人列表 |
+| POST | /api/task | 创建（owner+collaborators 多人协作） |
+| PUT | /api/task/{id} | 更新 |
+| DELETE | /api/task/{id} | 删除 |
+| POST | /api/task/{id}/start | 开始（执行人） |
+| POST | /api/task/{id}/report | 汇报进度 |
+| POST | /api/task/{id}/complete | 完工确认（仅 task:write） |
+| POST | /api/task/{id}/cancel | 取消（task:write） |
+| POST | /api/task/{id}/reopen | 重开（task:write） |
+| GET | /api/task/my-count | 我的待办数（Dashboard 联动） |
+
+> 状态机：PENDING→IN_PROGRESS→COMPLETED/CANCELLED（可 REOPEN）。
+
+### 4.29 请购单闭环（v6.3~v6.6，权限 purchase:read/write）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /api/purchase-order | 列表 |
+| GET | /api/purchase-order/{id} | 详情 |
+| GET | /api/purchase-order/{id}/items | 明细 |
+| POST | /api/purchase-order | 创建（body 含 items 数组：materialCode/qty/unitPrice/unit） |
+| PUT | /api/purchase-order/{id}/header | 编辑头（仅 DRAFT；补供应商/仓库/交期/备注） |
+| POST | /api/purchase-order/{id}/audit | DRAFT→APPROVED（须已补供应商+有明细） |
+| POST | /api/purchase-order/{id}/to-purchase | APPROVED→CLOSED（逐明细生成采购单，单事务+幂等防重） |
+| DELETE | /api/purchase-order/{id} | 删除（仅 DRAFT，MRP 误单清理） |
+
+> 状态机：DRAFT→(audit)→APPROVED→(to-purchase)→CLOSED；短量关闭（receivedQty<qty）须传 reason。
+
+### 4.30 MRP 采购建议（v6.3，权限 purchase:read/write）
+
+**POST /api/mrp/suggest**（body 可空 `{orderIds:[1,2]}`，空=全部 CONFIRMED 销售订单）
+
+响应：`{orders: <分析订单数>, lines: [{materialCode, materialName, materialCategory, need, stock, transit, gap, suggested, orders: "SO-xxx，SO-yyy"}]}`
+- need=配方树展开需求（含半成品递归）；stock 排除隔离（REJECT/TAILING/EXPIRED）；transit=APPROVED 未到货；suggested=gap×1.05；orders 为需求来源单号串。
+
+**POST /api/mrp/create-order**（body `{lines:[{materialCode, suggested|gap}]}`）→ `{orderNo, itemCount}`（DRAFT 请购单）。
+
+### 4.31 价格政策（v6.3，权限 sales:read/write）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /api/price-policy | 全部政策 |
+| GET | /api/price-policy/match?materialCode=&qty= | 取价 `{price, policyId, tier:"物料档 ≥10"}`；无匹配 price=null |
+| POST | /api/price-policy | 创建 |
+| PUT | /api/price-policy/{id} | 更新 |
+| DELETE | /api/price-policy/{id} | 删除 |
+
+> 阶梯规则：物料精确档（按 minQty 取已达最高阶梯）＞大类兜底档；需在生效期内；下单选物料/改数量自动带出。
+
+### 4.32 出纳银行对账（v6.3，权限 finance:read/write）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /api/bank/account | 账户列表 |
+| POST | /api/bank/account | 建账户（name/bankName/openingBalance） |
+| GET | /api/bank/journal?accountId=&from=&to= | 出纳日记账（opening/closing/rows[signed/balance/matched]） |
+| GET | /api/bank/statement/template | 流水导入模板 xlsx |
+| POST | /api/bank/statement/import?accountId= | 流水导入（multipart file；余额指纹防重）→ {inserted, skipped} |
+| GET | /api/bank/statement?accountId=&from=&to=&status= | 流水列表 |
+| POST | /api/bank/reconcile/auto?accountId= | 自动勾对（金额相等+日期±3天+对方名加分）→ {matched, remaining} |
+| POST | /api/bank/reconcile/{id}/bind?refType=RECEIPT|DISBURSEMENT&refId= | 手工勾对 |
+| POST | /api/bank/reconcile/{id}/unbind | 取消勾对 |
+| GET | /api/bank/reconcile/report?accountId=&from=&to=&bankEnding= | 双侧余额调节表 |
+
+> 调节表：`{bookClosing, bankEnding, firmInNotInBank, firmOutNotInBank, bankInNotInFirm, bankOutNotInFirm, adjustedBank, adjustedBook, diff}`；未达账项=截至对账日全量未勾对（会计准则口径）；diff=0 即平衡。
+
+### 4.33 包装标准 / UI 配置 / 异常订单 / 打印计数
+
+**包装标准**（v5.81，权限 recipe:read/write）：`GET/POST/PUT/DELETE /api/packaging-standard`（组合包装：桶+袋+托盘一套多明细）。
+
+**UI 配置**（v6.0，登录即可）：`GET /api/ui-config?key=pims.ui.cols.{username}.{table}`（只许读自己的）/ `POST /api/ui-config` body `{key, value}`（≤100KB UPSERT）。
+
+**异常订单处置**（权限 production:read/write）：`GET /api/abnormal-order`（列表）、`POST /{orderNo}/handle`（原因+措施闭环）、`GET /{orderNo}`（记录）、`GET /export`（Excel）。
+
+**打印计数**（登录即可）：`POST /api/print-count` body `{docType, docNo}`。
+
+### 4.34 新报表端点（v6.3+）
+
+| 端点 | 权限 | 说明 |
+|---|---|---|
+| GET /api/qc/statistics?from=&to= | qc:read | 质量统计：overall{total,pass,reject,rate%}/monthly 趋势/byMaterial TOP20/byCategory/bySupplier（按 arrival_id 关联到货） |
+| GET /api/report/turnover?days=90 | inventory:read | 周转率：byCategory 汇总+details（年化=出库/库存×365/days，呆滞在前 TOP300）；REWORK 不计用量 |
+| GET /api/finance-report/supplier-statement?supplierId=&from=&to= | finance:read | 供应商对账单：期初+三流（应付立账/付款/退货冲减）+期末（时点口径） |
+| POST /api/voucher/year-end-close?year=YYYY | finance:audit | 年结：结平本年利润→未分配利润（POSTED 凭证）+12月月结；前置校验 1-11 月已结+损益已转 |
+| GET /api/recipe/{id}/changes | recipe:read | 配方变更日志（CREATE/UPDATE/RELEASE/ARCHIVE/TREE_SAVE 留痕） |
+
+### 4.35 v5.28 后散点新增（既有 Controller 内）
+
+- 生产退料：`GET /api/outbound/production/issued-lines`（可退明细）、`POST /api/outbound/production/return`（PROD-RET 负数冲减）、`PUT /api/outbound/production/{id}/void`（作废）
+- 领料补领：`POST /api/outbound/production?supplement=true&supplementType=COLOR_ADJUST|OVER_CONSUME`（色差/超耗分类标签）
+- 工艺路线：`/api/process/route*` 7 端点（多条命名路线）
+- 销售订单：`PUT /api/sales-order/{id}`（编辑+变更留痕）、`GET /{id}/changes`、`GET /recent-price(s)`（成交价带出）、`POST /{id}/close`（短交完结须 reason）
+- 采购关闭：`POST /api/purchase/close/{id}?type=RAW|FINISHED&reason=`（短量关闭须 reason+已到齐拒关）
+- 客户信用：`GET /api/customer/{id}/credit-check?amount=`（超额弹窗）、`GET /{id}/profile`（客户 360°）
+- 配方版本：`GET /api/recipe/{id}/versions`、`POST /{id}/version`、`PUT /version/{versionId}`（草稿编辑+变更日志）
+- 质检反审核：到货 `POST /api/purchase-arrival/{id}/reverse-audit`（按 arrivalId 精确隔离）
+- 操作日志归档：`GET /api/log/archives`、`GET /api/log/archives/{month}`
+- 备份：`POST /api/dashboard/backup`（手动触发）、健康状态含 backupStale
+- 物料编码权限：`PUT /api/material/{id}/enabled`（生命周期）+ 编码手填需 material:code-edit 权限
+- 入库标签分桶：打印标签时弹桶数+微调（Σ守恒禁打），标签带第 N/M 桶序号+批量合计
 
 ## 5. 核心接口对接示例
 
