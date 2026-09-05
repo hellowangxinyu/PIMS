@@ -14,11 +14,11 @@
 
     <p-table :data="list" stripe border size="small" @header-dragend="onHeaderDragend">
       <el-table-column prop="complaintNo" label="投诉单号" :width="cw('投诉单号') || 118" />
-      <el-table-column prop="customerName" label="客户" min-width="120" show-overflow-tooltip />
-      <el-table-column prop="materialName" label="涉及物料" min-width="120" show-overflow-tooltip />
+      <el-table-column prop="customerName" label="客户" :width="cw('客户') || undefined" min-width="120" show-overflow-tooltip />
+      <el-table-column prop="materialName" label="涉及物料" :width="cw('涉及物料') || undefined" min-width="120" show-overflow-tooltip />
       <el-table-column prop="batchNo" label="批号" :width="cw('批号') || 110" />
       <el-table-column prop="category" label="分类" :width="cw('分类') || 92" align="center" />
-      <el-table-column prop="description" label="问题描述" min-width="160" show-overflow-tooltip />
+      <el-table-column prop="description" label="问题描述" :width="cw('问题描述') || undefined" min-width="160" show-overflow-tooltip />
       <el-table-column prop="complaintDate" label="投诉日期" :width="cw('投诉日期') || 96" />
       <el-table-column label="状态" :width="cw('状态') || 82" align="center">
         <template #default="{ row }">

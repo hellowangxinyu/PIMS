@@ -15,14 +15,14 @@
       </div>
       <p-table :data="filteredWarehouses" stripe border highlight-current-row @current-change="onWarehouseSelect" @header-dragend="onHeaderDragend">
         <el-table-column prop="code" label="编码" :width="cw('编码') || 140" />
-        <el-table-column prop="name" label="名称" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="name" label="名称" :width="cw('名称') || undefined" min-width="160" show-overflow-tooltip />
         <el-table-column label="类型" :width="cw('类型') || 110" align="center">
           <template #default="{row}">{{ typeMap[row.warehouseType] || row.warehouseType }}</template>
         </el-table-column>
         <el-table-column label="所属工厂" :width="cw('所属工厂') || 140" show-overflow-tooltip>
           <template #default="{row}">{{ row.processorName || row.processorId || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="address" label="地址" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="address" label="地址" :width="cw('地址') || undefined" min-width="150" show-overflow-tooltip />
         <el-table-column label="状态" :width="cw('状态') || 80" align="center">
           <template #default="{row}"><el-tag size="small" :type="row.enabled?'success':'danger'">{{ row.enabled?'启用':'禁用' }}</el-tag></template>
         </el-table-column>
@@ -47,7 +47,7 @@
       </div>
       <p-table :data="zones" stripe border size="small" highlight-current-row @current-change="onZoneSelect" empty-text="暂无分库，点击上方按钮新增" @header-dragend="onHeaderDragendZone">
         <el-table-column prop="code" label="编码" :width="cwZone('编码') || 120" />
-        <el-table-column prop="name" label="名称" min-width="140" show-overflow-tooltip>
+        <el-table-column prop="name" label="名称" :width="cw('名称') || undefined" min-width="140" show-overflow-tooltip>
           <template #default="{row}">
             {{ row.name }}
             <el-tag v-if="row.zoneType === 'UNQUALIFIED_RAW'" size="small" type="danger" style="margin-left:6px">原材料不合格品库·保护</el-tag>
@@ -58,7 +58,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="sortOrder" label="排序" :width="cwZone('排序') || 80" align="center" />
-        <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="remark" label="备注" :width="cw('备注') || undefined" min-width="160" show-overflow-tooltip />
         <el-table-column label="状态" :width="cwZone('状态') || 70" align="center">
           <template #default="{row}"><el-tag size="small" :type="row.enabled?'success':'danger'">{{ row.enabled?'启用':'禁用' }}</el-tag></template>
         </el-table-column>
@@ -81,9 +81,9 @@
         </div>
         <p-table :data="locations" stripe border size="small" empty-text="暂无库位，点击上方按钮新增" @header-dragend="onHeaderDragendLoc">
           <el-table-column prop="code" label="编码" :width="cwLoc('编码') || 120" />
-          <el-table-column prop="name" label="名称" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="name" label="名称" :width="cw('名称') || undefined" min-width="140" show-overflow-tooltip />
           <el-table-column prop="sortOrder" label="排序" :width="cwLoc('排序') || 80" align="center" />
-          <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="remark" label="备注" :width="cw('备注') || undefined" min-width="160" show-overflow-tooltip />
           <el-table-column label="状态" :width="cwLoc('状态') || 70" align="center">
             <template #default="{row}"><el-tag size="small" :type="row.enabled?'success':'danger'">{{ row.enabled?'启用':'禁用' }}</el-tag></template>
           </el-table-column>

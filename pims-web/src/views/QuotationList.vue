@@ -18,8 +18,8 @@
 
     <p-table :data="filtered" stripe border size="small" @header-dragend="onHeaderDragend">
       <el-table-column prop="quoteNo" label="报价单号" :width="cw('报价单号') || 120" />
-      <el-table-column prop="customerName" label="客户" min-width="140" show-overflow-tooltip />
-      <el-table-column prop="materialNames" label="报价内容" min-width="180" show-overflow-tooltip />
+      <el-table-column prop="customerName" label="客户" :width="cw('客户') || undefined" min-width="140" show-overflow-tooltip />
+      <el-table-column prop="materialNames" label="报价内容" :width="cw('报价内容') || undefined" min-width="180" show-overflow-tooltip />
       <el-table-column prop="quoteDate" label="报价日期" :width="cw('报价日期') || 100" />
       <el-table-column prop="validUntil" label="有效期至" :width="cw('有效期至') || 100" />
       <el-table-column label="金额" align="right" :width="cw('金额') || 110">
@@ -61,7 +61,7 @@
         <el-form-item label="报价明细" required>
           <div style="width:100%">
             <p-table :data="form.items" border size="small" style="width:100%">
-              <el-table-column label="物料" min-width="200">
+              <el-table-column label="物料" :width="cw('物料') || undefined" min-width="200">
                 <template #default="{ row }">
                   <el-select v-model="row.materialCode" filterable size="small" placeholder="搜索物料" style="width:100%" @change="onItemMatChange(row)">
                     <el-option v-for="m in materials" :key="m.code" :label="m.code + ' ' + m.name" :value="m.code" />
@@ -108,7 +108,7 @@
     <el-dialog :title="'报价明细 ' + (viewing?.quoteNo || '')" v-model="viewVisible" width="min(1100px, 96vw)">
       <p-table :data="viewItems" border size="small">
         <el-table-column prop="materialCode" label="编码" width="110" />
-        <el-table-column prop="materialName" label="物料" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="materialName" label="物料" :width="cw('物料') || undefined" min-width="160" show-overflow-tooltip />
         <el-table-column prop="qty" label="数量" width="100" align="right" />
         <el-table-column prop="unit" label="单位" width="60" />
         <el-table-column label="单价" width="110" align="right">

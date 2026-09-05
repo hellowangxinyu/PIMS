@@ -9,7 +9,7 @@
     <div class="table-card">
       <p-table :data="roles" stripe border @header-dragend="onHeaderDragend">
         <el-table-column prop="code" label="编码" :width="cw('编码') || 130" />
-        <el-table-column prop="name" label="名称" min-width="150" />
+        <el-table-column prop="name" label="名称" :width="cw('名称') || undefined" min-width="150" />
         <el-table-column prop="enabled" label="启用" :width="cw('启用') || 80" align="center">
           <template #default="{row}"><el-tag :type="row.enabled?'success':'danger'">{{ row.enabled?'是':'否' }}</el-tag></template>
         </el-table-column>
@@ -58,7 +58,7 @@
             <span v-else class="no-perm">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="字段权限" min-width="160">
+        <el-table-column label="字段权限" :width="cw('字段权限') || undefined" min-width="160">
           <template #default="{ row }">
             <template v-if="row.fieldPerms && row.fieldPerms.length">
               <div v-for="fp in row.fieldPerms" :key="fp.code" class="field-perm-item">

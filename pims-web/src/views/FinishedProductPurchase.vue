@@ -155,7 +155,7 @@
             <button class="op-btn op-btn-add" type="button" @click="addBatchRow">+ 添加物料</button>
           </div>
           <p-table :data="batchItems" border size="small" style="width:100%">
-            <el-table-column label="成品物料" min-width="240">
+            <el-table-column label="成品物料" :width="cw('成品物料') || undefined" min-width="240">
               <template #default="{ row }">
                 <el-select v-model="row.materialName" filterable clearable :filter-method="v => row.searchText = v" :disabled="!form.supplierName" placeholder="请先选择供应商" size="small" class="full-width" @change="name => onBatchMaterialChange(row, name)">
                   <el-option v-for="m in rowMaterials(row)" :key="m.code" :label="m.code + ' ' + m.name + (m.brand ? ' [' + m.brand + ']' : '')" :value="m.name">

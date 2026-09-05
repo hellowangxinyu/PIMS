@@ -11,7 +11,7 @@
     <div class="table-card">
       <p-table :data="list" stripe border @header-dragend="onHeaderDragend">
         <el-table-column prop="code" label="编码" :width="cw('编码') || 130" />
-        <el-table-column prop="name" label="名称" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="name" label="名称" :width="cw('名称') || undefined" min-width="180" show-overflow-tooltip />
         <el-table-column prop="contactPerson" label="联系人" :width="cw('联系人') || 100" />
         <el-table-column prop="contactPhone" label="电话" :width="cw('电话') || 130" />
         <el-table-column prop="abcLevel" label="等级" :width="cw('等级') || 80" align="center" />
@@ -61,7 +61,7 @@
         <div class="p360-sec">最新成交价 <span class="p360-hint">（下单选物料自动带出）</span></div>
         <el-table :data="recentPrices" size="small" border max-height="240">
           <el-table-column prop="materialCode" label="编码" width="110" />
-          <el-table-column prop="materialName" label="物料" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="materialName" label="物料" :width="cw('物料') || undefined" min-width="160" show-overflow-tooltip />
           <el-table-column label="最新单价" width="110" align="right">
             <template #default="{row}">¥{{ Number(row.unitPrice).toFixed(2) }}</template>
           </el-table-column>
@@ -71,7 +71,7 @@
         <div class="p360-sec">最近订单</div>
         <el-table :data="profile.recentOrders" size="small" border>
           <el-table-column prop="orderNo" label="订单号" width="120" />
-          <el-table-column prop="materialNames" label="物料" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="materialNames" label="物料" :width="cw('物料') || undefined" min-width="160" show-overflow-tooltip />
           <el-table-column prop="totalAmount" label="金额" width="100" align="right" />
           <el-table-column prop="status" label="状态" width="80" align="center">
             <template #default="{row}">{{ {DRAFT:'草稿',CONFIRMED:'已确认',SHIPPED:'已发货',CLOSED:'已关闭'}[row.status] || row.status }}</template>
@@ -85,7 +85,7 @@
             <template #default="{row}">{{ {BANK:'银行',CASH:'现金',ACCEPTANCE:'承兑'}[row.method] || row.method }}</template>
           </el-table-column>
           <el-table-column prop="receiptDate" label="日期" width="105" />
-          <el-table-column prop="arDocNo" label="核销" min-width="130" show-overflow-tooltip />
+          <el-table-column prop="arDocNo" label="核销" :width="cw('核销') || undefined" min-width="130" show-overflow-tooltip />
         </el-table>
       </template>
     </el-drawer>

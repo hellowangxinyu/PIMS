@@ -48,7 +48,7 @@
       <p-table v-else :data="group.items" stripe border size="small">
         <el-table-column prop="subCategory" label="小类" width="120" />
         <el-table-column prop="subCategoryCode" label="小类代码" width="100" />
-        <el-table-column label="编码规则" min-width="260">
+        <el-table-column label="编码规则" :width="cw('编码规则') || undefined" min-width="260">
           <template #default="{row}">
             <span v-if="group.categoryCode === 'C'">{{ row.subCategoryCode }} + 主材(1) + 色系(1) + 序号(5)，如 {{ row.subCategoryCode }}TH00010</span>
             <span v-else>{{ subPrefix(row) }} + 主材(1) + 序号(5)，如 {{ subPrefix(row) }}F00010</span>

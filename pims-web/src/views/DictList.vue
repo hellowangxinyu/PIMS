@@ -15,7 +15,7 @@
       </div>
       <p-table :data="group.items" stripe border size="small" @header-dragend="onHeaderDragend">
         <el-table-column prop="value" label="值" :width="cw('值') || 180" />
-        <el-table-column prop="label" label="显示名称" min-width="150" />
+        <el-table-column prop="label" label="显示名称" :width="cw('显示名称') || undefined" min-width="150" />
         <el-table-column prop="sortOrder" label="排序" :width="cw('排序') || 80" />
         <el-table-column label="操作" width="130" v-if="hasPerm('dict:write')">
           <template #default="{row}">

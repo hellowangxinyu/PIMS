@@ -26,7 +26,7 @@
     <div class="table-card">
       <p-table :data="list" stripe border @header-dragend="onHeaderDragend">
         <el-table-column prop="code" label="编码" :width="cw('编码') || 130" />
-        <el-table-column prop="name" label="名称" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="name" label="名称" :width="cw('名称') || undefined" min-width="200" show-overflow-tooltip />
         <el-table-column label="类型" :width="cw('类型') || 90" align="center">
           <template #default="{row}">
             <el-tag size="small" :type="row.type==='FINISHED'?'success':(row.type==='PROCESSOR'?'warning':'primary')">
@@ -96,12 +96,12 @@
             <template #default="{row}">{{ {BANK:'银行',CASH:'现金',ACCEPTANCE:'承兑'}[row.method] || row.method }}</template>
           </el-table-column>
           <el-table-column prop="payDate" label="日期" width="105" />
-          <el-table-column prop="apDocNo" label="核销" min-width="130" show-overflow-tooltip />
+          <el-table-column prop="apDocNo" label="核销" :width="cw('核销') || undefined" min-width="130" show-overflow-tooltip />
         </el-table>
         <div class="p360-sec" v-if="profile.recentReturns?.length">最近退货</div>
         <el-table v-if="profile.recentReturns?.length" :data="profile.recentReturns" size="small" border>
           <el-table-column prop="docNo" label="退货单" width="120" />
-          <el-table-column prop="materialName" label="物料" min-width="140" />
+          <el-table-column prop="materialName" label="物料" :width="cw('物料') || undefined" min-width="140" />
           <el-table-column prop="qty" label="数量" width="90" align="right" />
           <el-table-column prop="returnAmount" label="金额" width="90" align="right" />
           <el-table-column prop="status" label="状态" width="90" align="center" />

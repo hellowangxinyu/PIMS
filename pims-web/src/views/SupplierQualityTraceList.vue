@@ -20,11 +20,11 @@
       </div>
       <p-table :data="filteredRows" stripe border highlight-current-row @header-dragend="onHeaderDragend">
         <el-table-column prop="traceNo" label="单号" :width="cw('单号') || 110" />
-        <el-table-column label="供应商" min-width="150" show-overflow-tooltip>
+        <el-table-column label="供应商" :width="cw('供应商') || undefined" min-width="150" show-overflow-tooltip>
           <template #default="{row}">{{ row.supplierName }}</template>
         </el-table-column>
         <el-table-column prop="purchaseOrderNo" label="采购单号" :width="cw('采购单号') || 120" show-overflow-tooltip />
-        <el-table-column label="物料" min-width="170" show-overflow-tooltip>
+        <el-table-column label="物料" :width="cw('物料') || undefined" min-width="170" show-overflow-tooltip>
           <template #default="{row}">{{ row.materialCode }} {{ row.materialName }}</template>
         </el-table-column>
         <el-table-column prop="batchNo" label="批号" :width="cw('批号') || 100" />
@@ -136,7 +136,7 @@
       </div>
       <p-table :data="batchRows" stripe border size="small" highlight-current-row @current-change="r => batchSelected = r" empty-text="输入关键字搜索库存台账批次">
         <el-table-column prop="materialCode" label="物料编码" width="120" />
-        <el-table-column prop="materialName" label="物料名称" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="materialName" label="物料名称" :width="cw('物料名称') || undefined" min-width="160" show-overflow-tooltip />
         <el-table-column prop="batchNo" label="批号" width="110" />
         <el-table-column label="数量" width="90" align="right">
           <template #default="{row}">{{ row.qty }}{{ row.unit }}</template>
@@ -211,10 +211,10 @@
     <!-- 函件模板管理 -->
     <el-dialog title="损失沟通函模板" v-model="tplListVisible" width="min(1100px, 96vw)">
       <el-table :data="templates" stripe border size="small">
-        <el-table-column prop="name" label="模板名称" min-width="150">
+        <el-table-column prop="name" label="模板名称" :width="cw('模板名称') || undefined" min-width="150">
           <template #default="{row}">{{ row.name }} <el-tag v-if="row.isDefault" size="small" type="success" style="margin-left:4px">默认</el-tag></template>
         </el-table-column>
-        <el-table-column label="正文预览" min-width="200" show-overflow-tooltip>
+        <el-table-column label="正文预览" :width="cw('正文预览') || undefined" min-width="200" show-overflow-tooltip>
           <template #default="{row}">{{ (row.bodyText || '').slice(0, 60) }}…</template>
         </el-table-column>
         <el-table-column label="操作" width="235" align="center">
@@ -283,14 +283,14 @@
         <el-table-column label="业务类型" width="100">
           <template #default="{row}">{{ docTypeMap[row.docType] || row.docType }}</template>
         </el-table-column>
-        <el-table-column prop="docNo" label="单据号" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="docNo" label="单据号" :width="cw('单据号') || undefined" min-width="130" show-overflow-tooltip />
         <el-table-column label="方向" width="70" align="center">
           <template #default="{row}">
             <el-tag size="small" :type="row.direction === 'IN' ? 'success' : 'danger'">{{ row.direction === 'IN' ? '入库' : '出库' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="qty" label="数量" width="90" align="right" />
-        <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="remark" label="备注" :width="cw('备注') || undefined" min-width="120" show-overflow-tooltip />
       </el-table>
     </el-drawer>
 

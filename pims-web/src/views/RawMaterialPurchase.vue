@@ -167,14 +167,14 @@
             <button class="op-btn op-btn-add" type="button" @click="addBatchRow">+ 添加物料</button>
           </div>
           <p-table :data="batchItems" border size="small" style="width:100%">
-            <el-table-column label="物料" min-width="220">
+            <el-table-column label="物料" :width="cw('物料') || undefined" min-width="220">
               <template #default="{ row }">
                 <el-autocomplete v-model="row.materialCode" :fetch-suggestions="searchMaterial" placeholder="编码或品名搜索" @select="it => onBatchMaterialSelect(row, it)" clearable size="small" class="full-width">
                   <template #default="{ item }"><span>{{ item.label }}</span></template>
                 </el-autocomplete>
               </template>
             </el-table-column>
-            <el-table-column label="品名" min-width="110" show-overflow-tooltip>
+            <el-table-column label="品名" :width="cw('品名') || undefined" min-width="110" show-overflow-tooltip>
               <template #default="{ row }">{{ row.materialName || '-' }}</template>
             </el-table-column>
             <el-table-column label="牌号" width="110">

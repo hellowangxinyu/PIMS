@@ -27,9 +27,9 @@
       <!-- ===== 待到货列表（原料/成品） ===== -->
       <template v-if="activeTab !== 'DETAIL'">
       <p-table :data="pagedRows" stripe border @header-dragend="onHeaderDragend">
-        <el-table-column prop="orderNo" label="合同号" min-width="140" show-overflow-tooltip />
-        <el-table-column prop="supplierName" label="供应商" min-width="120" show-overflow-tooltip />
-        <el-table-column prop="materialName" label="品名" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="orderNo" label="合同号" :width="cw('合同号') || undefined" min-width="140" show-overflow-tooltip />
+        <el-table-column prop="supplierName" label="供应商" :width="cw('供应商') || undefined" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="materialName" label="品名" :width="cw('品名') || undefined" min-width="150" show-overflow-tooltip />
         <el-table-column prop="brand" label="牌号" :width="cw('牌号') || 100" />
         <el-table-column label="采购数量" :width="cw('采购数量') || 100" align="right">
           <template #default="{row}">{{ row.qty }}</template>
@@ -87,15 +87,15 @@
         </div>
         <p-table :data="detailRows" stripe border @selection-change="sel => selectedDetailRows = sel">
           <el-table-column type="selection" width="40" />
-          <el-table-column prop="docNo" label="到货单号" min-width="150" show-overflow-tooltip>
+          <el-table-column prop="docNo" label="到货单号" :width="cw('到货单号') || undefined" min-width="150" show-overflow-tooltip>
             <template #default="{ row }">{{ row.docNo || '—' }}</template>
           </el-table-column>
-          <el-table-column prop="arrivalDate" label="到货日期" min-width="110" />
-          <el-table-column prop="refOrderNo" label="合同号" min-width="140" show-overflow-tooltip />
-          <el-table-column prop="supplierName" label="供应商" min-width="120" show-overflow-tooltip />
-          <el-table-column prop="materialCode" label="编码" min-width="105" show-overflow-tooltip />
-          <el-table-column prop="materialName" label="品名" min-width="140" show-overflow-tooltip />
-          <el-table-column prop="batchNo" label="批号" min-width="120" show-overflow-tooltip>
+          <el-table-column prop="arrivalDate" label="到货日期" :width="cw('到货日期') || undefined" min-width="110" />
+          <el-table-column prop="refOrderNo" label="合同号" :width="cw('合同号') || undefined" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="supplierName" label="供应商" :width="cw('供应商') || undefined" min-width="120" show-overflow-tooltip />
+          <el-table-column prop="materialCode" label="编码" :width="cw('编码') || undefined" min-width="105" show-overflow-tooltip />
+          <el-table-column prop="materialName" label="品名" :width="cw('品名') || undefined" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="batchNo" label="批号" :width="cw('批号') || undefined" min-width="120" show-overflow-tooltip>
             <template #default="{ row }">{{ row.batchNo || '—' }}</template>
           </el-table-column>
           <el-table-column prop="qty" label="到货数量" width="100" align="right" />
@@ -111,11 +111,11 @@
           <el-table-column label="税率" width="65" align="center">
             <template #default="{ row }">{{ (row.taxRate ?? taxRate) }}%</template>
           </el-table-column>
-          <el-table-column label="仓库" min-width="110">
+          <el-table-column label="仓库" :width="cw('仓库') || undefined" min-width="110">
             <template #default="{row}">{{ whName(row.warehouseId) }}</template>
           </el-table-column>
-          <el-table-column prop="zoneName" label="分库" min-width="90" />
-          <el-table-column prop="locationName" label="库位" min-width="90" />
+          <el-table-column prop="zoneName" label="分库" :width="cw('分库') || undefined" min-width="90" />
+          <el-table-column prop="locationName" label="库位" :width="cw('库位') || undefined" min-width="90" />
           <el-table-column prop="operator" label="操作人" width="90" />
         </p-table>
         <!-- 分页（v5.2） -->

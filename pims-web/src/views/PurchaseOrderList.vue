@@ -19,14 +19,14 @@
     <div class="table-card">
       <p-table :data="paged" stripe border @header-dragend="onHeaderDragend">
         <el-table-column prop="orderNo" label="单号" :width="cw('单号') || 150" />
-        <el-table-column label="供应商" min-width="150" show-overflow-tooltip>
+        <el-table-column label="供应商" :width="cw('供应商') || undefined" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">{{ supplierName(row) }}</template>
         </el-table-column>
         <el-table-column prop="orderDate" label="订单日期" :width="cw('订单日期') || 110" align="center" />
         <el-table-column prop="totalAmount" label="金额" :width="cw('金额') || 130" align="right" v-if="hasAmountPerm">
           <template #default="{ row }">{{ fmt(row.totalAmount) }}</template>
         </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="remark" label="备注" :width="cw('备注') || undefined" min-width="180" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" :width="cw('状态') || 100" align="center">
           <template #default="{ row }">
             <el-tag size="small" :type="poStatusType(row.status)">{{ poStatusLabel(row.status) }}</el-tag>
@@ -53,8 +53,8 @@
     <!-- 明细弹窗 -->
     <el-dialog :title="`请购明细 ${viewRow?.orderNo || ''}`" v-model="itemsVisible" width="640px">
       <p-table :data="viewItems" border size="small" style="width:100%">
-        <el-table-column prop="materialCode" label="物料编码" min-width="130" />
-        <el-table-column label="物料名称" min-width="160">
+        <el-table-column prop="materialCode" label="物料编码" :width="cw('物料编码') || undefined" min-width="130" />
+        <el-table-column label="物料名称" :width="cw('物料名称') || undefined" min-width="160">
           <template #default="{ row }">{{ matName(row.materialCode) }}</template>
         </el-table-column>
         <el-table-column prop="qty" label="数量" width="100" align="right" />
@@ -98,7 +98,7 @@
         <el-button size="small" @click="addItem">+ 添加物料</el-button>
       </div>
       <el-table :data="form.items" border size="small" style="width:100%">
-        <el-table-column label="物料" min-width="240">
+        <el-table-column label="物料" :width="cw('物料') || undefined" min-width="240">
           <template #default="{ row }">
             <el-select v-model="row.materialCode" filterable size="small" style="width:100%">
               <el-option v-for="m in materials" :key="m.code" :label="m.code + ' ' + (m.name || '')" :value="m.code" />

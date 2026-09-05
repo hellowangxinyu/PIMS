@@ -32,7 +32,7 @@
     <div class="table-card">
       <p-table :data="pagedRows" stripe border @header-dragend="onHeaderDragend">
         <el-table-column prop="code" label="编码" :width="cw('编码') || 130" />
-        <el-table-column prop="name" label="品名" min-width="180" show-overflow-tooltip>
+        <el-table-column prop="name" label="品名" :width="cw('品名') || undefined" min-width="180" show-overflow-tooltip>
           <template #default="{row}"><span :style="row.enabled ? '' : 'color:#94a3b8;text-decoration:line-through'">{{ row.name }}</span></template>
         </el-table-column>
         <el-table-column prop="brand" label="牌号" :width="cw('牌号') || 120" />

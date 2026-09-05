@@ -12,8 +12,8 @@
 
     <p-table :data="list" stripe border size="small" @header-dragend="onHeaderDragend">
       <el-table-column prop="sampleNo" label="打样单号" :width="cw('打样单号') || 118" />
-      <el-table-column prop="customerName" label="客户/线索" min-width="130" show-overflow-tooltip />
-      <el-table-column prop="materialDesc" label="意向产品/颜色" min-width="150" show-overflow-tooltip />
+      <el-table-column prop="customerName" label="客户/线索" :width="cw('客户/线索') || undefined" min-width="130" show-overflow-tooltip />
+      <el-table-column prop="materialDesc" label="意向产品/颜色" :width="cw('意向产品/颜色') || undefined" min-width="150" show-overflow-tooltip />
       <el-table-column prop="qty" label="数量" :width="cw('数量') || 70" align="right" />
       <el-table-column prop="applicant" label="申请人" :width="cw('申请人') || 80" />
       <el-table-column label="状态" :width="cw('状态') || 88" align="center">
