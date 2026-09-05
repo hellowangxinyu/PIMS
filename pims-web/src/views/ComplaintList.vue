@@ -176,7 +176,7 @@ function fmtTime(t) {
 
 const docTypeMap = {
   PURCHASE_IN: '采购入库', OUTSOURCE_OUT: '委外出库', OUTSOURCE_IN: '委外入库',
-  SALES_OUT: '销售出库', PRODUCTION_OUT: '生产领料', OTHER_OUT: '其他出库',
+  SALES_OUT: '销售出库', PRODUCTION_OUT: '生产领料', OTHER_OUT: '其他出库', REWORK_OUT: '返工领料',   // v6.9.1
   OTHER_IN: '其他入库', TRANSFER: '调拨', ADJUSTMENT: '盘点调整'
 }
 

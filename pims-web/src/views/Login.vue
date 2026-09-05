@@ -34,7 +34,7 @@
           <div class="brand-icon">
             <svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true">
               <path d="M32 11c6.5 9 14.5 16.4 14.5 25a14.5 14.5 0 1 1-29 0c0-8.6 8-16 14.5-25z" fill="#fff"/>
-              <circle cx="26.5" cy="38" r="4.5" fill="#818cf8" opacity="0.55"/>
+              <circle cx="26.5" cy="38" r="4.5" fill="#7da59d" opacity="0.55"/>
             </svg>
           </div>
           <div>
@@ -457,17 +457,17 @@
           <ellipse class="pshadow" cx="75" cy="143" rx="38" ry="6" fill="rgba(0,0,0,0.24)"/>
           <g class="body anim-bob">
             <g class="anim-wob">
-            <circle cx="52" cy="50" r="8" fill="#7c3aed"/><circle cx="98" cy="50" r="8" fill="#7c3aed"/>
-            <circle class="bf" cx="75" cy="88" r="42" fill="#9d6bf5" stroke="#7c3aed" stroke-width="2.5"/>
-            <circle cx="55" cy="48" r="7" fill="#b39cf7"/><circle cx="75" cy="44" r="8" fill="#b39cf7"/><circle cx="95" cy="48" r="7" fill="#b39cf7"/>
-            <circle cx="40" cy="112" r="9" fill="#8b5cf6"/><circle cx="110" cy="112" r="9" fill="#8b5cf6"/>
-            <circle cx="58" cy="140" r="8" fill="#8b5cf6"/><circle cx="92" cy="140" r="8" fill="#8b5cf6"/>
+            <circle cx="52" cy="50" r="8" fill="#3a655e"/><circle cx="98" cy="50" r="8" fill="#3a655e"/>
+            <circle class="bf" cx="75" cy="88" r="42" fill="#7da59d" stroke="#3a655e" stroke-width="2.5"/>
+            <circle cx="55" cy="48" r="7" fill="#a3c2bc"/><circle cx="75" cy="44" r="8" fill="#a3c2bc"/><circle cx="95" cy="48" r="7" fill="#a3c2bc"/>
+            <circle cx="40" cy="112" r="9" fill="#5f9187"/><circle cx="110" cy="112" r="9" fill="#5f9187"/>
+            <circle cx="58" cy="140" r="8" fill="#5f9187"/><circle cx="92" cy="140" r="8" fill="#5f9187"/>
           </g>
           </g>
           <g class="head-idle anim-sway">
           <g class="head" :style="{ transform: `rotate(${toys.monster.rot + toys.monster.baseRot}deg)` }">
-            <circle cx="75.0" cy="49.0" r="7" fill="#7c3aed" opacity="0.9"/><circle cx="53.4" cy="53.2" r="7" fill="#7c3aed" opacity="0.9"/><circle cx="96.6" cy="53.2" r="7" fill="#7c3aed" opacity="0.9"/><circle cx="40.8" cy="71.2" r="6" fill="#7c3aed" opacity="0.9"/><circle cx="109.2" cy="71.2" r="6" fill="#7c3aed" opacity="0.9"/><circle cx="39.0" cy="87.4" r="5" fill="#7c3aed" opacity="0.9"/><circle cx="111.0" cy="87.4" r="5" fill="#7c3aed" opacity="0.9"/>
-            <circle class="hf" cx="75" cy="82" r="36" fill="#9d6bf5" stroke="#7c3aed" stroke-width="2.5"/>
+            <circle cx="75.0" cy="49.0" r="7" fill="#3a655e" opacity="0.9"/><circle cx="53.4" cy="53.2" r="7" fill="#3a655e" opacity="0.9"/><circle cx="96.6" cy="53.2" r="7" fill="#3a655e" opacity="0.9"/><circle cx="40.8" cy="71.2" r="6" fill="#3a655e" opacity="0.9"/><circle cx="109.2" cy="71.2" r="6" fill="#3a655e" opacity="0.9"/><circle cx="39.0" cy="87.4" r="5" fill="#3a655e" opacity="0.9"/><circle cx="111.0" cy="87.4" r="5" fill="#3a655e" opacity="0.9"/>
+            <circle class="hf" cx="75" cy="82" r="36" fill="#7da59d" stroke="#3a655e" stroke-width="2.5"/>
             <path d="M62 103 Q75 116 88 103" fill="none" stroke="#5b21b6" stroke-width="3" stroke-linecap="round"/>
             <ellipse cx="48" cy="96" rx="6.5" ry="4.5" fill="#e9d5ff" opacity="0.75"/>
             <ellipse cx="102" cy="96" rx="6.5" ry="4.5" fill="#e9d5ff" opacity="0.75"/>
@@ -615,7 +615,7 @@
           <div class="brand-icon small">
             <svg viewBox="0 0 64 64" width="24" height="24" aria-hidden="true">
               <path d="M32 11c6.5 9 14.5 16.4 14.5 25a14.5 14.5 0 1 1-29 0c0-8.6 8-16 14.5-25z" fill="#fff"/>
-              <circle cx="26.5" cy="38" r="4.5" fill="#818cf8" opacity="0.55"/>
+              <circle cx="26.5" cy="38" r="4.5" fill="#7da59d" opacity="0.55"/>
             </svg>
           </div>
           <h1>王新宇的芃远综合管理系统</h1>
@@ -1725,7 +1725,7 @@ async function login() {
   height: 6px;
   border-radius: 3px;
   margin-bottom: 26px;
-  background: linear-gradient(90deg, #818cf8 0 25%, #10b981 25% 50%, #f59e0b 50% 75%, #f43f5e 75% 100%);
+  background: linear-gradient(90deg, #4a7c74 0 25%, #b08968 25% 50%, #b58a3c 50% 75%, #b05a4e 75% 100%);   /* v6.9.1 黛青系 */
   box-shadow:
     inset 0 1px 1px rgba(255,255,255,0.75),
     inset 0 -2px 3px rgba(0,0,0,0.3),

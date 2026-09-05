@@ -660,11 +660,12 @@ body {
 
 /* 变体：primary 跟随主题，其余语义色四套主题下相同，rgb 三元组直接写死 */
 .op-btn-primary { --opb: var(--pims-primary); --opb-rgb: var(--pims-primary-rgb); }
-.op-btn-success, .op-btn-add { --opb: #16a34a; --opb-rgb: 22, 163, 74; }
-.op-btn-danger, .op-btn-del { --opb: #ef4444; --opb-rgb: 239, 68, 68; }
-.op-btn-warn, .op-btn-warning { --opb: #f59e0b; --opb-rgb: 245, 158, 11; }
-.op-btn-trace, .op-btn-print { --opb: #7c3aed; --opb-rgb: 124, 58, 237; }
-.op-btn-alt { --opb: #0891b2; --opb-rgb: 8, 145, 178; }
+/* v6.9.1：操作按钮变体色降饱和，与黛青·素雅语义色一致 */
+.op-btn-success, .op-btn-add { --opb: var(--pims-success, #5b8a5e); --opb-rgb: 91, 138, 94; }
+.op-btn-danger, .op-btn-del { --opb: var(--pims-danger, #b05a4e); --opb-rgb: 176, 90, 78; }
+.op-btn-warn, .op-btn-warning { --opb: var(--pims-warning, #b58a3c); --opb-rgb: 181, 138, 60; }
+.op-btn-trace, .op-btn-print { --opb: var(--pims-accent, #b08968); --opb-rgb: 176, 137, 104; }
+.op-btn-alt { --opb: var(--pims-primary, #4a7c74); --opb-rgb: 74, 124, 116; }
 
 /* 切换菜单里"液态玻璃"的色板（渐变玻璃片，替代三色点；所有主题下都要显示，故不加 data-theme 前缀） */
 .theme-swatches .glass-chip {

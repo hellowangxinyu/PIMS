@@ -37,6 +37,7 @@ public class ProductionOrderService {
 
     private final ProductionOrderRepository orderRepo;
     private final com.pengyuan.pims.repository.ProductionOrderExceptionRepository exceptionRepo;   // v6.8 完工联动
+    private final org.springframework.transaction.support.TransactionTemplate txTemplate;   // v6.9.1 建档独立事务
     private final ProductionOrderItemRepository itemRepo;
     private final ProductionOutboundRepository outboundRepo;
     private final ProductionInboundRepository inboundRepo;
@@ -54,7 +55,8 @@ public class ProductionOrderService {
                                   InventoryLedgerRepository inventoryLedgerRepo,
                                   WriteQueue writeQueue,
                                   com.pengyuan.pims.repository.MaterialRepository materialRepo,
-                                     com.pengyuan.pims.repository.ProductionOrderExceptionRepository exceptionRepo) {
+                                     com.pengyuan.pims.repository.ProductionOrderExceptionRepository exceptionRepo,
+                                     org.springframework.transaction.support.TransactionTemplate txTemplate) {
         this.orderRepo = orderRepo;
         this.itemRepo = itemRepo;
         this.outboundRepo = outboundRepo;
@@ -64,6 +66,7 @@ public class ProductionOrderService {
         this.writeQueue = writeQueue;
         this.materialRepo = materialRepo;
         this.exceptionRepo = exceptionRepo;
+        this.txTemplate = txTemplate;
     }
 
     public List<ProductionOrder> listAll() {
@@ -406,30 +409,38 @@ public class ProductionOrderService {
         if (scheduled && (reason == null || reason.isBlank()))
             throw new IllegalArgumentException("排产中的订单按实际完结必须填写原因（如：质检不合格客户让步、短量产出完结）");
         order.status = "COMPLETED";
-        if (scheduled && reason != null && !reason.isBlank()) {
+        if (scheduled) {
+            // v6.9.1 修复：reason 判空防"按实际完结：null"（旧调用路径无原因时）
             order.remark = (order.remark == null || order.remark.isBlank() ? "" : order.remark + "；")
-                    + "按实际完结：" + reason.trim();
+                    + "按实际完结：" + (reason == null || reason.isBlank() ? "（未填原因）" : reason.trim());
         }
         order.updateTime = LocalDateTime.now();
         orderRepo.save(order);
-        // 投出比异常联动：填快照建档，走异常订单处置闭环
+        // v6.9.1 修复：投出比异常建档挪出主事务（独立事务模板）——
+        // 原在同一 @Transactional 内 save，若建档抛错会把整个完工事务标 rollback-only，
+        // "不影响完工"的 catch 形同虚设；独立事务下建档失败只丢建档，完工照常提交
         try {
             fillIoRatio(java.util.List.of(order));
             if (order.ioStatus != null && order.ioStatus.contains("ABNORMAL")
                     && exceptionRepo.findByOrderNo(order.orderNo).isEmpty()) {
-                var ex = new com.pengyuan.pims.entity.ProductionOrderException();
-                ex.orderNo = order.orderNo;
-                ex.ioRatio = order.ioRatio;
-                ex.inputQty = order.inputQty;
-                ex.outputQty = order.outputQty;
-                ex.reason = "按实际完结：" + reason;
-                ex.status = "PENDING";
-                ex.createdBy = "系统";
-                exceptionRepo.save(ex);
-                log.warn("订单 {} 按实际完结且投出比异常（{}%），已自动建异常订单记录待处置", order.orderNo, order.ioRatio);
+                final String why = scheduled ? ("按实际完结：" + (reason == null || reason.isBlank() ? "未填原因" : reason.trim()))
+                        : "手动完工（投出比异常联动）";
+                final var o = order;
+                txTemplate.executeWithoutResult(tx -> {
+                    var ex = new com.pengyuan.pims.entity.ProductionOrderException();
+                    ex.orderNo = o.orderNo;
+                    ex.ioRatio = o.ioRatio;
+                    ex.inputQty = o.inputQty;
+                    ex.outputQty = o.outputQty;
+                    ex.reason = why;
+                    ex.status = "PENDING";
+                    ex.createdBy = "系统";
+                    exceptionRepo.save(ex);
+                });
+                log.warn("订单 {} 完工且投出比异常（{}%），已自动建异常订单记录待处置", order.orderNo, order.ioRatio);
             }
         } catch (Exception e) {
-            log.warn("完工联动异常订单建档失败（不影响完工）: {}", e.getMessage());
+            log.warn("完工联动异常订单建档失败（完工已提交，仅丢失建档）: {}", e.getMessage());
         }
         return order;
     }
@@ -462,6 +473,28 @@ public class ProductionOrderService {
         order.updateTime = LocalDateTime.now();
         orderRepo.save(order);
         log.info("生产订单自动完工（入库合格触发）：{} 产品={}", order.orderNo, order.productName);
+        // v6.9.1：自动完工同套投出比建档——短量产出但质检合格的单不再绕过异常闭环
+        try {
+            fillIoRatio(java.util.List.of(order));
+            if (order.ioStatus != null && order.ioStatus.contains("ABNORMAL")
+                    && exceptionRepo.findByOrderNo(order.orderNo).isEmpty()) {
+                final var o = order;
+                txTemplate.executeWithoutResult(tx -> {
+                    var ex = new com.pengyuan.pims.entity.ProductionOrderException();
+                    ex.orderNo = o.orderNo;
+                    ex.ioRatio = o.ioRatio;
+                    ex.inputQty = o.inputQty;
+                    ex.outputQty = o.outputQty;
+                    ex.reason = "入库合格自动完工（投出比异常联动）";
+                    ex.status = "PENDING";
+                    ex.createdBy = "系统";
+                    exceptionRepo.save(ex);
+                });
+                log.warn("订单 {} 自动完工且投出比异常（{}%），已建异常订单记录待处置", order.orderNo, order.ioRatio);
+            }
+        } catch (Exception e) {
+            log.warn("自动完工联动建档失败（完工已提交）: {}", e.getMessage());
+        }
     }
 
     /**
