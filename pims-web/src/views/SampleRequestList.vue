@@ -48,7 +48,9 @@
     <el-dialog :title="editing ? '编辑打样 ' + editing.sampleNo : '新增打样申请'" v-model="dialogVisible" width="min(1100px, 96vw)" destroy-on-close>
       <el-form :model="form" label-width="100px">
         <el-form-item label="客户" required>
-          <el-select v-model="form.customerId" filterable allow-create default-first-option placeholder="选择正式客户或直接输入线索公司名" style="width:100%" @change="onCustChange">
+          <!-- v-model 绑 customerName（选项 value=名称）：绑 customerId 会被 onCustChange 改写成数字 id，
+               el-select 找不到 value=id 的选项就把原始数字显示出来（选中山东亚泰显示 1 的 bug） -->
+          <el-select v-model="form.customerName" filterable allow-create default-first-option placeholder="选择正式客户或直接输入线索公司名" style="width:100%" @change="onCustChange">
             <el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.name" />
           </el-select>
         </el-form-item>
@@ -215,7 +217,7 @@ function openEdit(row) {
 
 function onCustChange(val) {
   const c = customers.value.find(c => c.name === val)
-  form.value.customerName = val
+  // customerName 已由 v-model 绑定自动是名称；这里只回填正式客户 id（手输线索名为 null）
   form.value.customerId = c ? c.id : null
 }
 
