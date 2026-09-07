@@ -59,8 +59,8 @@
       </p-table>
     </div>
 
-    <!-- 配方编辑抽屉 -->
-    <el-drawer v-model="editorVisible" :title="editorTitle" size="min(880px, 96vw)" destroy-on-close :close-on-click-modal="false">
+    <!-- 配方编辑弹窗（居中大窗，v7.7.4 由侧边抽屉改为 dialog） -->
+    <el-dialog v-model="editorVisible" :title="editorTitle" width="min(960px, 96vw)" top="4vh" destroy-on-close :close-on-click-modal="false">
       <div v-if="editorRow" class="editor">
         <!-- v7.7.2 复样参考：登记时关联了历史打样则展示其配方，可一键带入作起点 -->
         <div class="ed-sec ref-sec" v-if="refFormula">
@@ -162,7 +162,7 @@
           <el-button type="primary" size="small" :loading="saving" @click="save">{{ locked ? '更新明细' : '保存（将创建成品物料）' }}</el-button>
         </div>
       </template>
-    </el-drawer>
+    </el-dialog>
 
     <MaterialPicker v-model="pickerVisible" @picked="onPicked" />
   </div>
@@ -397,7 +397,7 @@ onMounted(async () => {
 .text-muted { color: #9ca3af; font-size: 12px; }
 .text-center { text-align: center; }
 .text-right { text-align: right; }
-.editor { padding: 0 4px; }
+.editor { padding: 0 4px; max-height: calc(100vh - 220px); overflow-y: auto; }
 .ref-sec { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px 12px; }
 .ref-total td { background: #eef2f7; font-weight: 600; }
 .ed-sec { margin-bottom: 22px; }
