@@ -69,14 +69,14 @@
             <el-button size="small" type="primary" plain :disabled="!refFormula.items?.length" @click="applyRef">带入参考配方</el-button>
           </div>
           <table class="ed-table" v-if="refFormula.items?.length">
-            <thead><tr><th>物料编码</th><th>品名</th><th style="width:90px">类别</th><th style="width:110px">用量(kg)</th></tr></thead>
+            <thead><tr><th>物料编码</th><th>品名</th><th style="width:90px">类别</th><th style="width:110px">用量(g)</th></tr></thead>
             <tbody>
               <tr v-for="it in refFormula.items" :key="it.materialCode">
                 <td>{{ it.materialCode }}</td><td>{{ it.materialName }}</td>
                 <td class="text-center">{{ catLabel(it.category) }}</td>
-                <td class="text-right">{{ Number(it.qty).toFixed(3) }}</td>
+                <td class="text-right">{{ Number(it.qty).toFixed(1) }}</td>
               </tr>
-              <tr class="ref-total"><td colspan="3" class="text-right">合计</td><td class="text-right">{{ Number(refFormula.totalQty).toFixed(3) }}</td></tr>
+              <tr class="ref-total"><td colspan="3" class="text-right">合计</td><td class="text-right">{{ Number(refFormula.totalQty).toFixed(1) }}</td></tr>
             </tbody>
           </table>
           <div v-else class="text-muted" style="padding:6px 0">该打样尚未录入配方</div>
@@ -120,12 +120,12 @@
 
         <div class="ed-sec">
           <div class="ed-sec-title">
-            <span>用料明细（实际打样用量，自由合计不强制 100）</span>
+            <span>用料明细（实际打样用量，按克称量，自由合计不强制 100）</span>
             <el-button size="small" type="primary" @click="openAddItem">+ 添加用料</el-button>
           </div>
           <div class="cost-bar">
             <span class="cost-bar-label">合计：</span>
-            <span class="cost-bar-total">{{ totalQty }} kg</span>
+            <span class="cost-bar-total">{{ totalQty }} g</span>
             <span class="cost-bar-unit">估算成本 ≈ ¥{{ estCost }}/kg</span>
             <span class="cost-bar-hint">材料按库存加权均价（与配方树成本同源），供报价参考</span>
           </div>
@@ -146,9 +146,9 @@
                 <span v-else>-</span>
               </template>
             </el-table-column>
-            <el-table-column label="用量(kg)" width="130" align="right">
+            <el-table-column label="用量(g)" width="130" align="right">
               <template #default="{ row }">
-                <el-input-number v-model="row.qty" :min="0.001" :precision="3" :step="0.1" size="small" controls-position="right" style="width:120px" />
+                <el-input-number v-model="row.qty" :min="0.1" :precision="1" :step="10" size="small" controls-position="right" style="width:120px" />
               </template>
             </el-table-column>
             <el-table-column label="参考单价" width="100" align="right">
@@ -186,8 +186,8 @@
             <el-tag v-if="addItemForm.subCategory" size="small" style="margin-left:6px">{{ addItemForm.subCategory }}</el-tag>
           </el-form-item>
           <el-form-item label="用量" required>
-            <el-input-number v-model="addItemForm.qty" :min="0.001" :precision="3" :step="0.1" style="width:160px" />
-            <span style="margin-left:8px;color:#64748b">kg（公斤）</span>
+            <el-input-number v-model="addItemForm.qty" :min="0.1" :precision="1" :step="10" style="width:160px" />
+            <span style="margin-left:8px;color:#64748b">g（克，打样按克称量）</span>
           </el-form-item>
         </el-form>
         <template #footer>
@@ -288,7 +288,7 @@ function priceOf(code) {
   const p = priceMap.value[code]
   return p != null ? Number(p).toFixed(2) : '—'
 }
-const totalQty = computed(() => form.value.items.reduce((s, it) => s + (Number(it.qty) || 0), 0).toFixed(3))
+const totalQty = computed(() => form.value.items.reduce((s, it) => s + (Number(it.qty) || 0), 0).toFixed(1))
 const estCost = computed(() => {
   let cost = 0, qty = 0
   for (const it of form.value.items) {
@@ -332,13 +332,13 @@ async function openEditor(row) {
 
 // v7.7.5 添加用料弹窗（参照配方管理「添加节点」方式：类型→搜料→用量→连续添加）
 const addDialogVisible = ref(false)
-const addItemForm = ref({ itemType: 'MATERIAL', materialCode: '', materialName: '', category: '', subCategory: '', qty: 0.1 })
+const addItemForm = ref({ itemType: 'MATERIAL', materialCode: '', materialName: '', category: '', subCategory: '', qty: 100 })
 const addItemMaterials = computed(() =>
   addItemForm.value.itemType === 'SEMI'
     ? materials.value.filter(m => m.category === 'B')
     : materials.value.filter(m => 'APFRS'.includes(m.category || '')))
 function openAddItem() {
-  addItemForm.value = { itemType: addItemForm.value.itemType, materialCode: '', materialName: '', category: '', subCategory: '', qty: 0.1 }
+  addItemForm.value = { itemType: addItemForm.value.itemType, materialCode: '', materialName: '', category: '', subCategory: '', qty: 100 }
   addDialogVisible.value = true
 }
 function onAddItemMatChange(code) {
@@ -348,7 +348,7 @@ function onAddItemMatChange(code) {
 function confirmAddItem() {
   const f = addItemForm.value
   if (!f.materialCode) { ElMessage.warning('请选择物料'); return }
-  if (!f.qty || f.qty <= 0) { ElMessage.warning('用量必须大于 0'); return }
+  if (!f.qty || f.qty <= 0) { ElMessage.warning('用量必须大于 0（克）'); return }
   form.value.items.push({ materialCode: f.materialCode, materialName: f.materialName, category: f.category, subCategory: f.subCategory, qty: f.qty })
   ElMessage.success(`已添加 ${f.materialName}，可继续添加`)
   openAddItem()   // 连续添加：清空物料保类型
@@ -373,7 +373,7 @@ function applyRef() {
 async function save() {
   if (!form.value.items.length) { ElMessage.warning('请至少录入一行用料明细'); return }
   if (form.value.items.some(it => !it.materialCode)) { ElMessage.warning('存在未选择物料的明细行'); return }
-  if (form.value.items.some(it => !it.qty || it.qty <= 0)) { ElMessage.warning('每行用量必须大于 0'); return }
+  if (form.value.items.some(it => !it.qty || it.qty <= 0)) { ElMessage.warning('每行用量必须大于 0（克）'); return }
   if (!locked.value && (!form.value.name.trim() || !form.value.subCategory || !form.value.mainMaterial || !form.value.colorSeries)) {
     ElMessage.warning('首次保存需填齐：中文名、小类、主材、色系'); return
   }

@@ -27,7 +27,7 @@ export function printSampleFormula(f) {
       <td>${esc(it.materialCode)}</td>
       <td>${esc(it.materialName)}</td>
       <td class="c">${CAT_NAME[it.category] || it.category || ''}</td>
-      <td class="r">${Number(it.qty ?? 0).toFixed(3)}</td>
+      <td class="r">${Number(it.qty ?? 0).toFixed(1)}</td>
     </tr>`).join('')
   const total = (f.items || []).reduce((s, it) => s + (Number(it.qty) || 0), 0)
 
@@ -61,7 +61,7 @@ export function printSampleFormula(f) {
   </tr>
   <tr>
     <td class="k">分类</td><td>${SUB_NAME[sub] || sub || ''} ｜ ${cat3}</td>
-    <td class="k">打样总量</td><td>${Number(f.totalQty ?? total).toFixed(3)} kg</td>
+    <td class="k">打样总量</td><td>${Number(f.totalQty ?? total).toFixed(1)} g</td>
   </tr>
   <tr>
     <td class="k">寄样样板</td><td>${f.sampleQty ?? '-'} ${f.sampleUnit || '张'}（${f.sampleSize === 'A4' ? 'A4 大小' : '常规尺寸'}）</td>
@@ -72,9 +72,9 @@ export function printSampleFormula(f) {
   </tr>
 </table>
 <table class="list">
-  <thead><tr><th class="c" style="width:44px">序号</th><th style="width:110px">物料编码</th><th>品名</th><th class="c" style="width:100px">类别</th><th class="r" style="width:110px">用量(kg)</th></tr></thead>
+  <thead><tr><th class="c" style="width:44px">序号</th><th style="width:110px">物料编码</th><th>品名</th><th class="c" style="width:100px">类别</th><th class="r" style="width:110px">用量(g)</th></tr></thead>
   <tbody>${rows}
-    <tr class="total"><td class="c">合计</td><td colspan="3"></td><td class="r">${total.toFixed(3)}</td></tr>
+    <tr class="total"><td class="c">合计</td><td colspan="3"></td><td class="r">${total.toFixed(1)}</td></tr>
   </tbody>
 </table>
 <div class="foot">

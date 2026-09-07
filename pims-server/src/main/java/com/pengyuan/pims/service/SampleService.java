@@ -311,8 +311,8 @@ public class SampleService {
      * 保存打样配方（打样单 1:1）：
      * 首次保存自动创建 C 类成品物料（9 位码自动生成，色系/主材/小类为取码属性段必填）并回填；
      * 覆盖更新前旧明细 JSON 快照进 sample_formula_history；
-     * 估算成本=Σ(用量×移动加权均价)÷总量（与配方树成本同源，供报价参考）；
-     * 用量自由合计（不强制 100——转制漆时才按标准批量 100 折算）。
+     * 估算成本=Σ(用量×移动加权均价)÷总量（比值与量纲无关，元/kg 口径供报价参考）；
+     * 用量自由合计、单位=克（v7.7.6；不强制 100——转制漆时按标准批量 100kg=100000g 折算）。
      */
     public java.util.Map<String, Object> saveFormula(Long requestId, java.util.Map<String, Object> payload) {
         return writeQueue.executeTx(() -> {
@@ -383,7 +383,7 @@ public class SampleService {
                 row.materialName = str(it.get("materialName"));
                 row.category = str(it.get("category"));
                 row.subCategory = str(it.get("subCategory"));
-                row.unit = "kg";
+                row.unit = "g";   // v7.7.6 打样用料单位=克（打样间按克称量）
                 row.qty = toBd(it.get("qty"));
                 row.sortOrder = order++;
                 formulaItemRepo.save(row);
@@ -533,6 +533,8 @@ public class SampleService {
             RecipeVersion draft = recipeVersionRepo.findByRecipeIdAndStatus(r.id, "DRAFT")
                     .orElseThrow(() -> new IllegalStateException("配方版本创建异常"));
             List<SampleFormulaItem> items = formulaItemRepo.findByFormulaIdOrderBySortOrder(f.id);
+            // v7.7.6 打样用量单位=克：折算系数=100kg÷总克数，克用量×系数直接得 kg 值
+            // （如 150g:50g 总 200g → 系数 0.5 → 75kg:25kg；勿用 100000/总克——那是折算后的克值，saveTree 校验的是 kg）
             java.math.BigDecimal ratio = java.math.BigDecimal.valueOf(100).divide(f.totalQty, 6, java.math.RoundingMode.HALF_UP);
             List<java.util.Map<String, Object>> tree = new java.util.ArrayList<>();
             for (SampleFormulaItem it : items) {
