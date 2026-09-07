@@ -57,9 +57,11 @@
         <el-form-item label="意向产品" required>
           <el-input v-model="form.materialDesc" placeholder="如：氟碳漆 RAL7016 哑光，附着力要求…" />
         </el-form-item>
-        <el-form-item label="关联物料">
-          <el-select v-model="form.materialCode" filterable clearable placeholder="可选，关联正式物料" style="width:100%">
-            <el-option v-for="m in materials" :key="m.code" :label="m.code + ' ' + m.name" :value="m.code" />
+        <!-- v7.7.2 关联打样（复样参考）：客户按上次打样再来一版时选历史打样，打样员录配方时可带入其配方；替代原"关联物料"（关联原材料无意义） -->
+        <el-form-item label="关联打样">
+          <el-select v-model="form.refSampleId" filterable clearable placeholder="可选，复样时选上次的打样做参考" style="width:100%">
+            <el-option v-for="f in refFormulas" :key="f.sampleRequestId" :value="f.sampleRequestId"
+              :label="f.sampleNo + ' ' + f.customerName + '｜' + (f.materialName || '未录配方') + (f.materialCode ? ' ' + f.materialCode : '')" />
           </el-select>
         </el-form-item>
         <el-form-item label="打样数量">
@@ -149,6 +151,7 @@
         <el-descriptions-item label="状态">{{ STATUS[viewing.status] }}（第 {{ (viewing.adjustCount || 0) + 1 }} 轮）</el-descriptions-item>
         <el-descriptions-item label="申请人">{{ viewing.applicant || '-' }}</el-descriptions-item>
         <el-descriptions-item label="调色员">{{ viewing.colorist || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="关联打样">{{ refFormulaLabel(viewing.refSampleId) }}</el-descriptions-item>
         <el-descriptions-item label="调色说明">{{ viewing.colorNote || '-' }}</el-descriptions-item>
         <el-descriptions-item label="寄样">{{ viewing.sendDate ? viewing.sendDate + ' 快递：' + (viewing.expressNo || '-') : '未寄样' }}</el-descriptions-item>
         <el-descriptions-item label="客户反馈">{{ viewing.feedbackContent ? (viewing.feedbackDate || '') + ' ' + viewing.feedbackContent : '-' }}</el-descriptions-item>
@@ -171,6 +174,16 @@ const STATUS = { APPLIED: '已申请', ASSIGNED: '已派发', COLORING: '调色�
 
 const list = ref([])
 const customers = ref([])
+// v7.7.2 关联打样候选：已录配方的历史打样（复样参考）
+const refFormulas = ref([])
+async function loadRefFormulas() {
+  try { refFormulas.value = await api.get('/sample/formulas') } catch { refFormulas.value = [] }
+}
+function refFormulaLabel(rid) {
+  if (!rid) return '-'
+  const f = refFormulas.value.find(x => x.sampleRequestId === rid)
+  return f ? f.sampleNo + '｜' + (f.materialName || '未录配方') : '（历史打样已清理）'
+}
 const materials = ref([])
 const query = ref({ status: '' })
 const dialogVisible = ref(false)
@@ -205,13 +218,15 @@ async function fetch() {
 function openCreate() {
   editing.value = null
   const user = JSON.parse(localStorage.getItem('user') || '{}')
-  form.value = { customerId: null, customerName: '', materialCode: '', materialDesc: '', qty: 1, unit: 'kg', applicant: user.realName || user.username || '', remark: '' }
+  form.value = { customerId: null, customerName: '', refSampleId: null, materialDesc: '', qty: 1, unit: 'kg', applicant: user.realName || user.username || '', remark: '' }
+  loadRefFormulas()
   dialogVisible.value = true
 }
 
 function openEdit(row) {
   editing.value = row
-  form.value = { customerId: row.customerId, customerName: row.customerName, materialCode: row.materialCode, materialDesc: row.materialDesc, qty: Number(row.qty), unit: row.unit, applicant: row.applicant, remark: row.remark }
+  form.value = { customerId: row.customerId, customerName: row.customerName, refSampleId: row.refSampleId || null, materialDesc: row.materialDesc, qty: Number(row.qty), unit: row.unit, applicant: row.applicant, remark: row.remark }
+  loadRefFormulas()
   dialogVisible.value = true
 }
 
@@ -288,7 +303,7 @@ async function submitWin() {
   } catch (e) { if (e && e.message) ElMessage.error(e.message) }
 }
 
-function openDetail(row) { viewing.value = row; detailVisible.value = true }
+function openDetail(row) { viewing.value = row; detailVisible.value = true; if (!refFormulas.value.length) loadRefFormulas() }
 
 async function del(row) {
   await ElMessageBox.confirm(`删除打样申请 ${row.sampleNo}？`)

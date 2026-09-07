@@ -43,6 +43,8 @@ public class SampleRequest {
     @Column(length = 200) public String lossReason;
     /** 联动的研发进度条目 id（COLORING 时自动创建） */
     public Long rdProgressId;
+    /** v7.7.2 关联打样（复样参考）：指向历史打样单 id，打样员录配方时可参考/带入其配方；替代原"关联物料"语义 */
+    public Long refSampleId;
     /** v7.7 派发的打样员（账号名）；打样任务页只看自己名下的单 */
     @Column(length = 50) public String assignee;
     /** 派发时间 / 打样员接收时间 */

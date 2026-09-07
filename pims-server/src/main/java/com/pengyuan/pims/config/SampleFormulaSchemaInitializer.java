@@ -28,6 +28,12 @@ public class SampleFormulaSchemaInitializer implements CommandLineRunner {
     public void run(String... args) {
         // v7.7 打样任务派发三列（存量表补列，幂等）
         try {
+            // v7.7.2 关联打样（复样参考）：指向历史打样单 id，打样员录配方时可参考/带入其配方
+            try {
+                boolean hasRef = jdbc.queryForList("PRAGMA table_info(sample_request)").stream()
+                        .anyMatch(c -> "ref_sample_id".equalsIgnoreCase(String.valueOf(c.get("name"))));
+                if (!hasRef) jdbc.execute("ALTER TABLE sample_request ADD COLUMN ref_sample_id BIGINT");
+            } catch (Exception ex) { log.warn("sample_request 补 ref_sample_id 失败: {}", ex.getMessage()); }
             for (String col : new String[]{"assignee VARCHAR(50)", "assign_time TIMESTAMP", "receive_time TIMESTAMP"}) {
                 String name = col.split(" ")[0];
                 boolean has = jdbc.queryForList("PRAGMA table_info(sample_request)").stream()

@@ -62,6 +62,26 @@
     <!-- 配方编辑抽屉 -->
     <el-drawer v-model="editorVisible" :title="editorTitle" size="min(880px, 96vw)" destroy-on-close :close-on-click-modal="false">
       <div v-if="editorRow" class="editor">
+        <!-- v7.7.2 复样参考：登记时关联了历史打样则展示其配方，可一键带入作起点 -->
+        <div class="ed-sec ref-sec" v-if="refFormula">
+          <div class="ed-sec-title">
+            <span>参考配方：{{ refFormula.sampleNo }}｜{{ refFormula.materialName || '未录配方' }}{{ refFormula.materialCode ? ' ' + refFormula.materialCode : '' }}</span>
+            <el-button size="small" type="primary" plain :disabled="!refFormula.items?.length" @click="applyRef">带入参考配方</el-button>
+          </div>
+          <table class="ed-table" v-if="refFormula.items?.length">
+            <thead><tr><th>物料编码</th><th>品名</th><th style="width:90px">类别</th><th style="width:110px">用量(kg)</th></tr></thead>
+            <tbody>
+              <tr v-for="it in refFormula.items" :key="it.materialCode">
+                <td>{{ it.materialCode }}</td><td>{{ it.materialName }}</td>
+                <td class="text-center">{{ catLabel(it.category) }}</td>
+                <td class="text-right">{{ Number(it.qty).toFixed(3) }}</td>
+              </tr>
+              <tr class="ref-total"><td colspan="3" class="text-right">合计</td><td class="text-right">{{ Number(refFormula.totalQty).toFixed(3) }}</td></tr>
+            </tbody>
+          </table>
+          <div v-else class="text-muted" style="padding:6px 0">该打样尚未录入配方</div>
+        </div>
+
         <div class="ed-sec">
           <div class="ed-sec-title">成品归属（首次保存后锁定，编码按此自动生成）</div>
           <div class="ed-grid">
@@ -206,6 +226,8 @@ async function accept(row) {
 // ============ 配方编辑器 ============
 const editorVisible = ref(false)
 const editorRow = ref(null)
+// v7.7.2 复样参考：登记时关联的历史打样配方
+const refFormula = ref(null)
 const pickerVisible = ref(false)
 const saving = ref(false)
 const savedCode = ref('')
@@ -244,6 +266,11 @@ async function openEditor(row) {
   editorRow.value = row
   savedCode.value = ''
   savedName.value = ''
+  // v7.7.2 复样参考：登记时关联了历史打样则拉其配方展示
+  refFormula.value = null
+  if (row.refSampleId) {
+    try { refFormula.value = await api.get(`/sample/${row.refSampleId}/formula`) } catch { refFormula.value = null }
+  }
   try {
     const f = await api.get(`/sample/${row.id}/formula`)
     if (f) {
@@ -267,6 +294,22 @@ async function openEditor(row) {
 }
 
 function addItem() { form.value.items.push({ materialCode: '', materialName: '', category: '', subCategory: '', qty: null }) }
+
+// v7.7.2 带入参考配方：明细+分类作为起点（中文名留空——复样通常是新颜色/新版本，需起新名防物料重名）
+function applyRef() {
+  if (!refFormula.value?.items?.length) return
+  form.value.items = refFormula.value.items.map(x => ({
+    materialCode: x.materialCode, materialName: x.materialName,
+    category: x.category, subCategory: x.subCategory, qty: Number(x.qty)
+  }))
+  if (!locked.value) {
+    form.value.subCategory = refFormula.value.subCategory || form.value.subCategory
+    form.value.mainMaterial = refFormula.value.mainMaterial || form.value.mainMaterial
+    form.value.colorSeries = refFormula.value.colorSeries || form.value.colorSeries
+    form.value.sampleLocation = form.value.sampleLocation || refFormula.value.sampleLocation || ''
+  }
+  ElMessage.success('已带入参考配方，请调整用量/颜色后保存')
+}
 function onItemMat(it) {
   const m = materials.value.find(x => x.code === it.materialCode)
   if (m) { it.materialName = m.name; it.category = m.category; it.subCategory = m.subCategory }
@@ -355,6 +398,8 @@ onMounted(async () => {
 .text-center { text-align: center; }
 .text-right { text-align: right; }
 .editor { padding: 0 4px; }
+.ref-sec { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px 12px; }
+.ref-total td { background: #eef2f7; font-weight: 600; }
 .ed-sec { margin-bottom: 22px; }
 .ed-sec-title { font-size: 14px; font-weight: 700; color: var(--pims-text); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
 .ed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 16px; }

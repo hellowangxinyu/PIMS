@@ -116,6 +116,7 @@ public class SampleService {
         s.customerId = in.customerId;
         s.customerName = in.customerName;
         s.materialCode = in.materialCode;
+        s.refSampleId = in.refSampleId;   // v7.7.2 关联打样（复样参考）
         s.materialDesc = in.materialDesc;
         s.qty = in.qty;
         s.unit = in.unit;
