@@ -120,6 +120,7 @@ public class SampleService {
         s.materialDesc = in.materialDesc;
         s.qty = in.qty;
         s.unit = in.unit;
+        s.sampleSize = in.sampleSize;   // v7.7.3 打样尺寸 NORMAL/A4
         s.applicant = in.applicant;
         s.remark = in.remark;
         s.updateTime = java.time.LocalDateTime.now();
@@ -437,6 +438,9 @@ public class SampleService {
         m.put("sampleNo", s.sampleNo);
         m.put("customerName", s.customerName);
         m.put("materialDesc", s.materialDesc);
+        m.put("sampleQty", s.qty);           // v7.7.3 打样寄样张数
+        m.put("sampleUnit", s.unit);
+        m.put("sampleSize", s.sampleSize);
         m.put("status", s.status);
         m.put("statusLabel", STATUS_LABEL.getOrDefault(s.status, s.status));
         m.put("assignee", s.assignee);

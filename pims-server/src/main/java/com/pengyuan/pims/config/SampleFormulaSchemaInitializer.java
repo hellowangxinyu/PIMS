@@ -34,6 +34,12 @@ public class SampleFormulaSchemaInitializer implements CommandLineRunner {
                         .anyMatch(c -> "ref_sample_id".equalsIgnoreCase(String.valueOf(c.get("name"))));
                 if (!hasRef) jdbc.execute("ALTER TABLE sample_request ADD COLUMN ref_sample_id BIGINT");
             } catch (Exception ex) { log.warn("sample_request 补 ref_sample_id 失败: {}", ex.getMessage()); }
+            // v7.7.3 打样尺寸：NORMAL 常规 / A4（打样寄样为铁片样板，数量单位=张）
+            try {
+                boolean hasSize = jdbc.queryForList("PRAGMA table_info(sample_request)").stream()
+                        .anyMatch(c -> "sample_size".equalsIgnoreCase(String.valueOf(c.get("name"))));
+                if (!hasSize) jdbc.execute("ALTER TABLE sample_request ADD COLUMN sample_size VARCHAR(10) DEFAULT 'NORMAL'");
+            } catch (Exception ex) { log.warn("sample_request 补 sample_size 失败: {}", ex.getMessage()); }
             for (String col : new String[]{"assignee VARCHAR(50)", "assign_time TIMESTAMP", "receive_time TIMESTAMP"}) {
                 String name = col.split(" ")[0];
                 boolean has = jdbc.queryForList("PRAGMA table_info(sample_request)").stream()

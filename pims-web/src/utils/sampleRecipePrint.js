@@ -64,6 +64,9 @@ export function printSampleFormula(f) {
     <td class="k">打样总量</td><td>${Number(f.totalQty ?? total).toFixed(3)} kg</td>
   </tr>
   <tr>
+    <td class="k">寄样样板</td><td>${f.sampleQty ?? '-'} ${f.sampleUnit || '张'}（${f.sampleSize === 'A4' ? 'A4 大小' : '常规尺寸'}）</td>
+  </tr>
+  <tr>
     <td class="k">估算成本</td><td>${f.estCost != null ? Number(f.estCost).toFixed(2) + ' 元/kg' : '—'}</td>
     <td class="k">留样位置</td><td>${f.sampleLocation ? esc(f.sampleLocation) : '—'}</td>
   </tr>

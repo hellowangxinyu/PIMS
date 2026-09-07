@@ -14,7 +14,9 @@
       <el-table-column prop="sampleNo" label="打样单号" :width="cw('打样单号') || 118" />
       <el-table-column prop="customerName" label="客户/线索" :width="cw('客户/线索') || undefined" min-width="130" show-overflow-tooltip />
       <el-table-column prop="materialDesc" label="意向产品/颜色" :width="cw('意向产品/颜色') || undefined" min-width="150" show-overflow-tooltip />
-      <el-table-column prop="qty" label="数量" :width="cw('数量') || 70" align="right" />
+      <el-table-column label="打样数量" :width="cw('打样数量') || 100" align="center">
+        <template #default="{ row }">{{ row.qty }} {{ row.unit || '张' }}<span v-if="row.sampleSize === 'A4'" style="color:#d97706">（A4）</span></template>
+      </el-table-column>
       <el-table-column prop="applicant" label="申请人" :width="cw('申请人') || 80" />
       <el-table-column label="状态" :width="cw('状态') || 88" align="center">
         <template #default="{ row }">
@@ -64,9 +66,16 @@
               :label="f.sampleNo + ' ' + f.customerName + '｜' + (f.materialName || '未录配方') + (f.materialCode ? ' ' + f.materialCode : '')" />
           </el-select>
         </el-form-item>
+        <!-- v7.7.3 打样寄样=样板片：数量单位张（整数），尺寸常规/A4 二选一 -->
         <el-form-item label="打样数量">
-          <el-input-number v-model="form.qty" :min="0.001" :precision="3" style="width:160px" />
-          <span style="margin-left:8px">{{ form.unit }}</span>
+          <el-input-number v-model="form.qty" :min="1" :precision="0" style="width:130px" />
+          <span style="margin-left:6px">张</span>
+        </el-form-item>
+        <el-form-item label="打样尺寸">
+          <el-radio-group v-model="form.sampleSize">
+            <el-radio value="NORMAL">常规尺寸</el-radio>
+            <el-radio value="A4">A4 大小</el-radio>
+          </el-radio-group>
         </el-form-item>
         <el-form-item label="申请人">
           <el-input v-model="form.applicant" placeholder="默认当前登录人" />
@@ -147,7 +156,7 @@
       <el-descriptions :column="1" border size="small" v-if="viewing">
         <el-descriptions-item label="客户">{{ viewing.customerName }}</el-descriptions-item>
         <el-descriptions-item label="意向产品">{{ viewing.materialDesc }}</el-descriptions-item>
-        <el-descriptions-item label="数量">{{ viewing.qty }} {{ viewing.unit }}</el-descriptions-item>
+        <el-descriptions-item label="打样数量">{{ viewing.qty }} {{ viewing.unit || '张' }}（{{ viewing.sampleSize === 'A4' ? 'A4 大小' : '常规尺寸' }}）</el-descriptions-item>
         <el-descriptions-item label="状态">{{ STATUS[viewing.status] }}（第 {{ (viewing.adjustCount || 0) + 1 }} 轮）</el-descriptions-item>
         <el-descriptions-item label="申请人">{{ viewing.applicant || '-' }}</el-descriptions-item>
         <el-descriptions-item label="调色员">{{ viewing.colorist || '-' }}</el-descriptions-item>
@@ -218,14 +227,14 @@ async function fetch() {
 function openCreate() {
   editing.value = null
   const user = JSON.parse(localStorage.getItem('user') || '{}')
-  form.value = { customerId: null, customerName: '', refSampleId: null, materialDesc: '', qty: 1, unit: 'kg', applicant: user.realName || user.username || '', remark: '' }
+  form.value = { customerId: null, customerName: '', refSampleId: null, materialDesc: '', qty: 1, unit: '张', sampleSize: 'NORMAL', applicant: user.realName || user.username || '', remark: '' }
   loadRefFormulas()
   dialogVisible.value = true
 }
 
 function openEdit(row) {
   editing.value = row
-  form.value = { customerId: row.customerId, customerName: row.customerName, refSampleId: row.refSampleId || null, materialDesc: row.materialDesc, qty: Number(row.qty), unit: row.unit, applicant: row.applicant, remark: row.remark }
+  form.value = { customerId: row.customerId, customerName: row.customerName, refSampleId: row.refSampleId || null, materialDesc: row.materialDesc, qty: Number(row.qty), unit: row.unit, sampleSize: row.sampleSize || 'NORMAL', applicant: row.applicant, remark: row.remark }
   loadRefFormulas()
   dialogVisible.value = true
 }

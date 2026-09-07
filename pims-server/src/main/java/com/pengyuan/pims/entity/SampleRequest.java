@@ -27,7 +27,7 @@ public class SampleRequest {
     /** 意向产品/颜色要求（必填文本） */
     @Column(nullable = false, length = 500) public String materialDesc;
     @Column(precision = 14, scale = 3) public BigDecimal qty = BigDecimal.ONE;
-    @Column(length = 10) public String unit = "kg";
+    @Column(length = 10) public String unit = "张";   // v7.7.3 打样寄样=样板片，单位张（历史 kg 记录兼容显示）
     @Column(length = 50) public String applicant;
     public LocalDate applyDate;
     @Column(nullable = false, length = 20) public String status = "APPLIED";
@@ -45,6 +45,8 @@ public class SampleRequest {
     public Long rdProgressId;
     /** v7.7.2 关联打样（复样参考）：指向历史打样单 id，打样员录配方时可参考/带入其配方；替代原"关联物料"语义 */
     public Long refSampleId;
+    /** v7.7.3 打样尺寸：NORMAL 常规尺寸 / A4（打样寄样为样板片，qty 单位=张） */
+    @Column(length = 10) public String sampleSize = "NORMAL";
     /** v7.7 派发的打样员（账号名）；打样任务页只看自己名下的单 */
     @Column(length = 50) public String assignee;
     /** 派发时间 / 打样员接收时间 */
