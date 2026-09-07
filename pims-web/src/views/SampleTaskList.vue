@@ -120,41 +120,81 @@
 
         <div class="ed-sec">
           <div class="ed-sec-title">
-            用料明细（实际打样用量，自由合计不强制 100）
-            <div>
-              <el-button size="small" @click="pickerVisible = true">从物料库选择</el-button>
-              <el-button size="small" @click="addItem">+ 增行</el-button>
-            </div>
+            <span>用料明细（实际打样用量，自由合计不强制 100）</span>
+            <el-button size="small" type="primary" @click="openAddItem">+ 添加用料</el-button>
           </div>
-          <table class="ed-table">
-            <thead>
-              <tr><th style="width:44%">物料（编码/品名模糊搜索）</th><th style="width:12%">大类</th><th style="width:18%">用量(kg) *</th><th style="width:14%">参考价(元/kg)</th><th style="width:12%"></th></tr>
-            </thead>
-            <tbody>
-              <tr v-for="(it, i) in form.items" :key="i">
-                <td>
-                  <el-select v-model="it.materialCode" size="small" filterable placeholder="输入编码或品名搜索" @change="onItemMat(it)">
-                    <el-option v-for="m in pickMaterials" :key="m.code" :label="m.code + ' ' + m.name" :value="m.code" />
-                  </el-select>
-                </td>
-                <td class="text-center">{{ catLabel(it.category) }}</td>
-                <td><el-input-number v-model="it.qty" size="small" :min="0.001" :precision="3" :controls="false" style="width:100%" /></td>
-                <td class="text-right">{{ priceOf(it.materialCode) }}</td>
-                <td class="text-center"><el-button link type="danger" size="small" @click="form.items.splice(i, 1)">✕</el-button></td>
-              </tr>
-              <tr v-if="!form.items.length"><td colspan="5" class="text-muted" style="text-align:center;padding:14px">暂无明细，点「从物料库选择」或「+ 增行」</td></tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td><b>合计</b></td>
-                <td></td>
-                <td class="text-right"><b>{{ totalQty }}</b></td>
-                <td class="text-right" colspan="2">估算成本 ≈ <b>{{ estCost }}</b> 元/kg</td>
-              </tr>
-            </tfoot>
-          </table>
+          <div class="cost-bar">
+            <span class="cost-bar-label">合计：</span>
+            <span class="cost-bar-total">{{ totalQty }} kg</span>
+            <span class="cost-bar-unit">估算成本 ≈ ¥{{ estCost }}/kg</span>
+            <span class="cost-bar-hint">材料按库存加权均价（与配方树成本同源），供报价参考</span>
+          </div>
+          <p-table :data="form.items" row-key="materialCode" border size="small">
+            <el-table-column label="序号" width="56" align="center">
+              <template #default="{ $index }">{{ $index + 1 }}</template>
+            </el-table-column>
+            <el-table-column label="品名" min-width="200">
+              <template #default="{ row }">
+                <el-tag :type="row.category === 'B' ? 'warning' : ''" size="small" style="margin-right:6px">{{ row.category === 'B' ? '色浆' : '原料' }}</el-tag>
+                <span>{{ row.materialName || row.materialCode }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="materialCode" label="编码" width="110" />
+            <el-table-column label="大类" width="75" align="center">
+              <template #default="{ row }">
+                <el-tag v-if="row.category" size="small" type="info">{{ catLabel(row.category) }}</el-tag>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="用量(kg)" width="130" align="right">
+              <template #default="{ row }">
+                <el-input-number v-model="row.qty" :min="0.001" :precision="3" :step="0.1" size="small" controls-position="right" style="width:120px" />
+              </template>
+            </el-table-column>
+            <el-table-column label="参考单价" width="100" align="right">
+              <template #default="{ row }">
+                <span v-if="priceOf(row.materialCode) !== '—'" style="color:#16a34a">￥{{ priceOf(row.materialCode) }}</span>
+                <span v-else style="color:#c0c4cc">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="70" align="center">
+              <template #default="{ $index }">
+                <button class="op-btn op-btn-danger" @click="form.items.splice($index, 1)">✕</button>
+              </template>
+            </el-table-column>
+          </p-table>
+          <div v-if="!form.items.length" class="text-muted" style="text-align:center;padding:16px 0">暂无用料，点「+ 添加用料」逐条录入</div>
         </div>
       </div>
+
+      <!-- 添加用料弹窗（参照配方管理「添加节点」：类型→搜料→用量→连续添加） -->
+      <el-dialog title="添加用料" v-model="addDialogVisible" width="520px" append-to-body destroy-on-close>
+        <el-form label-width="80px">
+          <el-form-item label="用料类型">
+            <el-radio-group v-model="addItemForm.itemType">
+              <el-radio value="MATERIAL">原料</el-radio>
+              <el-radio value="SEMI">色浆（半成品）</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="选择物料" required>
+            <el-select v-model="addItemForm.materialCode" filterable placeholder="输入编码或品名搜索" style="width:100%" @change="onAddItemMatChange">
+              <el-option v-for="m in addItemMaterials" :key="m.code" :label="m.code + ' ' + (m.name || '')" :value="m.code" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="addItemForm.category" label="物料分类">
+            <el-tag size="small" type="info">{{ catLabel(addItemForm.category) }}</el-tag>
+            <el-tag v-if="addItemForm.subCategory" size="small" style="margin-left:6px">{{ addItemForm.subCategory }}</el-tag>
+          </el-form-item>
+          <el-form-item label="用量" required>
+            <el-input-number v-model="addItemForm.qty" :min="0.001" :precision="3" :step="0.1" style="width:160px" />
+            <span style="margin-left:8px;color:#64748b">kg（公斤）</span>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="addDialogVisible = false">关闭</el-button>
+          <el-button type="primary" @click="confirmAddItem">添加</el-button>
+        </template>
+      </el-dialog>
       <template #footer>
         <div class="ed-foot">
           <span v-if="savedCode" class="saved-code">已生成成品物料：<b>{{ savedCode }}</b> {{ savedName }}</span>
@@ -164,7 +204,6 @@
       </template>
     </el-dialog>
 
-    <MaterialPicker v-model="pickerVisible" @picked="onPicked" />
   </div>
 </template>
 
@@ -178,7 +217,6 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { statusType } from '../utils/statusTag'
-import MaterialPicker from '../components/MaterialPicker.vue'
 import { printSampleFormula } from '../utils/sampleRecipePrint'
 
 const STATUS = { APPLIED: '已申请', ASSIGNED: '已派发', COLORING: '调色中', FORMULATED: '已录配方', SENT: '已寄样', SATISFIED: '客户满意', ADJUST: '需调整', WON: '已转单', LOST: '未成交' }
@@ -228,7 +266,6 @@ const editorVisible = ref(false)
 const editorRow = ref(null)
 // v7.7.2 复样参考：登记时关联的历史打样配方
 const refFormula = ref(null)
-const pickerVisible = ref(false)
 const saving = ref(false)
 const savedCode = ref('')
 const savedName = ref('')
@@ -293,7 +330,29 @@ async function openEditor(row) {
   editorVisible.value = true
 }
 
-function addItem() { form.value.items.push({ materialCode: '', materialName: '', category: '', subCategory: '', qty: null }) }
+// v7.7.5 添加用料弹窗（参照配方管理「添加节点」方式：类型→搜料→用量→连续添加）
+const addDialogVisible = ref(false)
+const addItemForm = ref({ itemType: 'MATERIAL', materialCode: '', materialName: '', category: '', subCategory: '', qty: 0.1 })
+const addItemMaterials = computed(() =>
+  addItemForm.value.itemType === 'SEMI'
+    ? materials.value.filter(m => m.category === 'B')
+    : materials.value.filter(m => 'APFRS'.includes(m.category || '')))
+function openAddItem() {
+  addItemForm.value = { itemType: addItemForm.value.itemType, materialCode: '', materialName: '', category: '', subCategory: '', qty: 0.1 }
+  addDialogVisible.value = true
+}
+function onAddItemMatChange(code) {
+  const m = materials.value.find(x => x.code === code)
+  if (m) { addItemForm.value.materialName = m.name; addItemForm.value.category = m.category; addItemForm.value.subCategory = m.subCategory }
+}
+function confirmAddItem() {
+  const f = addItemForm.value
+  if (!f.materialCode) { ElMessage.warning('请选择物料'); return }
+  if (!f.qty || f.qty <= 0) { ElMessage.warning('用量必须大于 0'); return }
+  form.value.items.push({ materialCode: f.materialCode, materialName: f.materialName, category: f.category, subCategory: f.subCategory, qty: f.qty })
+  ElMessage.success(`已添加 ${f.materialName}，可继续添加`)
+  openAddItem()   // 连续添加：清空物料保类型
+}
 
 // v7.7.2 带入参考配方：明细+分类作为起点（中文名留空——复样通常是新颜色/新版本，需起新名防物料重名）
 function applyRef() {
@@ -309,16 +368,6 @@ function applyRef() {
     form.value.sampleLocation = form.value.sampleLocation || refFormula.value.sampleLocation || ''
   }
   ElMessage.success('已带入参考配方，请调整用量/颜色后保存')
-}
-function onItemMat(it) {
-  const m = materials.value.find(x => x.code === it.materialCode)
-  if (m) { it.materialName = m.name; it.category = m.category; it.subCategory = m.subCategory }
-}
-function onPicked(picked) {
-  for (const p of picked) {
-    if (form.value.items.some(it => it.materialCode === p.code)) continue
-    form.value.items.push({ materialCode: p.code, materialName: p.name, category: p.category, subCategory: p.subCategory, qty: null })
-  }
 }
 
 async function save() {
@@ -398,6 +447,11 @@ onMounted(async () => {
 .text-center { text-align: center; }
 .text-right { text-align: right; }
 .editor { padding: 0 4px; max-height: calc(100vh - 220px); overflow-y: auto; }
+.cost-bar { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; background: #f0fdf4; border-radius: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.cost-bar-label { font-size: 13px; color: #64748b; }
+.cost-bar-total { font-size: 16px; font-weight: 700; color: #15803d; }
+.cost-bar-unit { font-size: 13px; color: #16a34a; font-weight: 600; }
+.cost-bar-hint { font-size: 12px; color: #94a3b8; }
 .ref-sec { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px 12px; }
 .ref-total td { background: #eef2f7; font-weight: 600; }
 .ed-sec { margin-bottom: 22px; }
