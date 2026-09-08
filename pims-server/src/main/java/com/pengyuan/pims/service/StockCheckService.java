@@ -89,8 +89,10 @@ public class StockCheckService {
             }
             ledger.qty = ledger.qty.add(diff);
             ledger.availableQty = ledger.availableQty.add(diff);
+            // v8.2（P0-3）：盘盈按新增量累加价值（量×单价），不再整行重估——避免吸收历史舍入差
             if (ledger.unitPrice != null && ledger.unitPrice.compareTo(BigDecimal.ZERO) > 0) {
-                ledger.amount = ledger.qty.multiply(ledger.unitPrice).setScale(2, java.math.RoundingMode.HALF_UP);
+                if (ledger.amount == null) ledger.amount = BigDecimal.ZERO;
+                ledger.amount = ledger.amount.add(diff.multiply(ledger.unitPrice)).setScale(2, java.math.RoundingMode.HALF_UP);
             }
             if (materialName != null) ledger.materialName = materialName;
             ledger.locationId = locationId;
@@ -153,9 +155,11 @@ public class StockCheckService {
             ledger.qty = ledger.qty.subtract(diff);
             ledger.availableQty = ledger.availableQty.subtract(diff);
             if (ledger.availableQty.compareTo(BigDecimal.ZERO) < 0) ledger.availableQty = BigDecimal.ZERO;
-            // v6.1：金额随量重算（量×单价），盘亏后存货价值与数量同步
+            // v8.2（P0-3）：盘亏按本次量等额扣减价值，不再整行重估（守恒）
             if (ledger.unitPrice != null && ledger.unitPrice.compareTo(BigDecimal.ZERO) > 0) {
-                ledger.amount = ledger.qty.multiply(ledger.unitPrice).setScale(2, java.math.RoundingMode.HALF_UP);
+                if (ledger.amount == null) ledger.amount = BigDecimal.ZERO;
+                ledger.amount = ledger.amount.subtract(diff.multiply(ledger.unitPrice)).setScale(2, java.math.RoundingMode.HALF_UP);
+                if (ledger.amount.compareTo(BigDecimal.ZERO) < 0) ledger.amount = BigDecimal.ZERO;
             }
             ledger.lastUpdateTime = LocalDateTime.now();
             ledgerRepo.save(ledger);

@@ -87,7 +87,7 @@ public class BankReconciliationService {
         // 收款（金额+）
         for (var r : jdbc.queryForList(
                 "SELECT id AS jid, doc_no AS docNo, strftime('%Y-%m-%d', receipt_date/1000, 'unixepoch', '+8 hours') AS d, amount, customer_name AS party, ar_doc_no AS refNo, bank_account AS acc " +
-                "FROM payment_receipt WHERE bank_account = ? AND receipt_date >= ? AND receipt_date < ? ORDER BY receipt_date, id",
+                "FROM payment_receipt WHERE bank_account = ? AND (method IS NULL OR method = 'BANK') AND receipt_date >= ? AND receipt_date < ? ORDER BY receipt_date, id",
                 accountName, fromMs, toMs)) {
             Map<String, Object> row = new LinkedHashMap<>(r);
             row.put("side", "RECEIPT");
@@ -97,7 +97,7 @@ public class BankReconciliationService {
         // 付款（金额−）
         for (var r : jdbc.queryForList(
                 "SELECT id AS jid, doc_no AS docNo, strftime('%Y-%m-%d', pay_date/1000, 'unixepoch', '+8 hours') AS d, amount, supplier_name AS party, ap_doc_no AS refNo, bank_account AS acc " +
-                "FROM payment_disbursement WHERE bank_account = ? AND pay_date >= ? AND pay_date < ? ORDER BY pay_date, id",
+                "FROM payment_disbursement WHERE bank_account = ? AND (method IS NULL OR method = 'BANK') AND pay_date >= ? AND pay_date < ? ORDER BY pay_date, id",
                 accountName, fromMs, toMs)) {
             Map<String, Object> row = new LinkedHashMap<>(r);
             row.put("side", "DISBURSEMENT");
@@ -108,10 +108,10 @@ public class BankReconciliationService {
         // 期初 = 账户期初 + 期间前净额
         BigDecimal opening = toBd(jdbc.queryForMap("SELECT opening_balance AS ob FROM bank_account WHERE id = ?", accountId).get("ob"));
         BigDecimal beforeIn = toBd(jdbc.queryForMap(
-                "SELECT COALESCE(SUM(amount),0) AS v FROM payment_receipt WHERE bank_account = ? AND receipt_date < ?",
+                "SELECT COALESCE(SUM(amount),0) AS v FROM payment_receipt WHERE bank_account = ? AND (method IS NULL OR method = 'BANK') AND receipt_date < ?",
                 accountName, fromMs).get("v"));
         BigDecimal beforeOut = toBd(jdbc.queryForMap(
-                "SELECT COALESCE(SUM(amount),0) AS v FROM payment_disbursement WHERE bank_account = ? AND pay_date < ?",
+                "SELECT COALESCE(SUM(amount),0) AS v FROM payment_disbursement WHERE bank_account = ? AND (method IS NULL OR method = 'BANK') AND pay_date < ?",
                 accountName, fromMs).get("v"));
         // 期初 = 账户期初 + 期间前净额（receipt_date/pay_date 为毫秒时间戳列，与 fromMs 数值直比）
         opening = opening.add(beforeIn).subtract(beforeOut);
@@ -216,9 +216,9 @@ public class BankReconciliationService {
             // 收/付款单未勾对池（按单号判断已勾）
             Set<String> matched = matchedKeys(accountId);
             List<Map<String, Object>> receipts = jdbc.queryForList(
-                    "SELECT id AS jid, 'RECEIPT' AS side, doc_no AS docNo, strftime('%Y-%m-%d', receipt_date/1000, 'unixepoch', '+8 hours') AS d, amount, customer_name AS party FROM payment_receipt WHERE bank_account = ? ORDER BY receipt_date", accountName(accountId));
+                    "SELECT id AS jid, 'RECEIPT' AS side, doc_no AS docNo, strftime('%Y-%m-%d', receipt_date/1000, 'unixepoch', '+8 hours') AS d, amount, customer_name AS party FROM payment_receipt WHERE bank_account = ? AND (method IS NULL OR method = 'BANK') ORDER BY receipt_date", accountName(accountId));
             List<Map<String, Object>> disbs = jdbc.queryForList(
-                    "SELECT id AS jid, 'DISBURSEMENT' AS side, doc_no AS docNo, strftime('%Y-%m-%d', pay_date/1000, 'unixepoch', '+8 hours') AS d, amount, supplier_name AS party FROM payment_disbursement WHERE bank_account = ? ORDER BY pay_date", accountName(accountId));
+                    "SELECT id AS jid, 'DISBURSEMENT' AS side, doc_no AS docNo, strftime('%Y-%m-%d', pay_date/1000, 'unixepoch', '+8 hours') AS d, amount, supplier_name AS party FROM payment_disbursement WHERE bank_account = ? AND (method IS NULL OR method = 'BANK') ORDER BY pay_date", accountName(accountId));
             int auto = 0;
             for (Map<String, Object> st : statements) {
                 BigDecimal amt = toBd(st.get("amount"));
@@ -298,12 +298,12 @@ public class BankReconciliationService {
         // 企业侧：该账户全部收付款单（日期 <= to）中未勾对者；银行侧：流水 status=UNMATCHED 且 tx_date <= to。
         BigDecimal firmIn = BigDecimal.ZERO, firmOut = BigDecimal.ZERO;   // 企业已记银行未记
         for (var row : jdbc.queryForList(
-                "SELECT id, amount FROM payment_receipt WHERE bank_account = ? AND receipt_date < ?", accountName, toMs)) {
+                "SELECT id, amount FROM payment_receipt WHERE bank_account = ? AND (method IS NULL OR method = 'BANK') AND receipt_date < ?", accountName, toMs)) {
             if (matched.contains("RECEIPT:" + row.get("id"))) continue;
             firmIn = firmIn.add(toBd(row.get("amount")));
         }
         for (var row : jdbc.queryForList(
-                "SELECT id, amount FROM payment_disbursement WHERE bank_account = ? AND pay_date < ?", accountName, toMs)) {
+                "SELECT id, amount FROM payment_disbursement WHERE bank_account = ? AND (method IS NULL OR method = 'BANK') AND pay_date < ?", accountName, toMs)) {
             if (matched.contains("DISBURSEMENT:" + row.get("id"))) continue;
             firmOut = firmOut.add(toBd(row.get("amount")));
         }

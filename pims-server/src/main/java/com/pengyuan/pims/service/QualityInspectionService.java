@@ -864,6 +864,17 @@ public class QualityInspectionService {
         if (inboundPrice == null && ("PRODUCTION_INBOUND".equals(qc.refDocType) || "OUTSOURCE_INBOUND".equals(qc.refDocType))) {
             inboundPrice = orderAggregatedUnitCost(qc.refDocType, qc.refDocNo, qc.qty);
         }
+        // v8.2（用户拍板口径）：来料采购单价为含税价，一般纳税人进项可抵扣——台账存货成本折不含税
+        // （生产/委外归集成本本就不含税；AP 立账仍按含税应付，负债口径正确不动）
+        if (inboundPrice != null && inboundPrice.compareTo(java.math.BigDecimal.ZERO) > 0
+                && "PURCHASE".equals(qc.refDocType)) {
+            java.math.BigDecimal rate = taxRatePercent();
+            if (rate.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                inboundPrice = inboundPrice.divide(java.math.BigDecimal.ONE.add(
+                        rate.divide(new java.math.BigDecimal("100"), 6, java.math.RoundingMode.HALF_UP)),
+                        4, java.math.RoundingMode.HALF_UP);
+            }
+        }
         // 透传质检信息到库存台账（入库即合格标签）
         InventoryService.QcInfo qcInfo = new InventoryService.QcInfo(
                 qc.status, qc.inspectionNo, qc.resultRemark, qc.inspector, qc.inspectDate);
@@ -875,6 +886,15 @@ public class QualityInspectionService {
                 qc.locationId, qc.qty,
                 inboundPrice != null ? inboundPrice : BigDecimal.ZERO,
                 produceDate, expiryDate, operator, qcInfo);
+    }
+
+    /** v8.2：数据字典 tax_rate 税率百分数（默认 13，与前端 utils/tax 同源口径） */
+    private java.math.BigDecimal taxRatePercent() {
+        try {
+            var rows = jdbc.queryForList("SELECT value FROM dict_item WHERE type = 'tax_rate' AND enabled = 1 ORDER BY sort_order ASC LIMIT 1");
+            if (!rows.isEmpty()) return new java.math.BigDecimal(String.valueOf(rows.get(0).get("value")));
+        } catch (Exception ignored) { }
+        return new java.math.BigDecimal("13");
     }
 
     /**

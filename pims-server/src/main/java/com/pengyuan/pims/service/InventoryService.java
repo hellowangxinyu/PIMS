@@ -578,8 +578,14 @@ public class InventoryService {
         BigDecimal qtyBefore = ledger.qty;
         ledger.qty = ledger.qty.subtract(qty);
         ledger.availableQty = (ledger.availableQty != null ? ledger.availableQty : BigDecimal.ZERO).subtract(qty);
-        ledger.amount = ledger.qty.multiply(
-                ledger.unitPrice != null ? ledger.unitPrice : BigDecimal.ZERO);
+        // v8.2（P0-3）：金额按"本次出库金额=量×单价"等额扣减——原按剩余量重估（amount=剩余量×单价），
+        // unitPrice 只有 2 位小数，非整数倍批次每次出库都把舍入差静默吸收，Σ金额不守恒、移动加权均价漂移
+        if (ledger.amount != null) {
+            BigDecimal amt = ledger.unitPrice != null
+                    ? qty.multiply(ledger.unitPrice).setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+            ledger.amount = ledger.amount.subtract(amt).setScale(2, java.math.RoundingMode.HALF_UP);
+            if (ledger.amount.compareTo(BigDecimal.ZERO) < 0) ledger.amount = BigDecimal.ZERO;   // 防御历史脏数据
+        }
         ledger.lastUpdateTime = LocalDateTime.now();
         ledgerRepo.save(ledger);
 
@@ -1077,8 +1083,13 @@ public class InventoryService {
             ledger.qty = ledger.qty.subtract(qty);
             ledger.availableQty = ledger.availableQty.subtract(qty);
             if (ledger.availableQty.compareTo(BigDecimal.ZERO) < 0) ledger.availableQty = BigDecimal.ZERO;
-            ledger.amount = ledger.qty.multiply(
-                    ledger.unitPrice != null ? ledger.unitPrice : BigDecimal.ZERO);
+            // v8.2（P0-3）：同 deductSingle——冲正出库按本次金额等额扣减，不再重估（守恒）
+            if (ledger.amount != null) {
+                BigDecimal amt = ledger.unitPrice != null
+                        ? qty.multiply(ledger.unitPrice).setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+                ledger.amount = ledger.amount.subtract(amt).setScale(2, java.math.RoundingMode.HALF_UP);
+                if (ledger.amount.compareTo(BigDecimal.ZERO) < 0) ledger.amount = BigDecimal.ZERO;
+            }
             ledger.lastUpdateTime = java.time.LocalDateTime.now();
             ledgerRepo.save(ledger);
 
