@@ -150,6 +150,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -172,7 +173,7 @@ const form = ref(emptyForm())
 
 function emptyForm() {
   return {
-    voucherDate: new Date().toISOString().slice(0, 10), attachmentCount: 0, remark: '',
+    voucherDate: todayLocal(), attachmentCount: 0, remark: '',
     source: 'MANUAL', refDocNo: null, createdBy: '',
     entries: [emptyLine(), emptyLine()]
   }
@@ -287,7 +288,7 @@ function print(row) { printVoucher(row) }
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/voucher/export', {}, `记账凭证-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/voucher/export', {}, `记账凭证-${todayLocal()}.xlsx`)
   } catch {} finally { exporting.value = false }
 }
 

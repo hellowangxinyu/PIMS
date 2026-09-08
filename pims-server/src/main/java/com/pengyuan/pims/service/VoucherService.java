@@ -478,7 +478,7 @@ public class VoucherService {
      *      ② 12 月月结（复用 closePeriod）。
      * 次年开账无需任何操作——期初即各科目当前余额（continuity 口径），报表按年区间自然切分。
      */
-    @Transactional
+    // v8.0（P0-1）：去外层 @Transactional（内部 create/post 各自锁内包事务）；年结凭证改走 create() 统一取号+校验
     public Map<String, Object> yearEndClose(String year, String operator) {
         if (year == null || !year.matches("\\d{4}")) throw new IllegalArgumentException("年份格式应为 YYYY");
         String dec = year + "-12";
@@ -503,36 +503,33 @@ public class VoucherService {
         BigDecimal bal = signedBalanceOf("3104", year);
         Voucher transfer = null;
         if (bal.compareTo(BigDecimal.ZERO) != 0) {
-            transfer = writeQueue.executeTx(() -> {
-                Voucher v = new Voucher();
-                v.voucherDate = LocalDate.of(Integer.parseInt(year), 12, 31);
-                v.source = "YEAR_END";
-                v.refDocNo = year;
-                v.remark = year + " 年结：本年利润结转未分配利润";
-                List<VoucherEntry> entries = new java.util.ArrayList<>();
-                VoucherEntry e1 = new VoucherEntry();
-                e1.subjectCode = bal.compareTo(BigDecimal.ZERO) > 0 ? "3104" : "3105";
-                e1.subjectName = subjectName(e1.subjectCode);
-                e1.digest = "年结结转";
-                if (bal.compareTo(BigDecimal.ZERO) > 0) { e1.debit = bal; e1.credit = BigDecimal.ZERO; }
-                else { e1.debit = BigDecimal.ZERO; e1.credit = bal.negate(); }
-                entries.add(e1);
-                VoucherEntry e2 = new VoucherEntry();
-                e2.subjectCode = bal.compareTo(BigDecimal.ZERO) > 0 ? "3105" : "3104";
-                e2.subjectName = subjectName(e2.subjectCode);
-                e2.digest = "年结结转";
-                if (bal.compareTo(BigDecimal.ZERO) > 0) { e2.debit = BigDecimal.ZERO; e2.credit = bal; }
-                else { e2.debit = bal.negate(); e2.credit = BigDecimal.ZERO; }
-                entries.add(e2);
-                v.entries = entries;
-                // 记账态直接生成（年结凭证无需人工审核——前置校验已保证合法性）
-                Voucher saved = repo.save(v);
-                saveEntries(saved);
-                saved.status = "POSTED";
-                saved.postedBy = operator;
-                saved.postedTime = LocalDateTime.now();
-                return repo.save(saved);
-            });
+            // v8.0（P0-1）：改走 create()+post()——旧实现手工 save 缺 docNo/period（两列 NOT NULL UNIQUE，
+            // INSERT 必炸使年结不可用），且绕过借贷平衡/科目校验、无 createdBy；create() 的来源查重
+            // （YEAR_END+年份）顺带获得年结幂等
+            Voucher v = new Voucher();
+            v.voucherDate = LocalDate.of(Integer.parseInt(year), 12, 31);
+            v.source = "YEAR_END";
+            v.refDocNo = year;
+            v.remark = year + " 年结：本年利润结转未分配利润";
+            v.createdBy = operator;
+            List<VoucherEntry> entries = new java.util.ArrayList<>();
+            VoucherEntry e1 = new VoucherEntry();
+            e1.subjectCode = bal.compareTo(BigDecimal.ZERO) > 0 ? "3104" : "3105";
+            e1.subjectName = subjectName(e1.subjectCode);
+            e1.digest = "年结结转";
+            if (bal.compareTo(BigDecimal.ZERO) > 0) { e1.debit = bal; e1.credit = BigDecimal.ZERO; }
+            else { e1.debit = BigDecimal.ZERO; e1.credit = bal.negate(); }
+            entries.add(e1);
+            VoucherEntry e2 = new VoucherEntry();
+            e2.subjectCode = bal.compareTo(BigDecimal.ZERO) > 0 ? "3105" : "3104";
+            e2.subjectName = subjectName(e2.subjectCode);
+            e2.digest = "年结结转";
+            if (bal.compareTo(BigDecimal.ZERO) > 0) { e2.debit = BigDecimal.ZERO; e2.credit = bal; }
+            else { e2.debit = bal.negate(); e2.credit = BigDecimal.ZERO; }
+            entries.add(e2);
+            v.entries = entries;
+            Voucher saved = create(v);            // 统一取号（VCH-YYYYMM-NNNN）+ normalizeAndValidate + 来源幂等
+            transfer = post(saved.id, operator);  // 记账（年结凭证无需人工审核——前置校验已保证合法性）
             result.put("transferVoucher", transfer.docNo);
             result.put("profitTransferred", bal);
         }

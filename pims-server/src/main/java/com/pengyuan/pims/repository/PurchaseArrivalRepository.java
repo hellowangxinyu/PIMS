@@ -39,4 +39,9 @@ public interface PurchaseArrivalRepository extends JpaRepository<PurchaseArrival
     /** v5.95.1 到货审核回写采购行：按 单号+物料 汇总已审核到货量 */
     @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(a.qty),0) FROM PurchaseArrival a WHERE a.refOrderNo = ?1 AND a.materialCode = ?2 AND a.status = 'APPROVED'")
     java.math.BigDecimal sumApprovedQtyByOrderNoAndMaterial(String refOrderNo, String materialCode);
+
+    /** v8.0（P0-8）：超收校验——排除指定到货单的已审核量（审核本单前算"其他单"的合计） */
+    @org.springframework.data.jpa.repository.Query("select coalesce(sum(a.qty),0) from PurchaseArrival a " +
+            "where a.refOrderNo = ?1 and a.materialCode = ?2 and a.status = 'APPROVED' and a.id <> ?3")
+    java.math.BigDecimal sumApprovedQtyByOrderNoAndMaterialExcluding(String refOrderNo, String materialCode, Long excludeId);
 }

@@ -66,6 +66,7 @@
 </template>
 
 <script setup>
+import { monthLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import api from '../api'
@@ -76,7 +77,7 @@ const data = ref(null)
 const perms = ref([])
 const loading = ref(false)
 const exporting = ref(false)
-const period = ref(new Date().toISOString().slice(0, 7))
+const period = ref(monthLocal())
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }

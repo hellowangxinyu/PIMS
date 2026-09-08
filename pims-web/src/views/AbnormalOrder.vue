@@ -118,6 +118,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -196,7 +197,7 @@ async function submitHandle() {
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/abnormal-order/export', {}, `异常订单-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/abnormal-order/export', {}, `异常订单-${todayLocal()}.xlsx`)
   } catch (e) { /* downloadFile 内已提示 */ }
   finally { exporting.value = false }
 }

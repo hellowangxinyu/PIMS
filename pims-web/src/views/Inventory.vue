@@ -204,6 +204,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, onMounted, computed, watch } from 'vue'
 import { loadTaxRate, netOfTax, taxOf, fmtTax } from '../utils/tax'
@@ -259,7 +260,7 @@ async function doExport() {
     if (currentWh.value) params.warehouseId = currentWh.value
     if (keyword.value.trim()) params.keyword = keyword.value.trim()
     if (currentZone.value) params.zoneId = currentZone.value
-    await downloadFile('/inventory/export', params, `库存-${view.value === 'code' ? '按编码' : '按批次'}-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/inventory/export', params, `库存-${view.value === 'code' ? '按编码' : '按批次'}-${todayLocal()}.xlsx`)
   } catch (e) { /* downloadFile 内已提示 */ }
   finally { exporting.value = false }
 }

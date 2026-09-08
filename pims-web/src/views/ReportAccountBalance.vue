@@ -50,6 +50,7 @@
 </template>
 
 <script setup>
+import { monthLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import api from '../api'
@@ -60,7 +61,7 @@ const rows = ref([])
 const perms = ref([])
 const loading = ref(false)
 const exporting = ref(false)
-const period = ref(new Date().toISOString().slice(0, 7))
+const period = ref(monthLocal())
 const level = ref('ALL')
 
 function hasPerm(c) { return perms.value.includes(c) }

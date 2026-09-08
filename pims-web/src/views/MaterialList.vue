@@ -156,6 +156,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -185,7 +186,7 @@ async function doExport() {
     if (keyword.value.trim()) params.keyword = keyword.value.trim()
     if (categoryFilter.value) params.category = categoryFilter.value
     if (enabledFilter.value !== '') params.enabled = enabledFilter.value
-    await downloadFile('/material/export', params, `物料档案-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/material/export', params, `物料档案-${todayLocal()}.xlsx`)
   } catch (e) { /* downloadFile 内已提示 */ }
   finally { exporting.value = false }
 }

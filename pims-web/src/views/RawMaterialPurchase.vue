@@ -300,6 +300,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { statusType } from '../utils/statusTag'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
@@ -333,7 +334,7 @@ async function doExport() {
       if (search.value.dateRange?.[0]) params.startDate = search.value.dateRange[0]
       if (search.value.dateRange?.[1]) params.endDate = search.value.dateRange[1]
     }
-    await downloadFile('/raw-material-purchase/export', params, `原料采购-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/raw-material-purchase/export', params, `原料采购-${todayLocal()}.xlsx`)
   } catch (e) { /* downloadFile 内已提示 */ }
   finally { exporting.value = false }
 }
@@ -474,7 +475,7 @@ async function fetchMaterials() {
 }
 
 function showForm(row) {
-  form.value = row ? { ...row } : { purchaseDate: new Date().toISOString().slice(0,10), isFree: false, taxRate: taxRate.value }
+  form.value = row ? { ...row } : { purchaseDate: todayLocal(), isFree: false, taxRate: taxRate.value }
   // 新建模式初始化一行空明细
   if (!row) { batchItems.value = []; addBatchRow() }
   visible.value = true

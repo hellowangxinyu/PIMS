@@ -46,6 +46,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { statusType as globalStatusType } from '../utils/statusTag'
 import { fmt } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
@@ -64,7 +65,7 @@ function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/finance/ar/export', {}, `应收明细-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/finance/ar/export', {}, `应收明细-${todayLocal()}.xlsx`)
   } catch (e) { /* downloadFile 内已提示 */ }
   finally { exporting.value = false }
 }

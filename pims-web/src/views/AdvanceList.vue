@@ -124,6 +124,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -146,7 +147,7 @@ const applyForm = ref({ targetId: null, amount: null })
 const form = ref(emptyForm())
 
 function emptyForm() {
-  return { direction: 'RECEIVE', partnerId: null, amount: null, method: 'BANK', payDate: new Date().toISOString().slice(0, 10), remark: '' }
+  return { direction: 'RECEIVE', partnerId: null, amount: null, method: 'BANK', payDate: todayLocal(), remark: '' }
 }
 
 function hasPerm(c) { return perms.value.includes(c) }
@@ -260,7 +261,7 @@ async function del(row) {
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/advance/export', {}, `预收预付-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/advance/export', {}, `预收预付-${todayLocal()}.xlsx`)
   } catch {} finally { exporting.value = false }
 }
 

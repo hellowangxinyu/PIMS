@@ -24,6 +24,16 @@ public class PurchaseOrderSchemaV633Initializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        // v8.0（P0-11）孤儿表恢复：上次 DROP 成功但 RENAME 失败（进程被杀/磁盘满）时，
+        // purchase_order 缺失而 purchase_order_v633 存在——原逻辑直接 return，主表永久消失。
+        // 恢复路径：把孤儿表改回主表名再走正常建索引。
+        var orphan = jdbc.queryForList("PRAGMA table_info(purchase_order)");
+        var leftover = jdbc.queryForList("PRAGMA table_info(purchase_order_v633)");
+        if (orphan.isEmpty() && !leftover.isEmpty()) {
+            jdbc.execute("ALTER TABLE purchase_order_v633 RENAME TO purchase_order");
+            jdbc.execute("CREATE UNIQUE INDEX IF NOT EXISTS uk_purchase_order_no ON purchase_order(order_no)");
+            log.warn("purchase_order 重建中断恢复：孤儿表 purchase_order_v633 已改回主表（上次 DROP 后 RENAME 失败）");
+        }
         try {
             var cols = jdbc.queryForList("PRAGMA table_info(purchase_order)");
             if (cols.isEmpty()) return;   // 表尚不存在（新库由 JPA？ddl-auto=none——由建表方创建）
@@ -62,7 +72,18 @@ public class PurchaseOrderSchemaV633Initializer implements CommandLineRunner {
             jdbc.execute("CREATE UNIQUE INDEX IF NOT EXISTS uk_purchase_order_no ON purchase_order(order_no)");
             log.info("purchase_order 重建完成：supplier_id/target_warehouse_id 放宽可空，迁移 {} 行", n);
         } catch (Exception e) {
-            log.warn("purchase_order 重建跳过: {}", e.getMessage());
+            // v8.0（P0-11）：DROP 之后的失败不再静默吞——主表可能已消失，必须让启动失败暴露（有上面的孤儿恢复兜底）
+            var after = jdbc.queryForList("PRAGMA table_info(purchase_order)");
+            if (after.isEmpty()) {
+                log.error("purchase_order 重建失败且主表缺失！将尝试从 _v633 恢复", e);
+                var v633 = jdbc.queryForList("PRAGMA table_info(purchase_order_v633)");
+                if (!v633.isEmpty()) {
+                    jdbc.execute("ALTER TABLE purchase_order_v633 RENAME TO purchase_order");
+                    log.error("已从 purchase_order_v633 恢复主表，请检查数据完整性后重启");
+                }
+                throw new IllegalStateException("purchase_order 重建失败（已尝试恢复），启动中止", e);
+            }
+            log.warn("purchase_order 重建跳过（主表完好）: {}", e.getMessage());
         }
     }
 }

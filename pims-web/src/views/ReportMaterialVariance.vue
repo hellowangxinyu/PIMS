@@ -113,6 +113,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import api from '../api'
@@ -163,7 +164,7 @@ async function fetch() {
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/report/material-variance/export', {}, `领料差异分析-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/report/material-variance/export', {}, `领料差异分析-${todayLocal()}.xlsx`)
   } catch {} finally { exporting.value = false }
 }
 

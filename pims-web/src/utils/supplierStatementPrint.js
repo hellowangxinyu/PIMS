@@ -1,3 +1,4 @@
+import { todayLocal } from './date'
 /**
  * 供应商对账单打印（v6.3）
  * 照抄 statementPrint 模式：纯字符串拼完整 HTML 文档（A4 纵向），window.open + document.write + print
@@ -66,7 +67,7 @@ export function buildSupplierStatementHtml(data) {
   <div class="meta">
     <div>供应商名称：<b>${escHtml(sup.name)}</b></div>
     <div>供应商编码：${escHtml(sup.code)}</div>
-    <div>制单日期：${new Date().toISOString().slice(0, 10)}</div>
+    <div>制单日期：${todayLocal()}</div>
   </div>
   <table>
     <thead>

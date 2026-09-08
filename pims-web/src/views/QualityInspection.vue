@@ -220,6 +220,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -248,7 +249,7 @@ async function doExport() {
       if (s.dateRange?.[0]) params.startDate = s.dateRange[0]
       if (s.dateRange?.[1]) params.endDate = s.dateRange[1]
     }
-    await downloadFile('/qc/export', params, `质检记录-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/qc/export', params, `质检记录-${todayLocal()}.xlsx`)
   } catch (e) { /* downloadFile 内已提示 */ }
   finally { exporting.value = false }
 }

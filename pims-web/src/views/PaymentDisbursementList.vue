@@ -98,6 +98,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -115,7 +116,7 @@ const visible = ref(false)
 const loading = ref(false)
 const perms = ref([])
 const exporting = ref(false)
-const form = ref({ supplierId: null, amount: null, method: 'BANK', bankAccount: '', payDate: new Date().toISOString().slice(0,10), remark: '' })
+const form = ref({ supplierId: null, amount: null, method: 'BANK', bankAccount: '', payDate: todayLocal(), remark: '' })
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
@@ -127,7 +128,7 @@ function payMethodLabel(m) { return { CASH: '现金', BANK: '银行', ACCEPTANCE
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/finance/disbursement/export', {}, `付款单-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/finance/disbursement/export', {}, `付款单-${todayLocal()}.xlsx`)
   } catch (e) { /* downloadFile 内已提示 */ }
   finally { exporting.value = false }
 }
@@ -147,7 +148,7 @@ async function fetchSupplier() { try { supplierList.value = await api.get('/supp
 async function fetchAP() { try { apList.value = await api.get('/finance/ap') } catch {} }
 
 function openDialog() {
-  form.value = { supplierId: null, amount: null, method: 'BANK', bankAccount: '', payDate: new Date().toISOString().slice(0,10), remark: '' }
+  form.value = { supplierId: null, amount: null, method: 'BANK', bankAccount: '', payDate: todayLocal(), remark: '' }
   fetchSupplier()
   fetchAP()
   visible.value = true

@@ -333,6 +333,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -409,7 +410,7 @@ const formVisible = ref(false)
 const form = ref({})
 
 function openCreate() {
-  form.value = { issueDate: new Date().toISOString().slice(0, 10) }
+  form.value = { issueDate: todayLocal() }
   formVisible.value = true
 }
 
@@ -490,7 +491,7 @@ const resolveVisible = ref(false)
 const resolveForm = ref({})
 
 function openResolve(row) {
-  resolveForm.value = { id: row.id, traceNo: row.traceNo, resultType: null, resultRemark: '', compensationAmount: null, handler: '', resolveDate: new Date().toISOString().slice(0, 10) }
+  resolveForm.value = { id: row.id, traceNo: row.traceNo, resultType: null, resultRemark: '', compensationAmount: null, handler: '', resolveDate: todayLocal() }
   resolveVisible.value = true
 }
 

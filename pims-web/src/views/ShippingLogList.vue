@@ -94,6 +94,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -112,7 +113,7 @@ const form = ref(emptyForm())
 
 function emptyForm() {
   return { outboundDocNo: '', salesOrderNo: '', customerName: '', carrier: '', trackingNo: '',
-    freight: null, borne: 'COMPANY', shipDate: new Date().toISOString().slice(0, 10), remark: '' }
+    freight: null, borne: 'COMPANY', shipDate: todayLocal(), remark: '' }
 }
 
 function hasPerm(c) { return perms.value.includes(c) }

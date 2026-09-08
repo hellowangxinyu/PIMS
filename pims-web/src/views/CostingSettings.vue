@@ -66,6 +66,7 @@
 </template>
 
 <script setup>
+import { monthLocal } from '../utils/date'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Warning } from '@element-plus/icons-vue'
@@ -85,7 +86,7 @@ const method = ref('SPECIFIC')
 const reason = ref('')
 const loading = ref(false)
 const logs = ref([])
-const checkPeriod = ref(new Date().toISOString().slice(0, 7))
+const checkPeriod = ref(monthLocal())
 const checking = ref(false)
 const monthly = ref(null)
 

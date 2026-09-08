@@ -258,6 +258,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { statusType } from '../utils/statusTag'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
@@ -275,7 +276,7 @@ const exporting = ref(false)
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/sales-order/export', {}, `销售订单-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/sales-order/export', {}, `销售订单-${todayLocal()}.xlsx`)
   } catch (e) { /* downloadFile 内已提示 */ }
   finally { exporting.value = false }
 }

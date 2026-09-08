@@ -112,6 +112,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -135,7 +136,7 @@ const filterMonth = ref('')
 const form = ref(emptyForm())
 
 function emptyForm() {
-  return { direction: 'EXPENSE', expenseType: '', amount: null, occurDate: new Date().toISOString().slice(0, 10),
+  return { direction: 'EXPENSE', expenseType: '', amount: null, occurDate: todayLocal(),
     method: 'BANK', partner: '', handler: '', remark: '' }
 }
 
@@ -229,7 +230,7 @@ async function del(row) {
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/expense/export', {}, `费用单-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/expense/export', {}, `费用单-${todayLocal()}.xlsx`)
   } catch {} finally { exporting.value = false }
 }
 

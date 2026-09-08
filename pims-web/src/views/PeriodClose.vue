@@ -49,6 +49,7 @@
 </template>
 
 <script setup>
+import { monthLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -57,7 +58,7 @@ import api from '../api'
 const periods = ref([])
 const perms = ref([])
 const loadingList = ref(false)
-const costingPeriod = ref(new Date().toISOString().slice(0, 7))
+const costingPeriod = ref(monthLocal())
 const costingMethod = ref('SPECIFIC')   // v5.63 全月平均结账前置
 
 function hasPerm(c) { return perms.value.includes(c) }

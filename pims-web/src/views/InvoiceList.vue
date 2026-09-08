@@ -176,6 +176,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -205,7 +206,7 @@ const form = ref(emptyForm())
 
 function emptyForm() {
   return { direction: 'OUTPUT', partnerId: null, partnerTaxNo: '', invoiceNo: '', amount: null,
-    taxRate: 13, taxAmount: 0, totalAmount: 0, invoiceDate: new Date().toISOString().slice(0, 10), refOrderNo: '', remark: '' }
+    taxRate: 13, taxAmount: 0, totalAmount: 0, invoiceDate: todayLocal(), refOrderNo: '', remark: '' }
 }
 
 function hasPerm(c) { return perms.value.includes(c) }
@@ -317,7 +318,7 @@ async function showSummary() {
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/invoice/export', {}, `发票登记-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/invoice/export', {}, `发票登记-${todayLocal()}.xlsx`)
   } catch {} finally { exporting.value = false }
 }
 

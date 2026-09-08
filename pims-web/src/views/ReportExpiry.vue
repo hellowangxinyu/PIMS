@@ -80,6 +80,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { fmtMoney } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -149,7 +150,7 @@ async function loadData() {
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/report/expiry/export', {}, `批次过期预警-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/report/expiry/export', {}, `批次过期预警-${todayLocal()}.xlsx`)
   } catch (e) { /* downloadFile 内已提示 */ }
   finally { exporting.value = false }
 }

@@ -113,6 +113,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -221,7 +222,7 @@ async function showHistory(row) {
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/asset/export', {}, `固定资产-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await downloadFile('/asset/export', {}, `固定资产-${todayLocal()}.xlsx`)
   } catch {} finally { exporting.value = false }
 }
 

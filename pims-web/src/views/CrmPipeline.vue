@@ -127,6 +127,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -232,7 +233,7 @@ async function submitStage() {
 
 async function openFollow(row) {
   followRow.value = row
-  followForm.value = { followDate: new Date().toISOString().slice(0, 10), method: 'PHONE', content: '', nextDate: '' }
+  followForm.value = { followDate: todayLocal(), method: 'PHONE', content: '', nextDate: '' }
   await loadFollows(row.id)
   followVisible.value = true
 }
@@ -247,7 +248,7 @@ async function submitFollow() {
   try {
     await api.post('/crm/follow-up', { ...followForm.value, opportunityId: followRow.value.id })
     ElMessage.success('跟进已记录')
-    followForm.value = { followDate: new Date().toISOString().slice(0, 10), method: 'PHONE', content: '', nextDate: '' }
+    followForm.value = { followDate: todayLocal(), method: 'PHONE', content: '', nextDate: '' }
     loadFollows(followRow.value.id)
     fetch()
   } catch (e) { ElMessage.error(e?.response?.data?.msg || e?.message || '保存失败') }

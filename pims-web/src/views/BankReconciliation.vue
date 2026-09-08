@@ -140,6 +140,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 // v6.3 出纳银行对账：日记账 vs 银行流水双栏、自动勾对、手工勾对、余额调节表
 import { ref, computed, onMounted } from 'vue'
@@ -161,7 +162,7 @@ const bindRowId = ref(null)
 const perms = ref([])
 function hasPerm(c) { return perms.value.includes(c) }
 
-function today() { return new Date().toISOString().slice(0, 10) }
+function today() { return todayLocal() }
 function monthStart() { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10) }
 // v6.4 金额格式统一（utils/fmt 千分位 2 位）
 const bindable = computed(() => (journal.value.rows || []).filter(r => !r.matched))

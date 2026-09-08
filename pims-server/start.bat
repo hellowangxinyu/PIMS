@@ -16,6 +16,7 @@ set JAVA_OPTS=-Xms512m -Xmx4g ^
  -XX:MaxGCPauseMillis=200 ^
  -XX:+ExitOnOutOfMemoryError ^
  -Dfile.encoding=UTF-8 ^
+ -Duser.timezone=Asia/Shanghai ^
  -Djava.io.tmpdir=%~dp0tmp
 
 echo [%date% %time%] PIMS 启动中... >> logs\startup.log

@@ -57,6 +57,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 /**
  * 业务单据生成凭证弹窗（v5.61）：收款单/付款单/费用单/发票列表页共用。
  * 用法：<voucher-generate-dialog ref="genDlg" @saved="fetch" /> + genDlg.value.open('RECEIPT', row.id)
@@ -91,7 +92,7 @@ async function open(sourceType, refId) {
   try {
     const p = await api.post('/voucher/generate', { sourceType, refId })
     form.value = {
-      voucherDate: p.voucherDate || new Date().toISOString().slice(0, 10),
+      voucherDate: p.voucherDate || todayLocal(),
       attachmentCount: 1,
       remark: p.digest || p.remark || '',
       source: p.source, refDocNo: p.refDocNo, red: !!p.red,

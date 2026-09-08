@@ -82,6 +82,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 // v6.3 质量统计分析：不良率总览/月趋势/物料 TOP/大类分布/供应商不良（经到货关联）
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -93,7 +94,7 @@ const range = ref([halfYearAgo(), today()])
 const data = ref(null)
 const loading = ref(false)
 
-function today() { return new Date().toISOString().slice(0, 10) }
+function today() { return todayLocal() }
 function halfYearAgo() {
   const d = new Date(); d.setMonth(d.getMonth() - 6)
   return d.toISOString().slice(0, 10)

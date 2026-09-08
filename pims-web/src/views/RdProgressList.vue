@@ -89,6 +89,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '../api'
@@ -107,7 +108,7 @@ const catFilter = ref('')
 const keyword = ref('')
 const form = ref(emptyForm())
 
-function emptyForm() { return { raiseDate: new Date().toISOString().slice(0, 10), owner: '', category: '配方', content: '', result: '', nextDate: '', closedDate: '', progress: '' } }
+function emptyForm() { return { raiseDate: todayLocal(), owner: '', category: '配方', content: '', result: '', nextDate: '', closedDate: '', progress: '' } }
 function hasPerm(c) { return perms.value.includes(c) }
 const catOptions = computed(() => dicts.value['weekly_topic_category'] || [])
 
@@ -177,7 +178,7 @@ async function onFile(e) {
 }
 
 async function doExport() {
-  try { await (await import('../utils/download')).downloadFile('/meeting/rd/export', {}, `研发进度-${new Date().toISOString().slice(0, 10)}.xlsx`) } catch {}
+  try { await (await import('../utils/download')).downloadFile('/meeting/rd/export', {}, `研发进度-${todayLocal()}.xlsx`) } catch {}
 }
 
 async function close(row) {

@@ -162,6 +162,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -200,7 +201,7 @@ function displayName(username) {
   const u = userList.value.find(x => x.username === username)
   return u ? u.realName : username
 }
-function today() { return new Date().toISOString().slice(0, 10) }
+function today() { return todayLocal() }
 function isOverdue(row) {
   return row.dueDate && row.dueDate < today() && row.status !== 'COMPLETED' && row.status !== 'CANCELLED'
 }

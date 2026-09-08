@@ -839,6 +839,9 @@ public class PurchaseService {
                         fp.isFree ? java.math.BigDecimal.ZERO : fp.unitPrice, null, operator, pa.id);   // v6.1.2 到货关联
             });
         }
+        // v8.0（P0-8）：审核前超收拦截——与 recordArrival 直达路径同口径。
+        // 此前 DRAFT 到货审核路径 backfillReceivedQty 直接 receivedQty=聚合值，无上限，可超订单量
+        validateNotOverReceived(pa);
         pa.status = "APPROVED";
         // v5.95.1：到货审核回写采购行已到货量（与旧到货录入路径同口径），到齐自动置 RECEIVED
         backfillReceivedQty(pa);
@@ -885,7 +888,12 @@ public class PurchaseService {
             }
         }
         amount = pa.qty != null ? pa.qty.multiply(unitPrice).setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
-        if (amount.compareTo(BigDecimal.ZERO) <= 0 || supplierId == null) return;
+        // v8.0（P0-8）：金额 0 或无供应商不再静默 return——留告警日志（货到无应付必须可发现；真赠品看日志可确认）
+        if (amount.compareTo(BigDecimal.ZERO) <= 0 || supplierId == null) {
+            log.warn("到货 {} {} 未生成应付：amount={} supplierId={}（0元/无供应商，如非赠品请补采购单价）",
+                    pa.id, pa.docNo, amount, supplierId);
+            return;
+        }
 
         AccountsPayable ap = new AccountsPayable();
         ap.supplierId = supplierId;
@@ -900,6 +908,33 @@ public class PurchaseService {
         ap.remark = "采购到货自动生成 " + orderNo + "（到货单#" + pa.id + "）";
         financeService.createAP(ap);
         log.info("到货审核生成AP(按到货单): 到货单#{} 订单={} 供应商={} 金额={}", pa.id, orderNo, supplierName, amount);
+    }
+
+    /** v8.0（P0-8）：到货审核前超收校验——其他已审核到货 + 本单 ≤ 订单量（与 recordArrival 同口径） */
+    private void validateNotOverReceived(PurchaseArrival pa) {
+        arrivalRepo.flush();
+        java.math.BigDecimal others = arrivalRepo.sumApprovedQtyByOrderNoAndMaterialExcluding(pa.refOrderNo, pa.materialCode, pa.id);
+        java.math.BigDecimal thisQty = pa.qty == null ? java.math.BigDecimal.ZERO : pa.qty;
+        java.math.BigDecimal total = (others == null ? java.math.BigDecimal.ZERO : others).add(thisQty);
+        if ("RAW".equals(pa.type)) {
+            rawRepo.findFirstByOrderNoAndMaterialCode(pa.refOrderNo, pa.materialCode).ifPresent(rp -> {
+                java.math.BigDecimal ordered = rp.qty == null ? java.math.BigDecimal.ZERO : rp.qty;
+                if (total.compareTo(ordered) > 0) {
+                    throw new IllegalArgumentException(String.format(
+                            "到货数量超订单：其他已到 %.3f + 本单 %.3f > 订量 %.3f", others, thisQty, ordered));
+                }
+            });
+        } else {
+            finishedRepo.findAllByOrderNo(pa.refOrderNo).forEach(f -> {
+                if (pa.materialCode != null && pa.materialCode.equals(f.materialCode)) {
+                    java.math.BigDecimal ordered = f.qty == null ? java.math.BigDecimal.ZERO : f.qty;
+                    if (total.compareTo(ordered) > 0) {
+                        throw new IllegalArgumentException(String.format(
+                                "到货数量超订单：其他已到 %.3f + 本单 %.3f > 订量 %.3f", others, thisQty, ordered));
+                    }
+                }
+            });
+        }
     }
 
     /** v5.95.1 到货审核回写采购行 receivedQty（单号+物料匹配），到齐置 RECEIVED */
@@ -959,6 +994,14 @@ public class PurchaseService {
         // 台账无此批次行（或行在库位上对不上），100% 抛"库存不足无法冲正"，反审核整体不可用。
         // ①已拦截非 PENDING 质检单 ⇒ 走到这里必然尚未入库，无库存可冲。
         // ③ 删该到货单立的 AP（arrivalId 幂等立账，精准冲）
+        // v8.0（P0-2）：已付款的 AP 物理删除会留孤儿付款单、账实不符——拦截，引导走红冲
+        for (AccountsPayable ap : apRepo.findByArrivalId(pa.id)) {
+            java.math.BigDecimal paidAmt = ap.paidAmount == null ? java.math.BigDecimal.ZERO : ap.paidAmount;
+            if (paidAmt.compareTo(java.math.BigDecimal.ZERO) > 0 || "PAID".equals(ap.status)) {
+                throw new IllegalArgumentException("该到货单的应付 " + ap.docNo + " 已有付款记录（已付 ¥" + paidAmt +
+                        "），不能反审核删除；请走付款红冲或联系财务处理");
+            }
+        }
         apRepo.findByArrivalId(pa.id).forEach(apRepo::delete);
         // ④ 删该到货生成的 PENDING 质检单（v6.1.2：按 arrivalId 精确隔离，同上）
         for (var qc : qcRepo.findByRefDocNoAndType(pa.refOrderNo, "INCOMING")) {

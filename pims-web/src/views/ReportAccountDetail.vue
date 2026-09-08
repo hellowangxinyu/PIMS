@@ -59,6 +59,7 @@
 </template>
 
 <script setup>
+import { monthLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import api from '../api'
@@ -70,7 +71,7 @@ const data = ref(null)
 const perms = ref([])
 const loading = ref(false)
 const exporting = ref(false)
-const nowMonth = new Date().toISOString().slice(0, 7)
+const nowMonth = monthLocal()
 const subjectCode = ref('1002')
 const from = ref(nowMonth)
 const to = ref(nowMonth)

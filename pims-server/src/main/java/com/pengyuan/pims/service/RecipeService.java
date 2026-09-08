@@ -302,6 +302,22 @@ public class RecipeService {
         if (!"DRAFT".equals(v.status)) {
             throw new IllegalArgumentException("只有草稿版本可编辑");
         }
+        // v8.0（P0-4）：改批量必须与配方树顶层合计一致——否则展开领料按 ratio=目标÷批量 缩放，
+        // 树合计≠批量时领料总量错算（批量500树合计100 → 500kg 订单只领 100kg 料）
+        boolean batchChanged = v.batchQty == null || updated.batchQty == null
+                || v.batchQty.compareTo(updated.batchQty) != 0;
+        if (batchChanged && updated.batchQty != null) {
+            java.math.BigDecimal treeSum = treeNodeRepo.findByVersionIdOrderBySortOrder(versionId).stream()
+                    .filter(n -> n.parentNodeId == null)
+                    .map(n -> n.qty == null ? java.math.BigDecimal.ZERO : n.qty)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            if (treeSum.compareTo(java.math.BigDecimal.ZERO) > 0
+                    && treeSum.subtract(updated.batchQty).abs().compareTo(new java.math.BigDecimal("0.001")) > 0) {
+                throw new IllegalArgumentException(String.format(
+                        "标准批量（%s）必须等于配方树顶层用量合计（%s）——请先调整配方树再改批量，或按树合计设置批量",
+                        updated.batchQty.stripTrailingZeros().toPlainString(), treeSum.stripTrailingZeros().toPlainString()));
+            }
+        }
         java.math.BigDecimal oldBatch = v.batchQty;
         v.batchQty = updated.batchQty;
         v.unit = "kg"; // v4.9：所有物料单位统一为公斤
@@ -323,6 +339,22 @@ public class RecipeService {
         RecipeVersion v = getVersion(versionId);
         if (!"DRAFT".equals(v.status)) {
             throw new IllegalArgumentException("只有草稿版本可发布");
+        }
+        // v8.0（P0-4）发布兜底：树顶层合计必须等于标准批量（批量与树脱钩会让领料按错误比例展开）
+        {
+            java.math.BigDecimal batch = v.batchQty == null ? java.math.BigDecimal.valueOf(100) : v.batchQty;
+            java.math.BigDecimal treeSum = treeNodeRepo.findByVersionIdOrderBySortOrder(versionId).stream()
+                    .filter(n -> n.parentNodeId == null)
+                    .map(n -> n.qty == null ? java.math.BigDecimal.ZERO : n.qty)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            if (treeSum.compareTo(java.math.BigDecimal.ZERO) == 0) {
+                throw new IllegalArgumentException("配方树为空，请先录入用料明细再发布");
+            }
+            if (treeSum.subtract(batch).abs().compareTo(new java.math.BigDecimal("0.001")) > 0) {
+                throw new IllegalArgumentException(String.format(
+                        "配方树顶层用量合计（%s）必须等于标准批量（%s）才能发布",
+                        treeSum.stripTrailingZeros().toPlainString(), batch.stripTrailingZeros().toPlainString()));
+            }
         }
 
         // 归档旧的 RELEASED 版本

@@ -205,9 +205,14 @@ public class SummarySchemaInitializer implements CommandLineRunner {
      */
     private void archiveOldMovements() {
         String cutoff = LocalDate.now().minusYears(1).toString();
+        // v8.0（P0-12）：SELECT * 改显式列名——两表列序已实测不一致（movement 第2列 batch_no、archive 第2列 doc_type），
+        // SELECT * 首次触发（2027-08）即全列错位写入且源行被删，是确定性数据事故。列名对齐 InventoryMovementArchiveService。
         int moved = jdbc.update("""
-            INSERT OR REPLACE INTO inventory_movement_archive
-            SELECT * FROM inventory_movement
+            INSERT OR REPLACE INTO inventory_movement_archive (id, doc_type, doc_no, material_code, batch_no,
+                warehouse_id, location_id, direction, qty, qty_before, qty_after, ownership_type, operator, remark, create_time)
+            SELECT id, doc_type, doc_no, material_code, batch_no,
+                warehouse_id, location_id, direction, qty, qty_before, qty_after, ownership_type, operator, remark, create_time
+            FROM inventory_movement
             WHERE date(CAST(create_time AS INTEGER) / 1000, 'unixepoch') < ?
             """, cutoff);
         if (moved > 0) {

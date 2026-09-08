@@ -65,6 +65,7 @@
 </template>
 
 <script setup>
+import { monthLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import api from '../api'
@@ -76,7 +77,7 @@ const dicts = ref({})
 const perms = ref([])
 const loading = ref(false)
 const exporting = ref(false)
-const month = ref(new Date().toISOString().slice(0, 7))
+const month = ref(monthLocal())
 const trendLabels = computed(() => (data.value?.trend || []).map(t => t.month))
 const trendSeries = computed(() => [
   { name: '收入', values: (data.value?.trend || []).map(t => Number(t.revenue || 0)), color: '#2563eb' },

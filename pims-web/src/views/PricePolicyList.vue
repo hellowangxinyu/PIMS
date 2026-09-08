@@ -74,6 +74,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 // v6.3 第二批：销售价格政策维护（物料精确档 > 大类兜底档；min_qty 阶梯=量大优惠）
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -96,7 +97,7 @@ function openEdit(row) {
   kind.value = row && !row.materialCode ? 'category' : 'material'
   form.value = row
     ? { ...row }
-    : { materialCode: null, materialCategory: null, minQty: 1, unitPrice: null, effectiveDate: new Date().toISOString().slice(0, 10), expiryDate: null, status: 'ENABLED', remark: '' }
+    : { materialCode: null, materialCategory: null, minQty: 1, unitPrice: null, effectiveDate: todayLocal(), expiryDate: null, status: 'ENABLED', remark: '' }
   dlg.value = true
 }
 

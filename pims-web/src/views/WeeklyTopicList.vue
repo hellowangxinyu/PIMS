@@ -90,6 +90,7 @@
 </template>
 
 <script setup>
+import { todayLocal } from '../utils/date'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -120,7 +121,7 @@ function st(row) {
   if (row.planDate && row.planDate < today()) return 'OVERDUE'
   return 'OPEN'
 }
-function today() { return new Date().toISOString().slice(0, 10) }
+function today() { return todayLocal() }
 
 const filtered = computed(() => {
   let arr = list.value
@@ -182,7 +183,7 @@ async function close(row) {
 function doImport() { fileRef.value?.click() }
 
 async function doExport() {
-  try { await (await import('../utils/download')).downloadFile('/meeting/topic/export', {}, `每周议题-${new Date().toISOString().slice(0, 10)}.xlsx`) } catch {}
+  try { await (await import('../utils/download')).downloadFile('/meeting/topic/export', {}, `每周议题-${todayLocal()}.xlsx`) } catch {}
 }
 async function onFile(e) {
   const f = e.target.files?.[0]

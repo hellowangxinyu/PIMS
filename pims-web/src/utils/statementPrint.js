@@ -1,3 +1,4 @@
+import { todayLocal } from './date'
 /**
  * 客户对账单打印（v5.36）
  * 照抄 qcPrint 模式：纯字符串拼完整 HTML 文档（A4 纵向），window.open + document.write + print
@@ -70,7 +71,7 @@ export function buildStatementHtml(data) {
     <div>客户名称：<b>${escHtml(c.name)}</b></div>
     <div>客户编码：${escHtml(c.code)}</div>
     <div>纳税人识别号：${escHtml(c.taxNo || '—')}</div>
-    <div>制单日期：${new Date().toISOString().slice(0, 10)}</div>
+    <div>制单日期：${todayLocal()}</div>
   </div>
   <table>
     <thead>

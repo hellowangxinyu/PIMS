@@ -120,6 +120,7 @@
   </div>
 </template>
 <script setup>
+import { todayLocal } from '../utils/date'
 // v6.4 补齐：搜索/筛选/分页/明细查看/手工创建/草稿删除（原 56 行半成品页，alert 占位）
 import { statusType } from '../utils/statusTag'
 import { fmt } from '../utils/fmt'
@@ -140,7 +141,7 @@ const itemsVisible = ref(false)
 const viewRow = ref(null)
 const viewItems = ref([])
 const createVisible = ref(false)
-const form = ref({ supplierId: null, orderDate: new Date().toISOString().slice(0, 10), expectedDeliveryDate: null, remark: '', items: [] })
+const form = ref({ supplierId: null, orderDate: todayLocal(), expectedDeliveryDate: null, remark: '', items: [] })
 const { cw, onHeaderDragend } = useColumnResize('purchase_order')
 
 function hasPerm(c) { return perms.value.includes(c) }
@@ -183,7 +184,7 @@ async function showItems(row) {
 }
 
 function openCreate() {
-  form.value = { supplierId: null, orderDate: new Date().toISOString().slice(0, 10), expectedDeliveryDate: null, remark: '', items: [{ materialCode: '', qty: 1 }] }
+  form.value = { supplierId: null, orderDate: todayLocal(), expectedDeliveryDate: null, remark: '', items: [{ materialCode: '', qty: 1 }] }
   createVisible.value = true
 }
 function addItem() { form.value.items.push({ materialCode: '', qty: 1 }) }
