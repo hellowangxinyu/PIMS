@@ -420,7 +420,12 @@ onMounted(async () => {
   } catch { /* ignore */ }
   loadFormulas()
   load()
-  try { materials.value = await api.get('/material', { params: { enabled: true } }) } catch { /* ignore */ }
+  // v7.7.8 权限归口：选料+参考价走打样模块聚合端点（sample:read 即可，不牵连 material:read/recipe:read）
+  try {
+    const agg = await api.get('/sample/formula/materials')
+    materials.value = agg.materials || []
+    priceMap.value = agg.prices || {}
+  } catch { /* ignore */ }
   try {
     const all = await api.get('/dict')
     const map = {}
@@ -430,7 +435,7 @@ onMounted(async () => {
     }
     dicts.value = map
   } catch { /* ignore */ }
-  try { priceMap.value = await api.get('/recipe/material-prices') } catch { /* ignore */ }
+
 })
 </script>
 

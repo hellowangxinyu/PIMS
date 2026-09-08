@@ -18,10 +18,16 @@ public class SampleController {
 
     private final SampleService service;
     private final com.pengyuan.pims.repository.UserRepository userRepo;
+    private final com.pengyuan.pims.repository.MaterialRepository materialRepo;
+    private final com.pengyuan.pims.service.RecipeService recipeService;
 
-    public SampleController(SampleService service, com.pengyuan.pims.repository.UserRepository userRepo) {
+    public SampleController(SampleService service, com.pengyuan.pims.repository.UserRepository userRepo,
+                            com.pengyuan.pims.repository.MaterialRepository materialRepo,
+                            com.pengyuan.pims.service.RecipeService recipeService) {
         this.service = service;
         this.userRepo = userRepo;
+        this.materialRepo = materialRepo;
+        this.recipeService = recipeService;
     }
 
     /** v7.7 派发人选：启用用户（username+姓名），sample:read 即可（内勤未必有 user:read） */
@@ -95,6 +101,31 @@ public class SampleController {
     @SaCheckPermission(value = "sample:read")
     public Result<java.util.Map<String, Object>> getFormula(@PathVariable Long id) {
         return Result.ok(service.getFormula(id));
+    }
+
+    /**
+     * v7.7.8 打样任务页聚合数据：可选用料（A/P/F/R/S/B 启用物料精简）+ 参考价映射（与配方树成本同源）。
+     * 权限归口 sample:read——打样员无需 material:read/recipe:read（此前页面直拉两接口，无权限时弹「无权限访问」且编辑器空）。
+     */
+    @GetMapping("/formula/materials")
+    @SaCheckPermission(value = "sample:read")
+    public Result<java.util.Map<String, Object>> formulaMaterials() {
+        java.util.List<java.util.Map<String, Object>> materials = new java.util.ArrayList<>();
+        for (com.pengyuan.pims.entity.Material m : materialRepo.findByEnabledTrue()) {
+            if (m.category == null || !"APFRSB".contains(m.category)) continue;
+            java.util.Map<String, Object> x = new java.util.LinkedHashMap<>();
+            x.put("code", m.code);
+            x.put("name", m.name);
+            x.put("brand", m.brand);
+            x.put("category", m.category);
+            x.put("subCategory", m.subCategory);
+            x.put("unit", "kg");
+            materials.add(x);
+        }
+        java.util.Map<String, Object> r = new java.util.LinkedHashMap<>();
+        r.put("materials", materials);
+        r.put("prices", recipeService.getMaterialPriceMap());
+        return Result.ok(r);
     }
 
     /** 打样配方列表（转制漆下拉/管理） */
