@@ -15,7 +15,11 @@ import java.util.stream.Collectors;
 public class FieldFilter {
 
     private static final Logger log = LoggerFactory.getLogger(FieldFilter.class);
-    private static final ObjectMapper mapper = new ObjectMapper();
+    // v8.3：注册 JavaTimeModule——原裸 ObjectMapper 遇 LocalDate/LocalDateTime 实体 convertValue 直接炸
+    //（catch 返回原对象=脱敏静默失效；此前只用于 Map/无日期实体未暴露）
+    private static final ObjectMapper mapper = new ObjectMapper()
+            .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+            .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     /**
      * 检查当前用户是否拥有指定权限

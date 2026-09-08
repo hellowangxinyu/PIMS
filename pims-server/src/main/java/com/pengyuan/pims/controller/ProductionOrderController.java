@@ -183,7 +183,9 @@ public class ProductionOrderController {
     @GetMapping("/{id}/outbounds")
     @SaCheckPermission(value = "production:read")
     public Result outbounds(@PathVariable Long id) {
-        return Result.ok(outboundService.listOutboundsByOrderId(id));
+        // v8.3（C2）：领料单价/成本后端脱敏（此前仅前端隐藏，直接调接口可见）
+        return Result.ok(com.pengyuan.pims.common.FieldFilter.filterListFields(
+                outboundService.listOutboundsByOrderId(id), "unitPrice", "cost"));
     }
 
     /** v5.27：排产（已确认 → 已排产） */

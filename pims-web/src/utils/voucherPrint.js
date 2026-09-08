@@ -6,17 +6,24 @@ function fmt(v) {
   return Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+// v8.3（C3）：摘要/科目/备注/制单人来自单据录入，拼 HTML 前必须转义（同源 XSS）
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 export function printVoucher(v) {
   const rows = (v.entries || []).map(e => `
     <tr>
-      <td class="digest">${e.digest || ''}</td>
-      <td class="subject">${e.subjectCode || ''} ${e.subjectName || ''}${e.auxName ? '（' + e.auxName + '）' : ''}</td>
+      <td class="digest">${esc(e.digest)}</td>
+      <td class="subject">${esc(e.subjectCode)} ${esc(e.subjectName)}${e.auxName ? '（' + esc(e.auxName) + '）' : ''}</td>
       <td class="amt">${Number(e.debit || 0) !== 0 ? fmt(e.debit) : ''}</td>
       <td class="amt">${Number(e.credit || 0) !== 0 ? fmt(e.credit) : ''}</td>
     </tr>`).join('')
 
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${v.docNo}</title>
+<html><head><meta charset="utf-8"><title>${esc(v.docNo)}</title>
 <style>
   @page { size: A4 landscape; margin: 12mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -52,12 +59,12 @@ export function printVoucher(v) {
     </tbody>
   </table>
   <div class="sign">
-    <span>制单：${v.createdBy || ''}</span>
-    <span>记账：${v.postedBy || ''}</span>
+    <span>制单：${esc(v.createdBy)}</span>
+    <span>记账：${esc(v.postedBy)}</span>
     <span>审核：</span>
     <span>出纳：</span>
   </div>
-  <div style="margin-top:6px;font-size:11px;color:#333;">备注：${v.remark || ''}</div>
+  <div style="margin-top:6px;font-size:11px;color:#333;">备注：${esc(v.remark)}</div>
 </body></html>`
 
   const iframe = document.createElement('iframe')

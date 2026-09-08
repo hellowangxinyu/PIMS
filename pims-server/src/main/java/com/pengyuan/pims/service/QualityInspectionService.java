@@ -1169,12 +1169,20 @@ public class QualityInspectionService {
      */
     private boolean generatePurchaseAP(QualityInspection qc) {
         if (qc == null || qc.refDocNo == null || qc.refDocNo.isBlank()) return false;
-        // 匹配质检单对应的到货单（recordArrival 每批到货一行：同单号+同物料+同数量，取最新）
-        PurchaseArrival arrival = arrivalRepo.findByRefOrderNo(qc.refDocNo).stream()
-                .filter(a -> qc.materialCode != null && qc.materialCode.equals(a.materialCode))
-                .filter(a -> a.qty != null && a.qty.compareTo(qc.qty) == 0)
-                .max(java.util.Comparator.comparing(a -> a.id))
-                .orElse(null);
+        // v8.3（A7/B7）：优先按 qc.arrivalId 精确匹配（v5.27 起质检单已带到货 ID）；
+        // 旧「同单号+同物料+同数量取 max(id)」是猜测式匹配——同物料同数量分批到货会挂错 AP
+        PurchaseArrival arrival = null;
+        if (qc.arrivalId != null) {
+            arrival = arrivalRepo.findById(qc.arrivalId).orElse(null);
+        }
+        if (arrival == null) {
+            // 历史质检单无 arrivalId 的回退旧匹配
+            arrival = arrivalRepo.findByRefOrderNo(qc.refDocNo).stream()
+                    .filter(a -> qc.materialCode != null && qc.materialCode.equals(a.materialCode))
+                    .filter(a -> a.qty != null && a.qty.compareTo(qc.qty) == 0)
+                    .max(java.util.Comparator.comparing(a -> a.id))
+                    .orElse(null);
+        }
         if (arrival == null) {
             log.warn("采购质检合格但未匹配到到货单（跳过立账，需人工核查）: 质检单={} 采购单={} 物料={} 数量={}",
                     qc.inspectionNo, qc.refDocNo, qc.materialCode, qc.qty);

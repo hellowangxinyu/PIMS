@@ -107,6 +107,14 @@ public class ReturnOrderService {
 
         // v5.24：单号生成+保存整体排队（WriteQueue 全局锁），防并发撞号
         return writeQueue.executeTx(() -> {
+            // v8.3（A7）：锁内二次校验库存可退量（锁外校验 TOCTOU）
+            var arrivalNow = arrivalRepo.findById(arrivalId).orElse(null);
+            if (arrivalNow == null) throw new IllegalArgumentException("到货单不存在");
+            var resolvedNow = resolveArrivalBatch(arrivalNow);
+            BigDecimal stockNow = (BigDecimal) resolvedNow.get("stockQty");
+            if (qty.compareTo(stockNow) > 0) {
+                throw new IllegalArgumentException("退货数量不能超过批号 " + resolvedNow.get("batchNo") + " 的库存 " + stockNow);
+            }
             Integer maxSeq = returnOrderRepo.findMaxSeq("RO-" + LocalDate.now().toString().replace("-", "") + "-%");
             String docNo = String.format("RO-%s-%04d", LocalDate.now().toString().replace("-", ""), (maxSeq == null ? 0 : maxSeq) + 1);
             ReturnOrder ro = new ReturnOrder();

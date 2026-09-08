@@ -1112,15 +1112,22 @@ public class OutboundService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException(
                         "物料「" + materialCode + "」不在销售订单 " + salesOrderNo + " 明细中，销售出库只能发订单内的物料"));
-        BigDecimal remaining = soItem.qty.subtract(soItem.shippedQty == null ? BigDecimal.ZERO : soItem.shippedQty);
-        if (qty.compareTo(remaining) > 0) {
-            throw new IllegalArgumentException("出库数量不能超过销售订单剩余可发量 " + remaining
-                    + (soItem.unit == null ? "" : soItem.unit));
-        }
+        final var soItemRef = soItem;
         // v5.27：客户由销售订单带出，不允许修改
         final String finalCustomerName = so.customerName;
         // v5.24：单号生成+单据保存+库存变动整体排队（WriteQueue 全局锁），防并发撞号
+        // v8.3（A6）：可发量校验挪进锁内——原在锁外查（TOCTOU），两张草稿并发建均可过校验，确认时超发
         return writeQueue.executeTx(() -> {
+        {
+            var item = salesItemRepo.findByOrderId(so.id).stream()
+                    .filter(it -> materialCode.equals(it.materialCode)).findFirst().orElse(null);
+            if (item == null) throw new IllegalArgumentException("物料「" + materialCode + "」不在销售订单明细中");
+            BigDecimal remaining = item.qty.subtract(item.shippedQty == null ? BigDecimal.ZERO : item.shippedQty);
+            if (qty.compareTo(remaining) > 0) {
+                throw new IllegalArgumentException("出库数量不能超过销售订单剩余可发量 " + remaining
+                        + (item.unit == null ? "" : item.unit));
+            }
+        }
         // v5.24：按最大序号+1（count 会删除错位且并发撞号）
         Integer salesMaxSeq = salesRepo.findMaxSeq("SALES-OUT-" + LocalDate.now().toString().replace("-", "") + "-%");
         String docNo = String.format("SALES-OUT-%s-%04d", LocalDate.now().toString().replace("-", ""), (salesMaxSeq == null ? 0 : salesMaxSeq) + 1);
@@ -1193,6 +1200,12 @@ public class OutboundService {
                                     .findFirst()
                                     .ifPresent(item -> {
                                         BigDecimal shipped = item.shippedQty == null ? BigDecimal.ZERO : item.shippedQty;
+                                        // v8.3（A6）：确认时复核剩余可发量——草稿建立到确认期间可能又有他单发货
+                                        if (finalOutQty.compareTo(item.qty.subtract(shipped)) > 0) {
+                                            throw new IllegalArgumentException(String.format(
+                                                    "确认失败：物料 %s 本单 %s 超过订单剩余可发量 %s（并发发货，请调整数量）",
+                                                    item.materialCode, finalOutQty, item.qty.subtract(shipped)));
+                                        }
                                         item.shippedQty = shipped.add(finalOutQty);
                                         salesItemRepo.save(item);
 

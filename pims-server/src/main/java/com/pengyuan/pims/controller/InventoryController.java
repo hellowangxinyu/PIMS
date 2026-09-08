@@ -133,8 +133,8 @@ public class InventoryController {
                 m.put("unit", r[3]);
                 m.put("qty", r[4]);
                 m.put("availableQty", r[5]);
-                m.put("unitPrice", r[6]);
-                m.put("amount", r[7]);
+                m.put("unitPrice", canSeePrice() ? r[6] : null);
+                m.put("amount", canSeePrice() ? r[7] : null);
                 m.put("inboundDate", msToDate(r[8]));
                 m.put("expiryDate", msToDate(r[9]));
                 // v5.31：批次所在库位（跨库位也精确到库位）
@@ -165,8 +165,8 @@ public class InventoryController {
             m.put("batchCount", r[3]);
             m.put("qty", r[4]);
             m.put("availableQty", r[5]);
-            m.put("unitPrice", r[6]);
-            m.put("amount", r[7]);
+            m.put("unitPrice", canSeePrice() ? r[6] : null);
+            m.put("amount", canSeePrice() ? r[7] : null);
             m.put("inboundDate", msToDate(r[8]));
             m.put("stockDays", stockDays().get(r[0]));   // v7.4 周转天数（null=无出库/无库存）
             m.put("category", r.length > 9 ? nz(r[9]) : null);         // v7.5 大类
@@ -217,6 +217,11 @@ public class InventoryController {
     }
 
     /** 空串归一 null（SQL COALESCE('') 防类型推断的回转） */
+    /** v8.3（C1）：库存单价/金额=采购成本，需 purchase:price 权限（仓管/质检/技术默认无此权限） */
+    private boolean canSeePrice() {
+        return com.pengyuan.pims.common.FieldFilter.hasPerm("purchase:price");
+    }
+
     private String nz(Object v) {
         return v == null || v.toString().isEmpty() ? null : v.toString();
     }
@@ -341,8 +346,8 @@ public class InventoryController {
                 m.put("unit", r[3]);
                 m.put("qty", r[4]);
                 m.put("availableQty", r[5]);
-                m.put("unitPrice", r[6]);
-                m.put("amount", r[7]);
+                m.put("unitPrice", canSeePrice() ? r[6] : null);
+                m.put("amount", canSeePrice() ? r[7] : null);
                 m.put("inboundDate", msToDate(r[8]));
                 m.put("expiryDate", msToDate(r[9]));
                 m.put("category", r.length > 16 ? nz(r[16]) : null);
@@ -395,8 +400,8 @@ public class InventoryController {
      * （台账 unit_price）没有采购单记录，导致"库存有价格但走势图空白"。
      * 现合并两个数据源：采购单价格（带供应商）+ 台账入库价格，按日期+价格去重后升序返回。
      */
+    @SaCheckPermission(value = {"inventory:read", "purchase:price"}, mode = cn.dev33.satoken.annotation.SaMode.AND)   // v8.3（C1）：走势含采购价与供应商名
     @GetMapping("/price-trend/{materialCode}")
-    @SaCheckPermission(value = "inventory:read")
     public Result<List<Map<String, Object>>> priceTrend(@PathVariable String materialCode) {
         // key: date|price —— 同一事件在两张表重复登记时去重（采购单优先，带供应商信息）
         Map<String, Map<String, Object>> merged = new LinkedHashMap<>();

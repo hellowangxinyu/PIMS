@@ -243,12 +243,13 @@ async function unbind(row) {
   try { await api.post(`/bank/reconcile/${row.id}/unbind`); fetchAll() } catch {}
 }
 
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') }
 function printReport() {
   const r = report.value
   const win = window.open('', '_blank')
   if (!win) { ElMessage.warning('浏览器拦截了弹窗'); return }
   const rows = (r.unmatchedStatements || []).map(u =>
-    `<tr><td>${String(u.tx_date).slice(0,10)}</td><td>${u.summary || ''}</td><td>${u.counterparty || ''}</td><td style="text-align:right">${fmt(u.amount)}</td></tr>`).join('')
+    `<tr><td>${String(u.tx_date).slice(0,10)}</td><td>${esc(u.summary)}</td><td>${esc(u.counterparty)}</td><td style="text-align:right">${fmt(u.amount)}</td></tr>`).join('')
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>银行存款余额调节表</title>
   <style>body{font-family:"Microsoft YaHei";font-size:12px;padding:24px}
   h2{text-align:center;letter-spacing:2px}table{width:100%;border-collapse:collapse;margin-top:14px}

@@ -122,10 +122,18 @@ public class SalesReturnService {
             finalBatchNo = batchNo;
             finalSalesOrderNo = salesOrderNo;
         }
+        // v8.3（A7）：可退量二次校验留待 executeTx 内（见下 finalRefCheck）——锁外校验存在 TOCTOU
         BigDecimal price = unitPrice != null ? unitPrice : BigDecimal.ZERO;
         BigDecimal amount = qty.multiply(price).setScale(2, RoundingMode.HALF_UP);
         // v5.24：单号生成+保存整体排队（WriteQueue 全局锁），防并发撞号
         return writeQueue.executeTx(() -> {
+            // v8.3（A7）：锁内二次校验可退量（锁外校验 TOCTOU：两笔退货并发均可过初检，合计超退）
+            if (refSalesOutboundNo != null && !refSalesOutboundNo.isBlank()) {
+                BigDecimal rem = calcRemaining(refSalesOutboundNo);
+                if (qty.compareTo(rem) > 0) {
+                    throw new IllegalArgumentException("退货数量不能超过出库单剩余可退量 " + rem);
+                }
+            }
             // 销售退货单号 SR-YYYY-NNNN（与采购退货 RO- 前缀区分，避免 doc_no 唯一冲突）
             // v5.24：按最大序号+1（count 会删除错位且并发撞号）
             Integer maxSeq = returnOrderRepo.findMaxSeq("SR-" + LocalDate.now().toString().replace("-", "") + "-%");

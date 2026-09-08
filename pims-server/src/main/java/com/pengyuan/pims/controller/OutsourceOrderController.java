@@ -195,7 +195,9 @@ public class OutsourceOrderController {
     @GetMapping("/{id}/outbounds")
     @SaCheckPermission(value = "outsource:read")
     public Result outbounds(@PathVariable Long id) {
-        return Result.ok(outboundService.listOutsourceOutboundsByOrderId(id));
+        // v8.3（C2）：发料单价/成本后端脱敏
+        return Result.ok(com.pengyuan.pims.common.FieldFilter.filterListFields(
+                outboundService.listOutsourceOutboundsByOrderId(id), "unitPrice", "cost"));
     }
 
     @PostMapping("/{id}/complete")

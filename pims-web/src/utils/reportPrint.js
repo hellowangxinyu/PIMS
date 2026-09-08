@@ -1,10 +1,11 @@
+function esc(s) { return String(s == null ? '': s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') }
 /**
  * 通用报表打印（v5.61）—— 准则格式报表（资产负债表/利润表/现金流量表/余额表/明细账）共用
  * 拼 HTML → 隐藏 iframe 打印
  */
 export function printTableHtml(title, subtitle, bodyHtml) {
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${title}</title>
+<html><head><meta charset="utf-8"><title>${esc(title)}</title>
 <style>
   @page { size: A4 portrait; margin: 14mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }

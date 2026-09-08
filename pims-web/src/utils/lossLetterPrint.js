@@ -23,7 +23,7 @@ function fmtDate(v) {
 /** 模板段落渲染：替换 {{key}} 占位符（缺失置空），换行转 <br> */
 function fillSection(text, data) {
   return escHtml(text)
-    .replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => (data[k] == null ? '' : String(data[k])))
+    .replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => escHtml(data[k]))   // v8.3（C3）：值也转义
     .replace(/\n/g, '<br>')
 }
 

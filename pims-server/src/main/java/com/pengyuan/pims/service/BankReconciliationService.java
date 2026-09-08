@@ -258,6 +258,32 @@ public class BankReconciliationService {
     public void bind(Long statementId, String refType, Long refId) {
         if (!"RECEIPT".equals(refType) && !"DISBURSEMENT".equals(refType)) throw new IllegalArgumentException("refType 必须是 RECEIPT/DISBURSEMENT");
         writeQueue.executeTx(() -> {
+            // v8.3（C4）：手工勾对校验（原零校验——一笔收款可被两条流水重复认领、金额方向任意配）
+            var stRows = jdbc.queryForList("SELECT amount FROM bank_statement WHERE id = ?", statementId);
+            if (stRows.isEmpty()) throw new IllegalArgumentException("银行流水不存在");
+            java.math.BigDecimal stAmtRaw = toBd(stRows.get(0).get("amount"));
+            // v8.3 修正：bank_statement 无 direction 列——方向由金额正负表达（正=流入/贷，负=流出/借）
+            java.math.BigDecimal stAmt = stAmtRaw.abs();
+            boolean stIsIn = stAmtRaw.compareTo(java.math.BigDecimal.ZERO) > 0;
+            // 已占用拦截
+            Integer used = jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM bank_statement WHERE ref_type = ? AND ref_id = ? AND id <> ? AND status = 'MATCHED'",
+                    Integer.class, refType, refId, statementId);
+            if (used != null && used > 0) {
+                throw new IllegalArgumentException("该收付款记录已被其他流水勾对，不能重复认领（先解除原勾对）");
+            }
+            // 单据存在性 + 金额一致 + 方向相反
+            String table = "RECEIPT".equals(refType) ? "payment_receipt" : "payment_disbursement";
+            var docRows = jdbc.queryForList("SELECT amount FROM " + table + " WHERE id = ?", refId);
+            if (docRows.isEmpty()) throw new IllegalArgumentException("收付款记录不存在");
+            java.math.BigDecimal docAmt = toBd(docRows.get(0).get("amount"));
+            if (stAmt.compareTo(docAmt) != 0) {
+                throw new IllegalArgumentException(String.format("金额不一致：流水 %.2f vs 收付款 %.2f，不能勾对", stAmt, docAmt));
+            }
+            boolean wantIn = "RECEIPT".equals(refType);   // 收款=银行流入
+            if (stIsIn != wantIn) {
+                throw new IllegalArgumentException("方向不一致：" + ("RECEIPT".equals(refType) ? "收款应勾对银行流入（贷）流水" : "付款应勾对银行流出（借）流水"));
+            }
             jdbc.update("UPDATE bank_statement SET status='MATCHED', ref_type=?, ref_id=? WHERE id=?", refType, refId, statementId);
             return null;
         });
