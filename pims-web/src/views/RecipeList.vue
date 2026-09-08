@@ -702,7 +702,8 @@ async function submitRecipe() {
       recipeDialogVisible.value = false
       await fetchList()
       const created = recipeList.value.find(x => x.id === r.recipeId)
-      if (created) current.value = created
+      // v7.8.1 走 onSelectRecipe（等价用户点开该配方）：拉版本+自动选中+显示预填的配方树（此前只赋 current，树区空白）
+      if (created) onSelectRecipe(created)
       saving.value = false
       return
     } else {
