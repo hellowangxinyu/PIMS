@@ -377,7 +377,12 @@
           </el-select>
         </el-form-item>
         <el-form-item :label="recipeForm.recipeType === 'GRINDING' ? '半成品' : '成品'" required>
-          <el-select v-model="recipeForm.productCode" filterable clearable placeholder="选择物料" style="width:100%" @change="onProductChange">
+          <!-- v7.7.7 选了打样配方：成品自动来自打样配方（锁定只读，不再手工选） -->
+          <div v-if="sampleFormulaId && recipeForm.productCode" class="sf-product-lock">
+            <b>{{ recipeForm.productCode }}</b> {{ recipeForm.productName }}
+            <span class="sf-product-from">（自动来自打样配方，编码已由打样生成）</span>
+          </div>
+          <el-select v-else v-model="recipeForm.productCode" filterable clearable placeholder="选择物料" style="width:100%" @change="onProductChange">
             <el-option v-for="m in productMaterials" :key="m.code" :label="m.code + ' ' + m.name" :value="m.code" />
           </el-select>
         </el-form-item>
@@ -1486,6 +1491,8 @@ onMounted(async () => {
 .cost-cell { color: #ea580c; font-weight: 600; cursor: default; }
 .usage-count { color: #2563eb; font-weight: 600; }
 .cost-empty { color: #cbd5e1; }
+.sf-product-lock { padding: 4px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 13px; color: #14532d; }
+.sf-product-from { color: #16a34a; font-size: 12px; }
 .form-tip { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 2px; }
 .cost-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; }
 .cost-bar-label { color: #9a3412; font-weight: 600; }
