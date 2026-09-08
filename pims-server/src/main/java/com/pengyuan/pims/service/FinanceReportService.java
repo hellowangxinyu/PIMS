@@ -36,6 +36,14 @@ public class FinanceReportService {
 
         BigDecimal revenue = sumOrZero("SELECT SUM(amount) FROM accounts_receivable WHERE " + monthOf("create_time"), month, month);
         BigDecimal cogs = sumOrZero("SELECT SUM(cost) FROM sales_outbound WHERE status = 'CONFIRMED' AND " + monthOf("create_time"), month, month);
+        // v8.5（B2）：销售退货冲减当月收入与成本（退货金额=完成态退货单 qty×unitPrice；成本按退货批次加回台账的口径同步冲回）
+        BigDecimal salesReturn = sumOrZero("SELECT SUM(qty * unit_price) FROM return_order WHERE type = 'SALES_RETURN' AND status = 'DONE' AND " + monthOf("create_time"), month, month);
+        // v8.5（B2）退货成本：按退货单 qty×对应出库批次单位成本（sales_outbound 按 ref 单号关联）
+        BigDecimal returnCost = sumOrZero("SELECT COALESCE(SUM(ro.qty * so.unit_price), 0) FROM return_order ro " +
+                "LEFT JOIN sales_outbound so ON so.doc_no = ro.ref_sales_outbound_no " +
+                "WHERE ro.type = 'SALES_RETURN' AND ro.status = 'DONE' AND " + monthOf("ro.create_time"), month, month);
+        revenue = revenue.subtract(salesReturn);
+        cogs = cogs.subtract(returnCost);
         BigDecimal grossProfit = revenue.subtract(cogs);
         BigDecimal grossRate = revenue.compareTo(BigDecimal.ZERO) > 0
                 ? grossProfit.multiply(BigDecimal.valueOf(100)).divide(revenue, 2, RoundingMode.HALF_UP) : null;
@@ -61,6 +69,8 @@ public class FinanceReportService {
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("month", month);
+        result.put("salesReturn", salesReturn);   // v8.5（B2）：退货金额（收入已净额化，此值供展示）
+        result.put("note", "本表为业务口径快算（出库/退货当月即计，含未结账数据）；与利润表（凭证口径）存在记账时间差，对外报数以结账后利润表为准");   // v8.5（B1）
         result.put("revenue", revenue);
         result.put("cogs", cogs);
         result.put("grossProfit", grossProfit);

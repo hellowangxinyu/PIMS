@@ -378,26 +378,36 @@ public class VoucherReportService {
                     .filter(e -> !CASH_SUBJECTS.contains(String.valueOf(e.get("subject_code")))).toList();
             if (nonCash.isEmpty()) continue;   // 现金科目内部转账（提现/互转）不产生现金流量
 
+            // v8.5（B5）：逐笔现金分录独立分摊——原按「非现金分录金额比例」整单分摊，
+            // 一凭证含两笔现金业务（提现+付款/收款+转账）时金额错配到对方流量项目。
+            // 新口径：每笔现金分录的金额，按「对方非现金分录金额占比」分摊到各自的流量项目；
+            // 对方也是现金科目（提现/现金互转）的分录从分摊基数中排除（不产生经营流量）。
             for (Map<String, Object> cash : ves) {
                 if (!CASH_SUBJECTS.contains(String.valueOf(cash.get("subject_code")))) continue;   // 只处理现金类分录
                 boolean inflow = toBd(cash.get("debit")).compareTo(BigDecimal.ZERO) != 0;
                 BigDecimal amount = inflow ? toBd(cash.get("debit")) : toBd(cash.get("credit"));
                 if (amount.compareTo(BigDecimal.ZERO) == 0) continue;
-                BigDecimal nonCashAbs = nonCash.stream().map(e -> toBd(e.get("debit")).add(toBd(e.get("credit"))).abs())
+                // 本笔现金分录的"真实对方"= 借贷方向与之相反的非现金分录（同向的是另一笔业务的自己这边）
+                java.util.List<Map<String, Object>> counterparts = nonCash.stream()
+                        .filter(nc -> {
+                            boolean ncIsDebit = toBd(nc.get("debit")).compareTo(BigDecimal.ZERO) != 0;
+                            return ncIsDebit != inflow;   // 现金流入的对方在贷方、流出的对方在借方
+                        }).toList();
+                if (counterparts.isEmpty()) continue;   // 现金内部转账（对方全现金）
+                BigDecimal cpAbs = counterparts.stream().map(e -> toBd(e.get("debit")).add(toBd(e.get("credit"))).abs())
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
-                if (nonCashAbs.compareTo(BigDecimal.ZERO) == 0) continue;
-                // v6.1.6：尾差挂末行——逐行 HALF_UP 的累计与总额差 1~2 分，末行用「总额−前面行合计」收口
+                if (cpAbs.compareTo(BigDecimal.ZERO) == 0) continue;
+                // 尾差挂末行（v6.1.6 口径保留）
                 BigDecimal allocated = BigDecimal.ZERO;
-                java.util.List<Map<String, Object>> ncList = nonCash;
-                for (int i = 0; i < ncList.size(); i++) {
-                    Map<String, Object> nc = ncList.get(i);
+                for (int i = 0; i < counterparts.size(); i++) {
+                    Map<String, Object> nc = counterparts.get(i);
                     String code = String.valueOf(nc.get("subject_code"));
                     BigDecimal share;
-                    if (i == ncList.size() - 1) {
+                    if (i == counterparts.size() - 1) {
                         share = amount.abs().subtract(allocated);
                     } else {
                         share = toBd(nc.get("debit")).add(toBd(nc.get("credit"))).abs()
-                                .multiply(amount.abs()).divide(nonCashAbs, 2, java.math.RoundingMode.HALF_UP);
+                                .multiply(amount.abs()).divide(cpAbs, 2, java.math.RoundingMode.HALF_UP);
                         allocated = allocated.add(share);
                     }
                     if (amount.compareTo(BigDecimal.ZERO) < 0) share = share.negate();   // 红字冲减

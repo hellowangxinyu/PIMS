@@ -17,7 +17,8 @@
 
     <template v-if="data && !loading">
       <div class="kpi-row" v-if="hasAmountPerm('finance-report')">
-        <div class="kpi-card"><div class="kpi-label">营业收入</div><div class="kpi-value">¥{{ fmt(data.revenue) }}</div></div>
+        <div class="kpi-card"><div class="kpi-label">营业收入<span title="已扣除当月销售退货">（净）</span></div><div class="kpi-value">¥{{ fmt(data.revenue) }}</div></div>
+        <div class="kpi-card" v-if="Number(data.salesReturn) > 0"><div class="kpi-label">销售退货</div><div class="kpi-value kpi-red">¥{{ fmt(data.salesReturn) }}</div></div>
         <div class="kpi-card"><div class="kpi-label">营业成本</div><div class="kpi-value">¥{{ fmt(data.cogs) }}</div></div>
         <div class="kpi-card"><div class="kpi-label">毛利润</div><div class="kpi-value" :class="data.grossProfit >= 0 ? '' : 'kpi-red'">¥{{ fmt(data.grossProfit) }}<small v-if="data.grossRate !== null && data.grossRate !== undefined">（{{ data.grossRate }}%）</small></div></div>
         <div class="kpi-card"><div class="kpi-label">期间费用</div><div class="kpi-value kpi-red">¥{{ fmt(data.expenseTotal) }}</div></div>
@@ -28,8 +29,10 @@
       <div class="grid-2col">
         <div class="table-card">
           <div class="card-title">利润表（{{ data.month }}）</div>
+          <div v-if="data.note" class="pl-note">{{ data.note }}</div>
           <table class="pl-table" v-if="hasAmountPerm('finance-report')">
-            <tr><td class="pl-item">一、营业收入</td><td class="pl-val">{{ fmt(data.revenue) }}</td></tr>
+            <tr><td class="pl-item">一、营业收入（净额）</td><td class="pl-val">{{ fmt(data.revenue) }}</td></tr>
+            <tr v-if="Number(data.salesReturn) > 0"><td class="pl-item">　其中：销售退货冲减</td><td class="pl-val kpi-red">-¥{{ fmt(data.salesReturn) }}</td></tr>
             <tr><td class="pl-item">　减：营业成本</td><td class="pl-val">{{ fmt(data.cogs) }}</td></tr>
             <tr class="pl-strong"><td class="pl-item">二、毛利润</td><td class="pl-val">{{ fmt(data.grossProfit) }}<span class="pl-rate" v-if="data.grossRate !== null && data.grossRate !== undefined">毛利率 {{ data.grossRate }}%</span></td></tr>
             <tr><td class="pl-item">　加：其他收入</td><td class="pl-val">{{ fmt(data.otherIncome) }}</td></tr>
@@ -158,4 +161,5 @@ onMounted(async () => {
 .pl-rate { font-size: 12px; color: #64748b; font-weight: 400; margin-left: 8px; }
 .pl-val.neg { color: #ef4444; }
 .no-perm { font-size: 13px; color: #94a3b8; padding: 12px 0; }
+.pl-note { font-size: 12px; color: #94a3b8; margin: 4px 0 10px; }
 </style>
