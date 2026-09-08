@@ -61,6 +61,7 @@ public class RoleService {
         codes.addAll(List.of(
             "invoice:delete", "expense:delete", "voucher:delete", "advance:delete",
             "salary:delete", "asset:delete", "shipping:delete", "quotation:delete",
+            "employee:delete",   // v7.7.9：权限树可勾但白名单漏收，保存被静默过滤（SS 丢此码的根因）
             "sales-order:delete", "sales-outbound:delete", "sales-return:delete",
             "raw-material-purchase:delete", "finished-purchase:delete",
             "purchase-arrival:delete", "purchase-return:delete",

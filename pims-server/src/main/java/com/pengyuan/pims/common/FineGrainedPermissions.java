@@ -48,6 +48,9 @@ public final class FineGrainedPermissions {
         // 库存域
         expand(m, "inventory:read", "inventory-view", "stock-check", "other-outbound", "other-inbound");
         expand(m, "inventory:write", "stock-check", "other-outbound", "other-inbound");
+        // v7.7.9 质检域（此前映射表漏了 qc 粗码——矩阵保存过的细码角色补不出 qc:read/write，质检页面全部「无权限访问」）
+        expand(m, "qc:read", "quality-inspection", "qc-template");
+        expand(m, "qc:write", "quality-inspection", "qc-template");
         // 金额可见性：finance:amount → 各模块独立金额码
         m.put("finance:amount", List.of(
             "finance-ar:amount", "invoice:amount", "voucher:amount", "salary:amount", "employee:amount",
