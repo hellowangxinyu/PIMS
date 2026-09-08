@@ -61,12 +61,14 @@ const CAT_LABEL = { A: '助剂', P: '颜料', F: '填料', R: '树脂', S: '溶�
 const catOptions = computed(() => props.categories.map(c => ({ value: c, label: CAT_LABEL[c] || c })))
 const catLabel = c => CAT_LABEL[c] || c || '—'
 
+// v7.8 修弱级联：选了大类只显示该大类的小类；未选大类时显示可选范围内全部小类
 const filteredSubs = computed(() => {
-  const subs = (dicts.value.material_sub_category || []).filter(d => {
-    if (props.categories.length === 1) return d.value.startsWith(props.categories[0])
-    return props.categories.some(c => d.value.startsWith(c))
-  })
-  return subs
+  const scope = cat.value ? [cat.value] : props.categories
+  return (dicts.value.material_sub_category || []).filter(d => scope.some(c => d.value.startsWith(c)))
+})
+watch(cat, v => {
+  // 切大类后若已选小类不属于新大类，清掉
+  if (sub.value && !sub.value.startsWith(v || '')) sub.value = ''
 })
 
 const filtered = computed(() => {

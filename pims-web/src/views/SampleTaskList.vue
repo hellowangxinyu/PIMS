@@ -121,7 +121,10 @@
         <div class="ed-sec">
           <div class="ed-sec-title">
             <span>用料明细（实际打样用量，按克称量，自由合计不强制 100）</span>
-            <el-button size="small" type="primary" @click="openAddItem">+ 添加用料</el-button>
+            <div>
+              <el-button size="small" @click="pickerVisible = true">从物料库批量选</el-button>
+              <el-button size="small" type="primary" @click="openAddItem">+ 添加用料</el-button>
+            </div>
           </div>
           <div class="cost-bar">
             <span class="cost-bar-label">合计：</span>
@@ -166,6 +169,8 @@
           <div v-if="!form.items.length" class="text-muted" style="text-align:center;padding:16px 0">暂无用料，点「+ 添加用料」逐条录入</div>
         </div>
       </div>
+
+      <MaterialPicker v-model="pickerVisible" @picked="onPicked" />
 
       <!-- 添加用料弹窗（参照配方管理「添加节点」：类型→搜料→用量→连续添加） -->
       <el-dialog title="添加用料" v-model="addDialogVisible" width="520px" append-to-body destroy-on-close>
@@ -217,6 +222,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { statusType } from '../utils/statusTag'
+import MaterialPicker from '../components/MaterialPicker.vue'
 import { printSampleFormula } from '../utils/sampleRecipePrint'
 
 const STATUS = { APPLIED: '已申请', ASSIGNED: '已派发', COLORING: '调色中', FORMULATED: '已录配方', SENT: '已寄样', SATISFIED: '客户满意', ADJUST: '需调整', WON: '已转单', LOST: '未成交' }
@@ -328,6 +334,18 @@ async function openEditor(row) {
     locked.value = false
   }
   editorVisible.value = true
+}
+
+// v7.8 批量选料弹窗（多级筛选+多选，一次加十几行）
+const pickerVisible = ref(false)
+function onPicked(picked) {
+  let added = 0
+  for (const p of picked) {
+    if (form.value.items.some(it => it.materialCode === p.code)) continue
+    form.value.items.push({ materialCode: p.code, materialName: p.name, category: p.category, subCategory: p.subCategory, qty: null })
+    added++
+  }
+  ElMessage.success(added ? `已加入 ${added} 种物料，请补用量` : '所选物料均已在明细中')
 }
 
 // v7.7.5 添加用料弹窗（参照配方管理「添加节点」方式：类型→搜料→用量→连续添加）
