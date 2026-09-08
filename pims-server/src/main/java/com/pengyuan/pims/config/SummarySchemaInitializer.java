@@ -295,7 +295,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             WHEN NEW.status != 'DRAFT'
             BEGIN
                 INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch'), 'PURCHASE', 1, COALESCE(NEW.total_amount, 0))
+                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'PURCHASE', 1, COALESCE(NEW.total_amount, 0))
                 ON CONFLICT(period, order_type) DO UPDATE SET
                     order_count = order_count + 1,
                     total_amount = total_amount + COALESCE(NEW.total_amount, 0);
@@ -310,7 +310,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_order_monthly SET
                     order_count = order_count + 1,
                     total_amount = total_amount + COALESCE(NEW.total_amount, 0)
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'PURCHASE'
+                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PURCHASE'
                 AND OLD.status = 'DRAFT' AND NEW.status != 'DRAFT';
 
                 -- 状态从有效变为DRAFT：计数-1，金额减去
@@ -323,7 +323,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 -- 金额变化（状态未变且非DRAFT）
                 UPDATE stat_order_monthly SET
                     total_amount = total_amount + (COALESCE(NEW.total_amount, 0) - COALESCE(OLD.total_amount, 0))
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'PURCHASE'
+                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PURCHASE'
                 AND OLD.status = NEW.status AND NEW.status != 'DRAFT'
                 AND COALESCE(NEW.total_amount, 0) != COALESCE(OLD.total_amount, 0);
             END
@@ -336,7 +336,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             WHEN NEW.status != 'DRAFT'
             BEGIN
                 INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch'), 'SALES', 1, COALESCE(NEW.total_amount, 0))
+                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'SALES', 1, COALESCE(NEW.total_amount, 0))
                 ON CONFLICT(period, order_type) DO UPDATE SET
                     order_count = order_count + 1,
                     total_amount = total_amount + COALESCE(NEW.total_amount, 0);
@@ -350,7 +350,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_order_monthly SET
                     order_count = order_count + 1,
                     total_amount = total_amount + COALESCE(NEW.total_amount, 0)
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'SALES'
+                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'SALES'
                 AND OLD.status = 'DRAFT' AND NEW.status != 'DRAFT';
 
                 UPDATE stat_order_monthly SET
@@ -361,7 +361,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
 
                 UPDATE stat_order_monthly SET
                     total_amount = total_amount + (COALESCE(NEW.total_amount, 0) - COALESCE(OLD.total_amount, 0))
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'SALES'
+                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'SALES'
                 AND OLD.status = NEW.status AND NEW.status != 'DRAFT'
                 AND COALESCE(NEW.total_amount, 0) != COALESCE(OLD.total_amount, 0);
             END
@@ -374,7 +374,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             WHEN NEW.status != 'DRAFT'
             BEGIN
                 INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch'), 'OUTSOURCE', 1, COALESCE(NEW.processing_fee, 0))
+                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'OUTSOURCE', 1, COALESCE(NEW.processing_fee, 0))
                 ON CONFLICT(period, order_type) DO UPDATE SET
                     order_count = order_count + 1,
                     total_amount = total_amount + COALESCE(NEW.processing_fee, 0);
@@ -388,7 +388,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_order_monthly SET
                     order_count = order_count + 1,
                     total_amount = total_amount + COALESCE(NEW.processing_fee, 0)
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'OUTSOURCE'
+                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'OUTSOURCE'
                 AND OLD.status = 'DRAFT' AND NEW.status != 'DRAFT';
 
                 UPDATE stat_order_monthly SET
@@ -399,7 +399,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
 
                 UPDATE stat_order_monthly SET
                     total_amount = total_amount + (COALESCE(NEW.processing_fee, 0) - COALESCE(OLD.processing_fee, 0))
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'OUTSOURCE'
+                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'OUTSOURCE'
                 AND OLD.status = NEW.status AND NEW.status != 'DRAFT'
                 AND COALESCE(NEW.processing_fee, 0) != COALESCE(OLD.processing_fee, 0);
             END
@@ -462,7 +462,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             WHEN NEW.status != 'DRAFT'
             BEGIN
                 INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch'), 'PRODUCTION', 1, COALESCE(NEW.batch_qty, 0))
+                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'PRODUCTION', 1, COALESCE(NEW.batch_qty, 0))
                 ON CONFLICT(period, order_type) DO UPDATE SET
                     order_count = order_count + 1,
                     total_amount = total_amount + COALESCE(NEW.batch_qty, 0);
@@ -476,7 +476,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_order_monthly SET
                     order_count = order_count + 1,
                     total_amount = total_amount + COALESCE(NEW.batch_qty, 0)
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'PRODUCTION'
+                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PRODUCTION'
                 AND OLD.status = 'DRAFT' AND NEW.status != 'DRAFT';
 
                 UPDATE stat_order_monthly SET
@@ -487,7 +487,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
 
                 UPDATE stat_order_monthly SET
                     total_amount = total_amount + (COALESCE(NEW.batch_qty, 0) - COALESCE(OLD.batch_qty, 0))
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'PRODUCTION'
+                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PRODUCTION'
                 AND OLD.status = NEW.status AND NEW.status != 'DRAFT'
                 AND COALESCE(NEW.batch_qty, 0) != COALESCE(OLD.batch_qty, 0);
             END

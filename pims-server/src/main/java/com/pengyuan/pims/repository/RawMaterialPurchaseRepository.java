@@ -32,7 +32,8 @@ public interface RawMaterialPurchaseRepository extends JpaRepository<RawMaterial
 
     /** 按月聚合采购金额（最近N个月）；purchase_date 存毫秒时间戳，需转东八区日期再比较/格式化 */
     @Query(value = "SELECT strftime('%Y-%m', purchase_date/1000, 'unixepoch', '+8 hours') AS period, COALESCE(SUM(total_amount),0) AS amount " +
-            "FROM raw_material_purchase WHERE purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) GROUP BY period ORDER BY period", nativeQuery = true)
+            "FROM raw_material_purchase WHERE purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "AND status != 'DRAFT' GROUP BY period ORDER BY period", nativeQuery = true)
     List<Object[]> monthlyAmountSince(String sinceDate);
 
     /** 供应商采购金额TOP10（最近N个月） */

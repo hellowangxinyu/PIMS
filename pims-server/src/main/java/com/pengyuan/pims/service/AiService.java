@@ -542,15 +542,20 @@ public class AiService {
     private String queryData(String sql) throws Exception {
         validateReadOnly(sql);
 
-        // 无 LIMIT 时兜底限制行数
-        String finalSql = sql.trim();
-        if (!finalSql.toUpperCase().matches("(?s).*\\bLIMIT\\s+\\d+.*")) {
-            if (finalSql.endsWith(";")) finalSql = finalSql.substring(0, finalSql.length() - 1);
-            finalSql += " LIMIT " + RESULT_LIMIT;
+        // v8.4（C5）：资源三道闸——原实现 LIMIT 兜底会被子查询里的 LIMIT 字样绕过、
+        // 无查询超时（WITH RECURSIVE 可挂死连接池）、行数硬限不可靠
+        String trimmed = sql.trim();
+        if (trimmed.endsWith(";")) trimmed = trimmed.substring(0, trimmed.length() - 1);
+        // 外层子查询硬限：无论内部怎么写，最多返回 RESULT_LIMIT 行（覆盖原语句自身 LIMIT 的绕过）
+        String finalSql = "SELECT * FROM (" + trimmed + ") LIMIT " + RESULT_LIMIT;
+        // 查询超时 10s（防递归 CTE / 笛卡尔积挂死）——finally 恢复，异常不残留全局状态
+        jdbc.setQueryTimeout(10);
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(finalSql);
+            return mapper.writeValueAsString(rows);
+        } finally {
+            jdbc.setQueryTimeout(0);
         }
-
-        List<Map<String, Object>> rows = jdbc.queryForList(finalSql);
-        return mapper.writeValueAsString(rows);
     }
 
     /** 只读校验：去掉字符串字面量后，语句必须 SELECT/WITH 开头，且不含写操作关键字 */

@@ -154,6 +154,7 @@ public class ExpiryQuarantineService {
                 reinspectTargets.add(l.materialCode + "|" + (l.batchNo == null ? "" : l.batchNo));
             }
             int triggered = 0;
+        int failed = 0;   // v8.4（A5）
             for (String key : triggerReinspection ? reinspectTargets : java.util.Set.<String>of()) {
                 String[] parts = key.split("[|]", 2);
                 String mc = parts[0], bn = parts.length > 1 ? parts[1] : "";
@@ -163,10 +164,13 @@ public class ExpiryQuarantineService {
                     qcService.createReinspection(mc, bn, "系统·过期自动触发");
                     triggered++;
                 } catch (Exception e) {
-                    log.warn("复检评估单自动生成失败: {} 批次 {} 原因={}", mc, bn, e.getMessage());
+                    // v8.4（A5）：升级 error 并计失败数（原 warn 后静默，部分批次隔离失败无感知）
+                    log.error("复检评估单自动生成失败: {} 批次 {} 原因={}", mc, bn, e.getMessage(), e);
+                    failed++;
                 }
             }
             if (triggered > 0) log.info("复检评估自动触发: 本轮生成 {} 张待判定复检单", triggered);
+            if (failed > 0) log.error("复检评估自动触发: {} 张生成失败（见上方堆栈，请核查隔离分库配置）", failed);
             return count;
         });
     }

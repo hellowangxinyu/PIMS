@@ -9,6 +9,12 @@ spring:
   application:
     name: pims-server
 
+  # v8.4（D7）：合同 PDF 上传（Spring Boot 默认 1MB，超限报"系统异常"无提示）
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
   # SQLite 数据源
   datasource:
     # v5.28：PRAGMA 全部改走连接 URL 参数——Hikari connection-init-sql 只执行第一条语句，

@@ -556,6 +556,13 @@ public class OutboundService {
      */
     // v6.1.5：去残留 @Transactional——方法内调 returnMaterial(executeTx)，外层事务先开等价旧时序（PROD-RET 取号撞号窗口）
     public java.util.Map<String, Object> voidProductionOutbound(Long id, String operator) {
+        // v8.4（A4）：整体包 executeTx——原"先回冲退料、再两次 save 作废"各自独立提交，中途失败留半截
+        return writeQueue.executeTx(() -> {
+        return voidProductionOutboundTx(id, operator);
+        });
+    }
+
+    private java.util.Map<String, Object> voidProductionOutboundTx(Long id, String operator) {
         ProductionOutbound doc = prodRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("领料单不存在"));
         if ("CANCELLED".equals(doc.status)) throw new IllegalArgumentException("该领料行已作废");

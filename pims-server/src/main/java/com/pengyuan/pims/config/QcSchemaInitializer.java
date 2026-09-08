@@ -361,8 +361,12 @@ public class QcSchemaInitializer implements CommandLineRunner {
             if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0 || supplierId == null) continue;
 
             // 生成AP记录
+            // v8.4（D5）：COUNT+1 改 MAX+1——删行后必然重号（与 ApArrivalSchemaInitializer 统一）
+            Integer apMax = jdbc.queryForObject(
+                    "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM accounts_payable WHERE doc_no LIKE ?",
+                    Integer.class, "AP-" + java.time.LocalDate.now().getYear() + "-%");
             String docNo = String.format("AP-%d-%04d", java.time.LocalDate.now().getYear(),
-                    jdbc.queryForObject("SELECT COUNT(*) FROM accounts_payable", Integer.class) + 1);
+                    (apMax == null ? 0 : apMax) + 1);
             jdbc.update("INSERT INTO accounts_payable (doc_no, supplier_id, purchase_order_no, payable_type, amount, paid_amount, due_date, status, remark, create_time) " +
                             "VALUES (?, ?, ?, 'PURCHASE', ?, 0, ?, 'UNPAID', ?, ?)",
                     docNo, supplierId, orderNo, amount,
@@ -375,7 +379,10 @@ public class QcSchemaInitializer implements CommandLineRunner {
         // 补偿二：recordArrival 路径（无到货审核记录，仅有质检单）
         // 先清理历史补偿插入的日期格式错误记录（JdbcTemplate 时间格式与 JPA 不一致）
         try {
-            int cleaned = jdbc.update("DELETE FROM accounts_payable WHERE remark LIKE '历史质检合格补录%'");
+            // v8.4（D4）：只删无付款的（原无条件物理删——若已被付款引用，重启即断链）
+            int cleaned = jdbc.update(
+                    "DELETE FROM accounts_payable WHERE remark LIKE '历史质检合格补录%' " +
+                    "AND COALESCE(paid_amount, 0) = 0 AND status != 'PAID'");
             if (cleaned > 0) {
                 log.info("历史数据补偿：清理 {} 条格式异常的应付账款记录，将用 JPA 重新生成", cleaned);
             }

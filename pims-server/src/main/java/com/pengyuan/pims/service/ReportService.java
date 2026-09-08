@@ -421,7 +421,7 @@ private Map<String, Object> doProductionProgress() {
     }
     // 按创建时间倒序（null 排最后），最多 100 条
     all.sort(Comparator.comparing((Map<String, Object> m) -> m.get("time") == null ? LocalDateTime.MIN : (LocalDateTime) m.get("time")).reversed());
-    if (all.size() > 100) all = all.subList(0, 100);
+    // v8.4（B6）：去掉 100 条截断——汇总数（完成率/平均进度）被截断后只算最近100单，统计失真
     for (Map<String, Object> row : all) row.remove("time");
 
     int completed = 0;

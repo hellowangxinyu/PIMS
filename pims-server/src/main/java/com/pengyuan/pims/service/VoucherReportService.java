@@ -172,11 +172,9 @@ public class VoucherReportService {
 
         // 期末余额（带符号：DR 正、CR 负→按科目余额语义：正=direction 方向）
         Map<String, BigDecimal> endBal = balancesWithOpening(yearStart, period);
-        // 年初余额 = 期初建账数（PL 年初必为 0）
-        Map<String, BigDecimal> beginBal = new HashMap<>();
-        for (var s : subjectRepo.findAllByOrderByCodeAsc()) {
-            beginBal.put(s.code, signed(s.openingBalance, s.openingDirection != null ? s.openingDirection : s.direction));
-        }
+        // v8.4（B4）：年初数=上年末余额（期初建账数+上年全年发生）——原恒等于建账期初，
+        // 第二个会计年度起年初数全错；上年无任何凭证时（首年）自然等于建账期初，口径兼容
+        Map<String, BigDecimal> beginBal = balancesWithOpening("0000-00", prevYearEnd(period));
         // 归集到一级（明细并入父级）
         Map<String, BigDecimal> endTop = rollup(endBal);
         Map<String, BigDecimal> beginTop = rollup(beginBal);
@@ -530,6 +528,12 @@ public class VoucherReportService {
             result.put(s.code, signed(s.openingBalance, dir).add(net(o)));
         }
         return result;
+    }
+
+    /** v8.4（B4）：上年末期间（202608 → "2025-12"） */
+    private static String prevYearEnd(String period) {
+        int y = Integer.parseInt(period.substring(0, 4));
+        return (y - 1) + "-12";
     }
 
     /** 明细科目余额上卷到一级 */
