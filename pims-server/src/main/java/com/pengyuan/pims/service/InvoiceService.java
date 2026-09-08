@@ -105,7 +105,7 @@ public class InvoiceService {
     }
 
     /** 红冲：生成负数对冲发票，原单标记 FLUSHED */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Invoice redFlush(Long id, String redInvoiceNo, String reason) {
         Invoice origin = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("发票不存在"));
         if (!"NORMAL".equals(origin.status)) throw new IllegalArgumentException("该发票已红冲");
@@ -115,7 +115,7 @@ public class InvoiceService {
         }
         // v6.1.1：已生成凭证的发票红冲后原凭证不冲销，会造成账票脱节（与 update/delete 同口径）
         assertNoVoucher(origin.docNo, "红冲");
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             Invoice red = new Invoice();
             red.invoiceNo = redInvoiceNo;
             red.direction = origin.direction;

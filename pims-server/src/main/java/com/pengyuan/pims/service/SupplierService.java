@@ -58,7 +58,7 @@ public class SupplierService {
     public Optional<Supplier> getById(Long id) { return repo.findById(id); }
 
     /** 创建供应商，自动生成编码，查重 */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Supplier create(Supplier s) {
         // v5.70.1 防呆：供应商核心字段必填
         if (s.name == null || s.name.isBlank())
@@ -68,7 +68,7 @@ public class SupplierService {
         if (s.paymentMethod == null || s.paymentMethod.isBlank())
             throw new IllegalArgumentException("付款方式不能为空");
         // v5.24：编码生成+保存整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             // 默认类型为材料供应商
             if (s.type == null || s.type.isBlank()) s.type = "MATERIAL";
             // 查重：名称+类型完全一致不允许重复录入

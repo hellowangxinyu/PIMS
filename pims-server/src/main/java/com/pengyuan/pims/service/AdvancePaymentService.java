@@ -55,7 +55,7 @@ public class AdvancePaymentService {
         if (a.amount == null || a.amount.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalArgumentException("金额必须大于 0");
         if (a.partnerId == null) throw new IllegalArgumentException(a.direction.equals("RECEIVE") ? "请选择客户" : "请选择供应商");
         if (a.payDate == null) a.payDate = LocalDate.now();
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             if (a.docNo == null || a.docNo.isBlank()) {
                 Integer maxSeq = repo.findMaxSeq("ADV-" + LocalDate.now().toString().replace("-", "") + "-%");
                 a.docNo = String.format("ADV-%s-%04d", LocalDate.now().toString().replace("-", ""), (maxSeq == null ? 0 : maxSeq) + 1);
@@ -74,8 +74,9 @@ public class AdvancePaymentService {
     }
 
     /** 预收冲应收：advance.usedAmount += amount，AR 按收款处理（receivedAmount/状态流转） */
-    @Transactional
-    public void applyToAr(Long advanceId, Long arId, BigDecimal amount) {
+    // v8.1（P0-5）：锁内包事务（内部调 receivePayment/makePayment 可重入）
+    public void applyToAr(Long advanceId, Long arId, BigDecimal amount) {        writeQueue.executeTx(() -> {
+
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalArgumentException("冲抵金额必须大于 0");
         AdvancePayment adv = repo.findById(advanceId).orElseThrow(() -> new IllegalArgumentException("预存单不存在"));
         if (!"RECEIVE".equals(adv.direction)) throw new IllegalArgumentException("只有预收单可冲应收");
@@ -88,11 +89,14 @@ public class AdvancePaymentService {
         financeService.receivePayment(arId, amount);
         advanceUsed(adv, amount);
         log.info("预收冲应收: advance={} ar={} amount={}", adv.docNo, ar.docNo, amount);
+   
+        });
     }
 
     /** 预付冲应付：advance.usedAmount += amount，AP 按付款处理 */
-    @Transactional
-    public void applyToAp(Long advanceId, Long apId, BigDecimal amount) {
+    // v8.1（P0-5）：锁内包事务（内部调 receivePayment/makePayment 可重入）
+    public void applyToAp(Long advanceId, Long apId, BigDecimal amount) {        writeQueue.executeTx(() -> {
+
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalArgumentException("冲抵金额必须大于 0");
         AdvancePayment adv = repo.findById(advanceId).orElseThrow(() -> new IllegalArgumentException("预存单不存在"));
         if (!"PAY".equals(adv.direction)) throw new IllegalArgumentException("只有预付单可冲应付");
@@ -105,6 +109,8 @@ public class AdvancePaymentService {
         financeService.makePayment(apId, amount);
         advanceUsed(adv, amount);
         log.info("预付冲应付: advance={} ap={} amount={}", adv.docNo, ap.docNo, amount);
+   
+        });
     }
 
     private void advanceUsed(AdvancePayment adv, BigDecimal amount) {

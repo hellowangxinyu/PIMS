@@ -461,7 +461,7 @@ public class VoucherService {
         if ("MONTHLY_AVG".equals(costingService.method()) && !costingService.monthlyDone(period)) {
             throw new IllegalArgumentException("当前计价方式为全月平均，" + period + " 尚未进行存货成本计算，请先在期末结账页执行「存货成本计算」");
         }
-        writeQueue.execute(() -> {
+        writeQueue.executeTx(() -> {
             AccountPeriod p = periodRepo.findByPeriod(period).orElseGet(AccountPeriod::new);
             p.period = period;
             p.closed = true;
@@ -555,7 +555,7 @@ public class VoucherService {
     }
 
     /** 反结账：仅允许从最近已结期间逐月往前 */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public void reopenPeriod(String period) {
         checkPeriod(period);
         AccountPeriod p = periodRepo.findByPeriod(period)
@@ -564,7 +564,7 @@ public class VoucherService {
         boolean hasLater = periodRepo.findAll().stream()
                 .anyMatch(x -> Boolean.TRUE.equals(x.closed) && x.period.compareTo(period) > 0);
         if (hasLater) throw new IllegalArgumentException("存在更晚的已结账期间，请从最近期间逐月反结账");
-        writeQueue.execute(() -> periodRepo.delete(p));
+        writeQueue.executeTx(() -> periodRepo.delete(p));
     }
 
     // ===== 内部方法 =====

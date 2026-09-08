@@ -114,7 +114,7 @@ public class OutsourceOrderService {
     /**
      * 创建委外订单（含配方明细）
      */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public OutsourceOrder create(OutsourceOrder order, List<OutsourceOrderItem> items) {
         // v5.70.1 防呆：委外订单核心字段必填
         if (order.processor == null || order.processor.isBlank())
@@ -122,7 +122,7 @@ public class OutsourceOrderService {
         if (items == null || items.isEmpty())
             throw new IllegalArgumentException("委外明细不能为空");
         // v5.24：单号生成+保存整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             // v5.7：改按年度最大序号+1（count()+1 在删除记录后会错位导致单号重复）
             Integer maxSeq = orderRepo.findMaxOrderSeq("OO-" + LocalDate.now().toString().replace("-", "") + "-%");
             String orderNo = String.format("OO-%s-%04d", LocalDate.now().toString().replace("-", ""),

@@ -466,8 +466,9 @@ public class FinanceService {
         });
     }
 
-    @Transactional
-    public void receivePayment(Long arId, BigDecimal amount) {
+    // v8.1（P0-5）：锁内包事务——核销读-校验-写整体串行，防并发超额
+    public void receivePayment(Long arId, BigDecimal amount) {        writeQueue.executeTx(() -> {
+
         AccountsReceivable ar = arRepo.findById(arId).orElseThrow(() -> new IllegalArgumentException("应收单不存在"));
         // v6.1 防呆：收款金额必须为正（负数曾是"无流水冲减已收"后门），且不得超过应收余额
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -485,10 +486,13 @@ public class FinanceService {
         if (ar.receivedAmount.compareTo(ar.amount) >= 0) ar.status = "PAID";
         else ar.status = "PARTIAL";
         arRepo.save(ar);
+   
+        });
     }
 
-    @Transactional
-    public void makePayment(Long apId, BigDecimal amount) {
+    // v8.1（P0-5）：锁内包事务——核销读-校验-写整体串行，防并发超额
+    public void makePayment(Long apId, BigDecimal amount) {        writeQueue.executeTx(() -> {
+
         AccountsPayable ap = apRepo.findById(apId).orElseThrow(() -> new IllegalArgumentException("应付单不存在"));
         // v6.1 防呆：付款金额必须为正，且不得超过应付余额
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -506,6 +510,8 @@ public class FinanceService {
         if (ap.paidAmount.compareTo(ap.amount) >= 0) ap.status = "PAID";
         else ap.status = "PARTIAL";
         apRepo.save(ap);
+   
+        });
     }
 
     // ============ 退货红冲（按订单号 FIFO 冲减未结清应收/应付）============
@@ -518,8 +524,9 @@ public class FinanceService {
      * @param refDocNo     退货入库单号（写入 remark 便于追溯）
      * @return 实际冲减金额（可能小于入参：当该订单 AR 已全部结清时返回 0）
      */
-    @Transactional
-    public BigDecimal applySalesReturn(String salesOrderNo, BigDecimal amount, String refDocNo) {
+    // v8.1（P0-5）：锁内包事务——核销读-校验-写整体串行，防并发超额
+    public BigDecimal applySalesReturn(String salesOrderNo, BigDecimal amount, String refDocNo) {        return writeQueue.executeTx(() -> {
+
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("退货冲减金额必须大于 0");
         }
@@ -544,6 +551,8 @@ public class FinanceService {
         BigDecimal applied = amount.subtract(remaining);
         log.info("销售退货冲减完成: order={} 申请={} 实际冲减={}", salesOrderNo, amount, applied);
         return applied;
+   
+        });
     }
 
     /**
@@ -555,8 +564,9 @@ public class FinanceService {
      * @param arrivalId       到货单 ID（v5.27 可空；非空则精准冲减该到货单对应的 AP，空则按订单号 FIFO）
      * @return 实际冲减金额
      */
-    @Transactional
-    public BigDecimal applyPurchaseReturn(String purchaseOrderNo, BigDecimal amount, String refDocNo, Long arrivalId) {
+    // v8.1（P0-5）：锁内包事务——核销读-校验-写整体串行，防并发超额
+    public BigDecimal applyPurchaseReturn(String purchaseOrderNo, BigDecimal amount, String refDocNo, Long arrivalId) {        return writeQueue.executeTx(() -> {
+
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("退货冲减金额必须大于 0");
         }
@@ -567,6 +577,8 @@ public class FinanceService {
         BigDecimal applied = applyApList(list, amount, refDocNo);
         log.info("采购退货冲减完成: order={} 申请={} 实际冲减={}", purchaseOrderNo, amount, applied);
         return applied;
+   
+        });
     }
 
     /**
@@ -577,8 +589,9 @@ public class FinanceService {
      * @param refDocNo   退货出库单号（写入 remark 便于追溯）
      * @return 实际冲减金额
      */
-    @Transactional
-    public BigDecimal applyPurchaseReturnBySupplier(Long supplierId, BigDecimal amount, String refDocNo) {
+    // v8.1（P0-5）：锁内包事务——核销读-校验-写整体串行，防并发超额
+    public BigDecimal applyPurchaseReturnBySupplier(Long supplierId, BigDecimal amount, String refDocNo) {        return writeQueue.executeTx(() -> {
+
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("退货冲减金额必须大于 0");
         }
@@ -586,6 +599,8 @@ public class FinanceService {
         BigDecimal applied = applyApList(list, amount, refDocNo);
         log.info("采购退货冲减完成: supplier={} 申请={} 实际冲减={}", supplierId, amount, applied);
         return applied;
+   
+        });
     }
 
     /** 公共 FIFO 冲减逻辑：按创建时间顺序累计 paidAmount，红冲视同已付款 */

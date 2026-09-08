@@ -91,9 +91,9 @@ public class SampleService {
         return s;
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public SampleRequest create(SampleRequest s) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             if (s.customerName == null || s.customerName.isBlank()) throw new IllegalArgumentException("请填写客户/线索公司");
             if (s.materialDesc == null || s.materialDesc.isBlank()) throw new IllegalArgumentException("请填写意向产品/颜色要求");
             Integer maxSeq = sampleRepo.findMaxSeq("DY-" + LocalDate.now().toString().replace("-", "") + "-%");
@@ -130,9 +130,9 @@ public class SampleService {
     }
 
     /** 开始调色：APPLIED/ADJUST → COLORING，首次自动在研发进度建条目 */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public SampleRequest startColoring(Long id, String colorist, String colorNote) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             SampleRequest s = sampleRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("打样单不存在"));
             if (!"APPLIED".equals(s.status) && !"ADJUST".equals(s.status))
                 throw new IllegalArgumentException("只有已申请/需调整状态可开始调色");
@@ -241,7 +241,7 @@ public class SampleService {
     }
 
     /** 仅 APPLIED 可删除（未进调色，无研发进度联动） */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public void delete(Long id) {
         SampleRequest s = sampleRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("打样单不存在"));
         if (!"APPLIED".equals(s.status)) throw new IllegalArgumentException("只有已申请状态可删除（已进入流程请标记未成交）");
@@ -253,7 +253,7 @@ public class SampleService {
     /** 派发：APPLIED/ADJUST → ASSIGNED（ASSIGNED 重复派发=改派）。内勤自己打就派发给自己。 */
     public SampleRequest assign(Long id, String assignee) {
         if (assignee == null || assignee.isBlank()) throw new IllegalArgumentException("请选择打样员");
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             SampleRequest s = sampleRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("打样单不存在"));
             if (!"APPLIED".equals(s.status) && !"ADJUST".equals(s.status) && !"ASSIGNED".equals(s.status))
                 throw new IllegalArgumentException("只有已申请/需调整/已派发状态可派发（打样中如需换人请先由本人处理或标记未成交）");
@@ -269,7 +269,7 @@ public class SampleService {
 
     /** 打样员接收任务：ASSIGNED → COLORING（仅 assignee 本人；研发进度联动同原调色流转） */
     public SampleRequest accept(Long id) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             SampleRequest s = sampleRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("打样单不存在"));
             if (!"ASSIGNED".equals(s.status)) throw new IllegalArgumentException("只有已派发状态可接收");
             String me = userService.currentUsername();
@@ -513,7 +513,7 @@ public class SampleService {
             }
             throw new IllegalArgumentException(sb.toString());
         }
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             SampleFormula f = formulaRepo.findById(formulaId).orElseThrow(() -> new IllegalArgumentException("打样配方不存在"));
             if (f.convertedRecipeId != null) {
                 Recipe old = recipeRepo.findById(f.convertedRecipeId).orElse(null);

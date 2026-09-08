@@ -205,9 +205,9 @@ public class SalesOrderService {
      * v5.47 编辑销售订单（仅 DRAFT 可改，与删除同口径）+ 变更留痕：
      * 头字段差异与明细增删改全部记录到 sales_order_change_log；无变化不记。
      */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public SalesOrder update(Long id, SalesOrder in, List<SalesOrderItem> items, String operator) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             SalesOrder order = orderRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("订单不存在"));
             if (!"DRAFT".equals(order.status)) throw new IllegalArgumentException("只有草稿状态的订单可编辑（已确认订单如需调整请另立新单）");
             if (items == null || items.isEmpty()) throw new IllegalArgumentException("请至少保留一条销售明细");

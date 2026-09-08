@@ -149,7 +149,7 @@ public class CodingRuleService {
      * 新码 7/8 位数字段从第 4/5 位起，历史 6 位码从第 3 位起——两条 MAX 合并全局池防重。
      */
     private String seqFor(String prefix, int seqStartIndex) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             Integer maxNew = jdbc.queryForObject(
                     "SELECT MAX(CAST(SUBSTR(code, " + seqStartIndex + ") AS INTEGER)) FROM material WHERE code LIKE ? AND LENGTH(code) > 6",
                     Integer.class, prefix + "%");

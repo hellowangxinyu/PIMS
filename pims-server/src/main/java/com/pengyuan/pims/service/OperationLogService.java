@@ -115,7 +115,7 @@ public class OperationLogService {
             byTable.computeIfAbsent("operation_log_" + e.time.format(MONTH_FMT), k -> new ArrayList<>()).add(e);
         }
 
-        writeQueue.execute(() -> {
+        writeQueue.executeTx(() -> {
             for (var group : byTable.entrySet()) {
                 String table = group.getKey();
                 ensureTable(table);
@@ -187,7 +187,7 @@ public class OperationLogService {
             String month = table.substring("operation_log_".length());
             if (isMonthExpired(month, ARCHIVE_DAYS)) {
                 String archiveTable = "operation_log_archive_" + month;
-                writeQueue.execute(() -> {
+                writeQueue.executeTx(() -> {
                     jdbc.execute("ALTER TABLE " + table + " RENAME TO " + archiveTable);
                     log.info("操作日志归档: {} -> {}", table, archiveTable);
                 });
@@ -198,7 +198,7 @@ public class OperationLogService {
         for (String table : archives) {
             String month = table.substring("operation_log_archive_".length());
             if (isMonthExpired(month, ARCHIVE_RETENTION_MONTHS * 31)) {
-                writeQueue.execute(() -> {
+                writeQueue.executeTx(() -> {
                     jdbc.execute("DROP TABLE " + table);
                     log.info("操作日志归档清理: {} 已删除", table);
                 });

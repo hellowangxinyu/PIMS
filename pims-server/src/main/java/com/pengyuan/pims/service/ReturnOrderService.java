@@ -106,7 +106,7 @@ public class ReturnOrderService {
                 : findPurchaseUnitPrice(arrival.refOrderNo, arrival.materialCode);
 
         // v5.24：单号生成+保存整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             Integer maxSeq = returnOrderRepo.findMaxSeq("RO-" + LocalDate.now().toString().replace("-", "") + "-%");
             String docNo = String.format("RO-%s-%04d", LocalDate.now().toString().replace("-", ""), (maxSeq == null ? 0 : maxSeq) + 1);
             ReturnOrder ro = new ReturnOrder();
@@ -292,10 +292,10 @@ public class ReturnOrderService {
      * 幂等：同一质检单号仅生成一次
      * @param qcId 质检单 ID
      */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public ReturnOrder createFromQcReject(Long qcId) {
         // v5.24：单号生成+保存整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             QualityInspection qc = qcRepo.findById(qcId)
                     .orElseThrow(() -> new IllegalArgumentException("质检单不存在"));
             // 幂等校验

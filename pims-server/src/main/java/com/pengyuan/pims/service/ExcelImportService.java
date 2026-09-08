@@ -150,7 +150,7 @@ public class ExcelImportService {
             rows.add(s);
         }
         requireNoErrors(errors, "供应商");
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             Integer maxSeq = supplierRepo.findMaxSeq("SUP-" + LocalDate.now().toString().replace("-", "") + "-%");
             long seq = maxSeq == null ? 0 : maxSeq;
             for (Supplier s : rows) {
@@ -271,7 +271,7 @@ public class ExcelImportService {
             rows.add(mat);
         }
         requireNoErrors(errors, "物料");
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             java.util.List<Material> materialBatch = new java.util.ArrayList<>();
             for (Material mat : rows) {
                 if (mat.code == null || mat.code.isBlank()) {
@@ -430,7 +430,7 @@ public class ExcelImportService {
         }
         requireNoErrors(errors, "配方");
         List<RecipeRow> rows = new ArrayList<>(byName.values());
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             Integer maxSeq = recipeRepo.maxRecipeNoSeq();
             long seq = maxSeq == null ? 0 : maxSeq;
             for (RecipeRow r : rows) {

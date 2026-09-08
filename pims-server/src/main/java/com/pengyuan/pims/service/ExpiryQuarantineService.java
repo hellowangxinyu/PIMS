@@ -110,7 +110,7 @@ public class ExpiryQuarantineService {
      * @return 本轮隔离行数
      */
     private int doQuarantine(boolean triggerReinspection) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             LocalDate today = LocalDate.now();
             List<InventoryLedger> all = ledgerRepo.findAll();
             // 物料大类一次性建映射（逐行 findByCode 是 N+1）

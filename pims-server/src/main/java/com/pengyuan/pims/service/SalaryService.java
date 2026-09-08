@@ -58,10 +58,10 @@ public class SalaryService {
     }
 
     /** 新建期间工资单：同期间唯一；自动带出在职员工（启用、未离职且离职月不早于本期间） */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public SalarySheet create(String period, String operator) {
         checkPeriod(period);
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             if (repo.findByPeriod(period).isPresent()) throw new IllegalArgumentException(period + " 已存在工资单");
             List<com.pengyuan.pims.entity.Employee> staff = employeeRepo.findByStatusOrderByIdAsc("ENABLED");
             List<SalaryItem> items = new ArrayList<>();
@@ -119,7 +119,7 @@ public class SalaryService {
                 throw new IllegalArgumentException("明细行缺少员工信息");
             }
         }
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             itemRepo.deleteBySheetId(id);
             recalc(sheet, items);
             sheet.updateTime = LocalDateTime.now();
@@ -130,11 +130,11 @@ public class SalaryService {
         });
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public SalarySheet confirm(Long id, String operator) {
         SalarySheet sheet = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("工资单不存在"));
         if ("CONFIRMED".equals(sheet.status)) throw new IllegalArgumentException("工资单已确认");
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             sheet.status = "CONFIRMED";
             sheet.confirmedBy = operator;
             sheet.confirmedTime = LocalDateTime.now();
@@ -143,11 +143,11 @@ public class SalaryService {
         });
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public void delete(Long id) {
         SalarySheet sheet = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("工资单不存在"));
         if ("CONFIRMED".equals(sheet.status)) throw new IllegalArgumentException("已确认的工资单不能删除");
-        writeQueue.execute(() -> {
+        writeQueue.executeTx(() -> {
             itemRepo.deleteBySheetId(id);
             repo.deleteById(id);
         });

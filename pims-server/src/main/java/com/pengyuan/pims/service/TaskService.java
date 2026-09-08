@@ -83,7 +83,7 @@ public class TaskService {
         return result;
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Task create(Task t) {
         if (t.title == null || t.title.isBlank()) throw new IllegalArgumentException("任务标题不能为空");
         if (t.owner == null || t.owner.isBlank()) throw new IllegalArgumentException("主执行人不能为空");
@@ -92,7 +92,7 @@ public class TaskService {
             for (String c : t.collaborators.split(",")) validateUser(c.trim());
         }
         if (!"HIGH".equals(t.priority) && !"MEDIUM".equals(t.priority) && !"LOW".equals(t.priority)) t.priority = "MEDIUM";
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             String day = LocalDate.now().toString().replace("-", "");
             Integer maxSeq = repo.findMaxSeq("TASK-" + day + "-%");
             t.docNo = String.format("TASK-%s-%04d", day, (maxSeq == null ? 0 : maxSeq) + 1);
@@ -119,11 +119,11 @@ public class TaskService {
         return repo.save(t);
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public void delete(Long id) {
         Task t = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("任务不存在"));
         if (!"PENDING".equals(t.status)) throw new IllegalArgumentException("只有待接收的任务可以删除");
-        writeQueue.execute(() -> {
+        writeQueue.executeTx(() -> {
             progressRepo.deleteByTaskId(id);
             repo.deleteById(id);
         });

@@ -129,12 +129,12 @@ public class RecipeService {
     /**
      * 创建配方，自动创建 V1.0 草稿版本
      */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Recipe create(Recipe recipe) {
         validateProcessRoute(recipe);
         checkProductNameDuplicate(recipe, null);
         // v5.24：编号生成+保存整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             // 生成配方编号 RCP-NNNN
             Integer maxSeq = recipeRepo.maxRecipeNoSeq();
             int nextSeq = (maxSeq == null ? 0 : maxSeq) + 1;

@@ -38,13 +38,13 @@ public class AccountSubjectService {
 
     public List<AccountSubject> list() { return repo.findAllByOrderByCodeAsc(); }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public AccountSubject create(AccountSubject s) {
         validate(s);
         if (s.code == null || !s.code.matches("\\d{4}(\\.\\d{2})?")) {
             throw new IllegalArgumentException("科目编码格式应为 4 位数字，明细为 4 位.2 位（如 6602.01）");
         }
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             if (repo.findByCode(s.code).isPresent()) throw new IllegalArgumentException("科目编码 " + s.code + " 已存在");
             AccountSubject saved = repo.save(s);
             saved.createTime = LocalDateTime.now();
@@ -104,7 +104,7 @@ public class AccountSubjectService {
             throw new IllegalArgumentException("期初余额不平衡：借方合计 " + drSum + " ≠ 贷方合计 " + crSum);
         }
 
-        writeQueue.execute(() -> {
+        writeQueue.executeTx(() -> {
             for (AccountSubject s : all) s.openingBalance = BigDecimal.ZERO;
             for (Map<String, Object> it : items) {
                 AccountSubject s = byCode.get(String.valueOf(it.get("code")));
@@ -129,13 +129,13 @@ public class AccountSubjectService {
         return mappingRepo.findAllByOrderByMapKeyAsc().stream().filter(m -> m.mapKey.startsWith("biz:")).toList();
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public void saveMapping(String mapKey, String subjectCode) {
         if (mapKey == null || !mapKey.startsWith("biz:")) throw new IllegalArgumentException("只允许维护 biz: 业务映射");
         if (subjectCode != null && !subjectCode.isBlank()) {
             repo.findByCode(subjectCode).orElseThrow(() -> new IllegalArgumentException("科目 " + subjectCode + " 不存在"));
         }
-        writeQueue.execute(() -> {
+        writeQueue.executeTx(() -> {
             Optional<AccountMapping> existing = mappingRepo.findByMapKey(mapKey);
             if (subjectCode == null || subjectCode.isBlank()) {
                 existing.ifPresent(mappingRepo::delete);   // 清空即删除映射，转凭证时人工选科目

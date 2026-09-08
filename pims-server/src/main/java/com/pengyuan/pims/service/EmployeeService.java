@@ -29,10 +29,10 @@ public class EmployeeService {
 
     public List<Employee> list() { return repo.findAllByOrderByIdAsc(); }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Employee create(Employee e) {
         validate(e);
-        return writeQueue.execute(() -> repo.save(e));
+        return writeQueue.executeTx(() -> repo.save(e));
     }
 
     @Transactional
@@ -53,7 +53,7 @@ public class EmployeeService {
     }
 
     /** 员工停用/启用（离职走 leaveDate，停用后工资单不再带出） */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Employee toggle(Long id) {
         Employee e = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("员工不存在"));
         e.status = "ENABLED".equals(e.status) ? "DISABLED" : "ENABLED";
@@ -66,7 +66,7 @@ public class EmployeeService {
         if (salaryItemRepo.existsByEmployeeId(id)) {
             throw new IllegalArgumentException("该员工已出现在工资单中，不能删除（请改用离职/停用）");
         }
-        writeQueue.execute(() -> repo.deleteById(id));
+        writeQueue.executeTx(() -> repo.deleteById(id));
     }
 
     private void validate(Employee e) {

@@ -48,11 +48,11 @@ public class CrmService {
 
     public List<CrmContact> listContacts() { return contactRepo.findAllByOrderByCreateTimeDescIdDesc(); }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public CrmContact createContact(CrmContact c) {
         if (c.name == null || c.name.isBlank()) throw new IllegalArgumentException("联系人姓名不能为空");
         if (c.companyName == null || c.companyName.isBlank()) throw new IllegalArgumentException("所属公司不能为空");
-        return writeQueue.execute(() -> contactRepo.save(c));
+        return writeQueue.executeTx(() -> contactRepo.save(c));
     }
 
     @Transactional
@@ -107,13 +107,13 @@ public class CrmService {
         return m;
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public CrmOpportunity createOpportunity(CrmOpportunity o, String operator) {
         if (o.title == null || o.title.isBlank()) throw new IllegalArgumentException("商机名称不能为空");
         if (o.companyName == null || o.companyName.isBlank()) throw new IllegalArgumentException("客户/公司名称不能为空");
         if (o.stage == null || !STAGES.contains(o.stage)) o.stage = "LEAD";
         o.createdBy = operator;
-        return writeQueue.execute(() -> oppRepo.save(o));
+        return writeQueue.executeTx(() -> oppRepo.save(o));
     }
 
     @Transactional
@@ -167,13 +167,13 @@ public class CrmService {
         return List.of();
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public CrmFollowUp createFollowUp(CrmFollowUp f, String operator) {
         if (f.opportunityId == null && f.customerId == null) throw new IllegalArgumentException("跟进记录须挂商机或客户");
         if (f.content == null || f.content.isBlank()) throw new IllegalArgumentException("跟进内容不能为空");
         if (f.followDate == null) f.followDate = LocalDate.now();
         f.operator = operator;
-        return writeQueue.execute(() -> followRepo.save(f));
+        return writeQueue.executeTx(() -> followRepo.save(f));
     }
 
     @Transactional

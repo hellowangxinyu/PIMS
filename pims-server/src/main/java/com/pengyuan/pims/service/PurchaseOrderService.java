@@ -135,6 +135,13 @@ public class PurchaseOrderService {
         }
         var items = itemRepo.findByOrderId(id);
         if (items.isEmpty()) throw new IllegalArgumentException("请购单无明细");
+        // v8.1（P0-9）：转采购前校验单价——MRP 生成的请购明细不带价，0 元采购会一路静默到
+        // "入库无应付"（AP 金额 0 跳过立账），该批采购在账上永久消失
+        for (PurchaseOrderItem it : items) {
+            if (it.unitPrice == null || it.unitPrice.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("明细 " + it.materialCode + " 未填单价——请先在请购单上补齐单价再转采购（MRP 生成的请购请手工补价）");
+            }
+        }
         // v6.6 原子性：逐单生成+请购关闭包同一 executeTx（锁重入、单事务）——
         // 原各 create 内部事务独立，中途失败时已生成的采购单留存 → 重试产生真实重复单据
         java.util.List<String> created = writeQueue.executeTx(() -> {

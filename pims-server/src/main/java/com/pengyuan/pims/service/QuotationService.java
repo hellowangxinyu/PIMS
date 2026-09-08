@@ -69,9 +69,9 @@ public class QuotationService {
 
     public List<QuotationItem> getItems(Long quotationId) { return itemRepo.findByQuotationId(quotationId); }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Quotation create(Quotation q, List<QuotationItem> items) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             if (q.customerId == null) throw new IllegalArgumentException("请选择客户");
             if (items == null || items.isEmpty()) throw new IllegalArgumentException("请至少添加一条报价明细");
             Integer maxSeq = quoteRepo.findMaxSeq("BJ-" + LocalDate.now().toString().replace("-", "") + "-%");
@@ -86,9 +86,9 @@ public class QuotationService {
         });
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Quotation update(Long id, Quotation in, List<QuotationItem> items) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             Quotation q = quoteRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("报价单不存在"));
             if (!"DRAFT".equals(q.status)) throw new IllegalArgumentException("只有草稿状态的报价单可编辑");
             if (items == null || items.isEmpty()) throw new IllegalArgumentException("请至少添加一条报价明细");
@@ -152,9 +152,9 @@ public class QuotationService {
      * 报价转销售订单：QUOTED 且未过期 → 生成 DRAFT 订单（单号/合同号自动），报价单标记 ACCEPTED 并回填订单号。
      * WriteQueue 可重入（ReentrantLock），嵌套调用 SalesOrderService.create 安全。
      */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Quotation toOrder(Long id) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             Quotation q = quoteRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("报价单不存在"));
             if (!"QUOTED".equals(q.status)) throw new IllegalArgumentException("只有已报价状态可转订单");
             if (q.validUntil != null && q.validUntil.isBefore(LocalDate.now()))

@@ -32,10 +32,10 @@ public class CustomerService {
 
     public Optional<Customer> getById(Long id) { return repo.findById(id); }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Customer create(Customer c) {
                 // v5.24：编码生成+保存整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             if (c.name != null && repo.existsByName(c.name.trim())) {
                 throw new IllegalArgumentException("已存在同名客户「" + c.name.trim() + "」，不允许重复录入");
             }

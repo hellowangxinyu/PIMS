@@ -361,14 +361,14 @@ public class QualityInspectionService {
      * v6.1.2：带 arrivalId 版本——到货审核生成质检单时建立精确关联，
      * 反审核按到货单隔离（同订单同物料分批到货不互删待检单）
      */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public QualityInspection createIncoming(String refDocNo, String materialCode, String materialName,
                                             String batchNo, BigDecimal qty, String unit,
                                             String warehouseId, String locationId,
                                             BigDecimal unitPrice, LocalDate produceDate,
                                             String operator, Long arrivalId) {
         // v5.24：质检单号生成+保存整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             // v5.24：按最大序号+1（count 会删除错位且并发撞号）
             Integer maxSeq = qcRepo.findMaxSeq("QC-IN-" + LocalDate.now().toString().replace("-", "") + "-%");
             String inspectionNo = String.format("QC-IN-%s-%04d", LocalDate.now().toString().replace("-", ""), (maxSeq == null ? 0 : maxSeq) + 1);
@@ -405,13 +405,13 @@ public class QualityInspectionService {
      * 所有入库物料均需质检合格方可入库，统一为来料质检(INCOMING)类型。
      * @param refDocType PRODUCTION_INBOUND / OUTSOURCE_INBOUND，用于 triggerInventory 映射入库 docType
      */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public QualityInspection createForInbound(String refDocType, String refDocNo, String materialCode, String materialName,
                                               String batchNo, BigDecimal qty, String unit,
                                               String warehouseId, String locationId,
                                               LocalDate produceDate, String operator) {
         // v5.24：质检单号生成+保存整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             // v5.24：按最大序号+1（count 会删除错位且并发撞号）
             Integer maxSeq = qcRepo.findMaxSeq("QC-IN-" + LocalDate.now().toString().replace("-", "") + "-%");
             String inspectionNo = String.format("QC-IN-%s-%04d", LocalDate.now().toString().replace("-", ""), (maxSeq == null ? 0 : maxSeq) + 1);
@@ -446,14 +446,14 @@ public class QualityInspectionService {
      * @param qcType INCOMING(其他入库) / OUTGOING(其他出库)
      * @param refDocType OTHER_INBOUND / OTHER_OUTBOUND
      */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public QualityInspection createForOther(String qcType, String refDocNo, String refDocType,
                                             String materialCode, String materialName,
                                             String batchNo, BigDecimal qty, String unit,
                                             String warehouseId, String locationId,
                                             BigDecimal unitPrice, String operator) {
         // v5.24：质检单号生成+保存整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             String prefix = "INCOMING".equals(qcType) ? "QC-IN" : "QC-OUT";
             // v5.24：按最大序号+1（count 会删除错位且并发撞号）
             Integer maxSeq = qcRepo.findMaxSeq(prefix + "-" + LocalDateTime.now().getYear() + "-%");
@@ -496,12 +496,12 @@ public class QualityInspectionService {
      * @param items v5.32：检测项实测值 [{id, measuredValue, itemResult}]，可选
      * @param batchNo v5.32：批号补填（到货未带批号时检验员按实物包装录入；非空则更新并入库沿用，空=保持原值）
      */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public QualityInspection judge(Long id, String result, String inspector, String resultRemark,
                                    Long unqualifiedLocationId, List<Map<String, Object>> items, String batchNo,
                                    LocalDate reexpiryDate) {
         // v5.24：判定+入库+退货单生成整体排队（WriteQueue 全局锁），防并发重复判定/重复入库
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             QualityInspection qc = qcRepo.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("质检单不存在"));
             if (!"PENDING".equals(qc.status))
@@ -567,14 +567,9 @@ public class QualityInspectionService {
             // v5.31：不合格品精确到库位（指定库位或不合格品库默认库位）
             if ("REJECT".equals(result) && List.of("PRODUCTION_INBOUND", "OUTSOURCE_INBOUND", "OTHER_INBOUND")
                     .contains(qc.refDocType)) {
-                try {
-                    unqualifiedInbound(qc, inspector, unqualifiedLocationId);
-                } catch (Exception e) {
-                    log.error("不合格品转入不合格品库失败: 质检单={} 原因={}", qc.inspectionNo, e.getMessage(), e);
-                    // v6.1.7：同上，失败写回质检单提示人工处理
-                    qc.resultRemark = (qc.resultRemark == null ? "" : qc.resultRemark + "；") + "不合格品转库失败，请人工处理";
-                    qcRepo.save(qc);
-                }
+                // v8.1（P0-7）：转库失败不再吞——judge 已是 executeTx 单事务，抛出让判定整体回滚重试。
+                // 旧行为（v6.1.7 写备注补偿）会留下"判定 REJECT 但隔离库存不存在"的账实不符，且无感知
+                unqualifiedInbound(qc, inspector, unqualifiedLocationId);
             }
 
             log.info("质检判定: {} 结果={} 检验员={} 检测结果={}", qc.inspectionNo, result, inspector, remark);
@@ -588,7 +583,7 @@ public class QualityInspectionService {
      * v5.37：对过期批次发起复检评估 —— 生成 PENDING 复检质检单（refDocType=REINSPECTION，快照质检模板）。
      * 数量 = 该批所有在库台账行合计；仓库取该批首个有库存的仓；防同批次重复发起。
      */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public QualityInspection createReinspection(String materialCode, String batchNo, String operator) {
         if (materialCode == null || materialCode.isBlank() || batchNo == null || batchNo.isBlank()) {
             throw new IllegalArgumentException("物料编码和批号不能为空");
@@ -614,7 +609,7 @@ public class QualityInspectionService {
                 .filter(d -> d != null && d.isBefore(LocalDate.now()))
                 .min(LocalDate::compareTo).map(LocalDate::toString).orElse("");
 
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             Integer maxSeq = qcRepo.findMaxSeq("QC-IN-" + LocalDate.now().toString().replace("-", "") + "-%");
             QualityInspection qc = new QualityInspection();
             qc.inspectionNo = String.format("QC-IN-%s-%04d", LocalDate.now().toString().replace("-", ""), (maxSeq == null ? 0 : maxSeq) + 1);
@@ -955,8 +950,9 @@ public class QualityInspectionService {
             unqZone = zoneRepo.findFirstByZoneTypeAndEnabledTrueOrderBySortOrderAsc(unqType).orElse(null);
         }
         if (unqZone == null) {
-            log.error("不合格品分库（zone_type={}）不存在，无法转入：质检单={} 物料={}", unqType, qc.inspectionNo, qc.materialCode);
-            return;
+            // v8.1（P0-7）：分库缺失直接失败（原 log.error+return 是"判定成功、库存没动"的静默路径）
+            throw new IllegalArgumentException("不合格品分库（zone_type=" + unqType + "）不存在，无法转入隔离仓：质检单="
+                    + qc.inspectionNo + " 物料=" + qc.materialCode + "；请先在仓库管理中建立对应隔离分库");
         }
         // 解析存放库位：指定库位需属于隔离区分库；否则取默认库位（该分库排序最前的启用库位）
         String locationId;

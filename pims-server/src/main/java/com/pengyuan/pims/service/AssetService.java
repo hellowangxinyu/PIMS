@@ -84,10 +84,10 @@ public class AssetService {
         return result;
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Asset create(Asset a) {
         validate(a);
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             Integer maxSeq = repo.findMaxSeq("FA-" + LocalDate.now().toString().replace("-", "") + "-%");
             a.docNo = String.format("FA-%s-%04d", LocalDate.now().toString().replace("-", ""), (maxSeq == null ? 0 : maxSeq) + 1);
             return repo.save(a);

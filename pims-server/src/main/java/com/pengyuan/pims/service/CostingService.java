@@ -206,6 +206,9 @@ public class CostingService {
         if (periodRepo.findByPeriod(period).filter(p -> Boolean.TRUE.equals(p.closed)).isPresent()) {
             throw new IllegalArgumentException(period + " 已结账，不能重算存货成本");
         }
+        // v8.1（P0-6）：幂等检查+取数+计算+回填整段进 executeTx——原实现只锁回填，
+        // 计算期间有人出入库会污染均价基数且并发双算可双双通过幂等检查
+        return writeQueue.executeTx(() -> {
         Integer existing = jdbc.queryForObject("SELECT COUNT(*) FROM costing_monthly_price WHERE period = ?", Integer.class, period);
         if (existing != null && existing > 0) {
             throw new IllegalArgumentException(period + " 存货成本已计算过（" + existing + " 个物料）；重复重算会使基数为已回填的均价，如确需重算请先清理该期快照");
@@ -252,20 +255,18 @@ public class CostingService {
             prices.put(code, price);
         }
 
-        writeQueue.executeTx(() -> {
+        for (Map.Entry<String, BigDecimal> en : prices.entrySet()) {
+            jdbc.update("INSERT INTO costing_monthly_price (period, material_code, price, create_time) VALUES (?,?,?,?) " +
+                    "ON CONFLICT(period, material_code) DO UPDATE SET price = excluded.price",
+                    period, en.getKey(), en.getValue(), System.currentTimeMillis());
+        }
+        for (String table : List.of("sales_outbound", "production_outbound", "outsource_material_outbound", "other_outbound")) {
             for (Map.Entry<String, BigDecimal> en : prices.entrySet()) {
-                jdbc.update("INSERT INTO costing_monthly_price (period, material_code, price, create_time) VALUES (?,?,?,?) " +
-                        "ON CONFLICT(period, material_code) DO UPDATE SET price = excluded.price",
-                        period, en.getKey(), en.getValue(), System.currentTimeMillis());
+                jdbc.update("UPDATE " + table + " SET unit_price = ?, cost = ROUND(qty * ?, 2) WHERE material_code = ? " +
+                        "AND status IN ('CONFIRMED','SIGNED') AND create_time >= ? AND create_time < ?",
+                        en.getValue(), en.getValue(), en.getKey(), from, to);
             }
-            for (String table : List.of("sales_outbound", "production_outbound", "outsource_material_outbound", "other_outbound")) {
-                for (Map.Entry<String, BigDecimal> en : prices.entrySet()) {
-                    jdbc.update("UPDATE " + table + " SET unit_price = ?, cost = ROUND(qty * ?, 2) WHERE material_code = ? " +
-                            "AND status IN ('CONFIRMED','SIGNED') AND create_time >= ? AND create_time < ?",
-                            en.getValue(), en.getValue(), en.getKey(), from, to);
-                }
-            }
-        });
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("period", period);
@@ -274,6 +275,7 @@ public class CostingService {
         result.put("prices", prices);
         result.put("operator", operator);
         return result;
+        });
     }
 
     /** 该期全月平均成本是否已计算（期末结账前置校验用） */

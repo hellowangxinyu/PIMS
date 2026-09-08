@@ -46,9 +46,9 @@ public class ComplaintService {
         return complaintRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("投诉单不存在"));
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public CustomerComplaint create(CustomerComplaint c) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             if (c.customerName == null || c.customerName.isBlank()) throw new IllegalArgumentException("请填写客户");
             if (c.description == null || c.description.isBlank()) throw new IllegalArgumentException("请填写问题描述");
             Integer maxSeq = complaintRepo.findMaxSeq("TS-" + LocalDate.now().toString().replace("-", "") + "-%");
@@ -83,9 +83,9 @@ public class ComplaintService {
     }
 
     /** 处理完成：PROCESSING → RESOLVED（填原因分析+处理措施） */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public CustomerComplaint resolve(Long id, String cause, String action, String handler, LocalDate resolveDate) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             CustomerComplaint c = complaintRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("投诉单不存在"));
             if (!"PROCESSING".equals(c.status)) throw new IllegalArgumentException("只有处理中状态可标记已处理");
             if (cause == null || cause.isBlank()) throw new IllegalArgumentException("请填写原因分析");

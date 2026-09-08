@@ -46,13 +46,13 @@ public class WeeklyMeetingService {
 
     public List<WeeklyTopic> listTopics() { return topicRepo.findAllByOrderByPlanDateDescIdDesc(); }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public WeeklyTopic createTopic(WeeklyTopic t, String operator) {
         if (t.owner == null || t.owner.isBlank()) throw new IllegalArgumentException("责任人不能为空");
         if (t.category == null || t.category.isBlank()) throw new IllegalArgumentException("分类不能为空");
         if (t.content == null || t.content.isBlank()) throw new IllegalArgumentException("待办事项不能为空");
         t.createdBy = operator;
-        return writeQueue.execute(() -> topicRepo.save(t));
+        return writeQueue.executeTx(() -> topicRepo.save(t));
     }
 
     @Transactional
@@ -79,7 +79,7 @@ public class WeeklyMeetingService {
         return topicRepo.save(t);
     }
 
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public void deleteTopic(Long id) { topicRepo.deleteById(id); }
 
     // ===== 研发进度 =====
@@ -92,7 +92,7 @@ public class WeeklyMeetingService {
         if (r.content == null || r.content.isBlank()) throw new IllegalArgumentException("内容不能为空");
         if (r.raiseDate == null) r.raiseDate = LocalDate.now();
         r.createdBy = operator;
-        return writeQueue.execute(() -> rdRepo.save(r));
+        return writeQueue.executeTx(() -> rdRepo.save(r));
     }
 
     @Transactional

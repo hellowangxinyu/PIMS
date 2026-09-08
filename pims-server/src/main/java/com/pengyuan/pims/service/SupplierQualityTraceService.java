@@ -97,9 +97,9 @@ public class SupplierQualityTraceService {
     }
 
     /** 登记（品控发起）：批次必选，供应商反查兜底补全，采购信息快照存单 */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public SupplierQualityTrace create(SupplierQualityTrace t) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             if (t.materialCode == null || t.materialCode.isBlank() || t.batchNo == null || t.batchNo.isBlank())
                 throw new IllegalArgumentException("必须选择批次（精确到批号）");
             if (t.description == null || t.description.isBlank()) throw new IllegalArgumentException("请填写问题描述");
@@ -163,10 +163,10 @@ public class SupplierQualityTraceService {
     }
 
     /** 处理完毕（采购）：PROCESSING → RESOLVED。必须有处理结果：结果类型+说明必填，赔款时金额必填 */
-    @Transactional
+    // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public SupplierQualityTrace resolve(Long id, String resultType, String resultRemark,
                                         BigDecimal compensationAmount, String handler, LocalDate resolveDate) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             SupplierQualityTrace t = getById(id);
             if (!"PROCESSING".equals(t.status)) throw new IllegalArgumentException("该追溯单已处理完毕");
             if (resultType == null || resultType.isBlank()) throw new IllegalArgumentException("请选择处理结果类型");
@@ -370,7 +370,7 @@ public class SupplierQualityTraceService {
     }
 
     public LossLetterTemplate createTemplate(LossLetterTemplate t) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             if (t.name == null || t.name.isBlank()) throw new IllegalArgumentException("请填写模板名称");
             if (t.bodyText == null || t.bodyText.isBlank()) throw new IllegalArgumentException("请填写问题与损失正文");
             if (Boolean.TRUE.equals(t.isDefault)) clearDefault();
@@ -383,7 +383,7 @@ public class SupplierQualityTraceService {
     }
 
     public LossLetterTemplate updateTemplate(Long id, LossLetterTemplate in) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             LossLetterTemplate t = templateRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("模板不存在"));
             if (in.name == null || in.name.isBlank()) throw new IllegalArgumentException("请填写模板名称");
             if (in.bodyText == null || in.bodyText.isBlank()) throw new IllegalArgumentException("请填写问题与损失正文");
@@ -399,7 +399,7 @@ public class SupplierQualityTraceService {
 
     /** 至少保留一个模板；删的是默认模板时把默认转移给剩余第一个 */
     public void deleteTemplate(Long id) {
-        writeQueue.execute(() -> {
+        writeQueue.executeTx(() -> {
             LossLetterTemplate t = templateRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("模板不存在"));
             long total = templateRepo.count();
             if (total <= 1) throw new IllegalArgumentException("至少保留一个函件模板");
@@ -417,7 +417,7 @@ public class SupplierQualityTraceService {
     }
 
     public LossLetterTemplate setDefault(Long id) {
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             LossLetterTemplate t = templateRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("模板不存在"));
             clearDefault();
             t.isDefault = true;

@@ -61,7 +61,7 @@ public class ShippingService {
             });
             s.outboundDocNo = s.outboundDocNo.trim();
         }
-        return writeQueue.execute(() -> {
+        return writeQueue.executeTx(() -> {
             Integer maxSeq = repo.findMaxSeq("SHIP-" + LocalDate.now().toString().replace("-", "") + "-%");
             s.docNo = String.format("SHIP-%s-%04d", LocalDate.now().toString().replace("-", ""), (maxSeq == null ? 0 : maxSeq) + 1);
             return repo.save(s);
