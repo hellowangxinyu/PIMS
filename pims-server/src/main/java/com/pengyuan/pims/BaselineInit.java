@@ -46,18 +46,23 @@ public final class BaselineInit {
                     }
                 }
             }
-            int done = 0;
+            int done = 0, skipped = 0;
+            String firstSkip = null;
             try (Statement st = c.createStatement()) {
                 for (String sql : statements) {
                     try {
                         st.execute(sql);
                         done++;
                     } catch (Exception skip) {
-                        // 表已存在等幂等冲突跳过
+                        // 表已存在等幂等冲突跳过——但把数量与首条原因打出来，静默漏执行可发现
+                        skipped++;
+                        if (firstSkip == null) firstSkip = skip.getMessage();
                     }
                 }
             }
-            System.out.println("[init-db] 基线导入完成：" + done + " 条 DDL（源 " + statements.size() + " 条）");
+            System.out.println("[init-db] 基线导入完成：" + done + " 条，跳过 " + skipped + " 条"
+                    + (firstSkip != null ? "（首条跳过原因: " + firstSkip + "）" : "")
+                    + "（源 " + statements.size() + " 条）");
         } catch (Exception e) {
             System.err.println("[init-db] 基线导入失败：" + e.getMessage());
             throw new IllegalStateException(e);

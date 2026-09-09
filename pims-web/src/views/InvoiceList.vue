@@ -318,7 +318,11 @@ async function showSummary() {
 async function doExport() {
   exporting.value = true
   try {
-    await downloadFile('/invoice/export', {}, `发票登记-${todayLocal()}.xlsx`)
+    // v8.10.2：导出与页面筛选同口径（原传空对象全量导出）
+    const params = {}
+    if (keyword.value.trim()) params.keyword = keyword.value.trim()
+    if (filterDir.value) params.direction = filterDir.value
+    await downloadFile('/invoice/export', params, `发票登记-${todayLocal()}.xlsx`)
   } catch {} finally { exporting.value = false }
 }
 
