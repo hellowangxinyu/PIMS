@@ -555,14 +555,17 @@ public class OutboundService {
      * 拦截：非 ISSUE 行、非 CONFIRMED 行、订单已入库（DONE）、该行已被部分退料。
      */
     // v6.1.5：去残留 @Transactional——方法内调 returnMaterial(executeTx)，外层事务先开等价旧时序（PROD-RET 取号撞号窗口）
-    public java.util.Map<String, Object> voidProductionOutbound(Long id, String operator) {
+    // v8.11：作废必填原因（追责依据——操作日志记 who/when，原因记 why）
+    public java.util.Map<String, Object> voidProductionOutbound(Long id, String operator, String reason) {
+        if (reason == null || reason.isBlank()) throw new IllegalArgumentException("作废必须填写原因（追责依据）");
+        final String why = reason.trim();
         // v8.4（A4）：整体包 executeTx——原"先回冲退料、再两次 save 作废"各自独立提交，中途失败留半截
         return writeQueue.executeTx(() -> {
-        return voidProductionOutboundTx(id, operator);
+        return voidProductionOutboundTx(id, operator, why);
         });
     }
 
-    private java.util.Map<String, Object> voidProductionOutboundTx(Long id, String operator) {
+    private java.util.Map<String, Object> voidProductionOutboundTx(Long id, String operator, String reason) {
         ProductionOutbound doc = prodRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("领料单不存在"));
         if ("CANCELLED".equals(doc.status)) throw new IllegalArgumentException("该领料行已作废");
@@ -606,9 +609,12 @@ public class OutboundService {
         }
 
         doc.status = "CANCELLED";
+        // v8.11：作废原因+操作人写入备注（领料列表 remark 列可见，追责依据）
+        doc.remark = (doc.remark == null || doc.remark.isBlank() ? "" : doc.remark + " | ")
+                + "作废原因: " + reason + "（操作人: " + operator + "）";
         doc.updateTime = LocalDateTime.now();
         prodRepo.save(doc);
-        log.info("领料单作废: {} 订单={} 操作={}，冲减单={}", doc.docNo, doc.productionOrderNo, operator,
+        log.info("领料单作废: {} 订单={} 操作={} 原因={}，冲减单={}", doc.docNo, doc.productionOrderNo, operator, reason,
                 rets.isEmpty() ? "-" : rets.get(0).docNo);
 
         java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();

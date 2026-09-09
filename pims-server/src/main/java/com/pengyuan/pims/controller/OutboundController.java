@@ -101,8 +101,11 @@ public class OutboundController {
     /** v5.64 领料单作废：整行冲回（生成 PROD-RET 负数行+库存加回）+ 原行标记 CANCELLED，不可逆 */
     @PutMapping("/production/{id}/void")
     @SaCheckPermission(value = "production:write")
-    public Result<Map<String, Object>> voidProduction(@PathVariable Long id) {
-        return Result.ok(service.voidProductionOutbound(id, userService.currentOperatorName()));
+    public Result<Map<String, Object>> voidProduction(@PathVariable Long id,
+                                                      @RequestBody java.util.Map<String, String> body) {
+        // v8.11：作废必填原因（追责依据——操作日志记 who/when，原因记 why）
+        return Result.ok(service.voidProductionOutbound(id, userService.currentOperatorName(),
+                body != null ? body.get("reason") : null));
     }
 
     @PostMapping("/production/{id}/confirm")

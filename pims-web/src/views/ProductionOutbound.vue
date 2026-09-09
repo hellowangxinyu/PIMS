@@ -409,15 +409,20 @@ async function confirmOne(row) {
 }
 
 // v5.64 领料单作废：整行冲回（库存加回原批次原库位）+ 原行标记，不可逆
+// v8.11：必填原因——ElMessageBox.prompt 输入，空原因后端也会拦
 async function voidOne(row) {
+  let reason
   try {
-    await ElMessageBox.confirm(
-      `作废领料单 ${row.docNo}？\n\n该行数量将按原批次原库位退回库存，系统生成一张负数冲减行，本行标记「已作废」。\n作废不可逆；该订单成本与投出比将自动剔除本行。`,
-      '作废领料单', { type: 'warning', confirmButtonText: '确认作废' })
+    const { value } = await ElMessageBox.prompt(
+      `作废领料行 ${row.docNo}（${row.materialName || row.materialCode} × ${row.qty}）不可逆，库存将整行冲回。请填写作废原因：`,
+      '作废领料行',
+      { confirmButtonText: '确认作废', cancelButtonText: '取消', inputPlaceholder: '必填（如：录错数量/计划取消）',
+        inputValidator: v => (v && v.trim()) ? true : '作废原因不能为空' })
+    reason = value.trim()
   } catch { return }
   try {
-    const r = await api.put(`/outbound/production/${row.id}/void`)
-    ElMessage.success(`已作废，冲减单 ${r.returnDocNo || ''} 已生成，库存已退回`)
+    const r = await api.put(`/outbound/production/${row.id}/void`, { reason })
+    ElMessage.success(`已作废（原因已留痕），冲减单 ${r.returnDocNo || ''} 已生成，库存已退回`)
     fetch()
   } catch (e) {
     ElMessage.error(e?.response?.data?.msg || e?.message || '作废失败')
