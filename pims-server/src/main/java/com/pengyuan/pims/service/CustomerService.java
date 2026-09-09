@@ -34,6 +34,8 @@ public class CustomerService {
 
     // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Customer create(Customer c) {
+        // v8.12：名称必填（原 name 为 null 时查重被跳过、null 名称直接入库——对账单没法发）
+        if (c.name == null || c.name.isBlank()) throw new IllegalArgumentException("客户名称不能为空");
                 // v5.24：编码生成+保存整体排队（WriteQueue 全局锁），防并发撞号
         return writeQueue.executeTx(() -> {
             if (c.name != null && repo.existsByName(c.name.trim())) {
@@ -51,6 +53,7 @@ public class CustomerService {
 
     @Transactional
     public Customer update(Long id, Customer c) {
+        if (c.name == null || c.name.isBlank()) throw new IllegalArgumentException("客户名称不能为空");   // v8.12
         Customer exist = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("客户不存在"));
         exist.name = c.name;
         exist.address = c.address;

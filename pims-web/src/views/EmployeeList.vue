@@ -52,7 +52,7 @@
         </el-form-item>
         <el-form-item label="岗位"><el-input v-model="form.position" placeholder="可选" /></el-form-item>
         <el-form-item label="电话"><el-input v-model="form.phone" /></el-form-item>
-        <el-form-item label="入职日期">
+        <el-form-item label="入职日期" required>
           <el-date-picker v-model="form.hireDate" type="date" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
         <el-form-item label="离职日期">

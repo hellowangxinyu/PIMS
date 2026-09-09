@@ -91,7 +91,7 @@
     </el-drawer>
     <el-dialog :title="form.id?'编辑客户':'新增客户'" v-model="dialogVisible" width="min(1100px, 96vw)">
       <el-form :model="form" label-width="80px">
-        <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
+        <el-form-item label="名称" required><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="联系人"><el-input v-model="form.contactPerson" /></el-form-item>
         <el-form-item label="电话"><el-input v-model="form.contactPhone" /></el-form-item>
         <el-form-item label="地址"><el-input v-model="form.address" /></el-form-item>

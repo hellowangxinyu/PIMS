@@ -39,6 +39,10 @@ public class InvoiceService {
 
     // v6.1.5：executeTx 锁内包事务 + 查重入锁（原 @Transactional+execute 旧时序，docNo 查重在锁外 TOCTOU）
     public Invoice create(Invoice inv) {
+        // v8.12：发票三必填（发票号/开票日期/购销对象——税务追溯依据）
+        if (inv.invoiceNo == null || inv.invoiceNo.isBlank()) throw new IllegalArgumentException("发票号不能为空");
+        if (inv.invoiceDate == null) throw new IllegalArgumentException("开票日期不能为空");
+        if (inv.partnerName == null || inv.partnerName.isBlank()) throw new IllegalArgumentException("购销对象（客户/供应商名称）不能为空");
         // v5.70 P0 防呆：发票金额上限
         if (inv.amount != null && inv.amount.compareTo(new java.math.BigDecimal("99990000")) > 0) {
             throw new IllegalArgumentException("发票金额异常：" + inv.amount + "，请核对");
@@ -65,6 +69,10 @@ public class InvoiceService {
 
     @Transactional
     public Invoice update(Long id, Invoice in) {
+        // v8.12：编辑同必填
+        if (in.invoiceNo == null || in.invoiceNo.isBlank()) throw new IllegalArgumentException("发票号不能为空");
+        if (in.invoiceDate == null) throw new IllegalArgumentException("开票日期不能为空");
+        if (in.partnerName == null || in.partnerName.isBlank()) throw new IllegalArgumentException("购销对象不能为空");
         Invoice inv = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("发票不存在"));
         if (!"NORMAL".equals(inv.status)) throw new IllegalArgumentException("已红冲发票不可编辑");
         assertNoVoucher(inv.docNo, "修改");

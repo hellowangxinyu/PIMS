@@ -94,7 +94,7 @@
         <el-form-item label="税号">
           <el-input v-model="form.partnerTaxNo" placeholder="选择单位后自动带出，可修改" />
         </el-form-item>
-        <el-form-item label="发票号码">
+        <el-form-item label="发票号码" required>
           <el-input v-model="form.invoiceNo" placeholder="税务系统发票号码，可选" />
         </el-form-item>
         <el-form-item label="不含税金额" required>

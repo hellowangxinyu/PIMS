@@ -130,6 +130,8 @@ public class SalesOrderService {
     public SalesOrder create(SalesOrder order, List<SalesOrderItem> items) {
         // v5.24：单号生成+保存整体排队（WriteQueue 全局锁），防并发撞号
         return writeQueue.executeTx(() -> {
+            // v8.12：客户名必填（null 会导致合同号拼音码生成垃圾）
+            if (order.customerName == null || order.customerName.isBlank()) throw new IllegalArgumentException("客户名称不能为空");
             if (items == null || items.isEmpty()) throw new IllegalArgumentException("销售明细不能为空");   // v6.1.6：items null 原裸遍历 NPE
             if (order.orderNo == null || order.orderNo.isBlank()) {
                 // v5.66.1：单号 = SO-年月日-流水（如 SO-20260826-0001），按天流水、每天从 0001 起
@@ -160,6 +162,10 @@ public class SalesOrderService {
                 // v6.1.7：金额服务端按 单价×数量 重算（不信任前端传值，与 update 同口径）
                 item.amount = (item.unitPrice != null && item.qty != null) ? item.unitPrice.multiply(item.qty) : null;
                 if (item.amount != null) total = total.add(item.amount);
+                // v8.12：缺价提醒（出库确认时硬拦，建单时 log 提醒防漏）
+                if (item.unitPrice == null || item.unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                    log.warn("销售订单 {} 明细 {} 未定价——出库确认前必须补价", order.orderNo, item.materialCode);
+                }
                 itemRepo.save(item);
             }
             saved.totalAmount = total;

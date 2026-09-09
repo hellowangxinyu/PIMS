@@ -71,6 +71,7 @@ public class EmployeeService {
 
     private void validate(Employee e) {
         if (e.name == null || e.name.isBlank()) throw new IllegalArgumentException("姓名不能为空");
+        if (e.hireDate == null) throw new IllegalArgumentException("入职日期不能为空（工龄/离职结算依据）");   // v8.12
         if (!DEPTS.contains(e.dept)) throw new IllegalArgumentException("部门不合法");
         if (e.baseSalary == null || e.baseSalary.compareTo(java.math.BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("基本工资不能为负");
