@@ -22,13 +22,15 @@ import java.util.Map;
  */
 @Service
 public class CostService {
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.10.1
 
     private static final Logger log = LoggerFactory.getLogger(CostService.class);
 
     private final JdbcTemplate jdbc;
     private final RecipeService recipeService;
 
-    public CostService(JdbcTemplate jdbc, RecipeService recipeService) {
+    public CostService(JdbcTemplate jdbc, RecipeService recipeService, com.pengyuan.pims.common.WriteQueue writeQueue) {
+        this.writeQueue = writeQueue;
         this.jdbc = jdbc;
         this.recipeService = recipeService;
     }
@@ -125,13 +127,16 @@ public class CostService {
     }
 
     /** 生产订单人工/制费补录（成本中无系统数据源的部分，由财务手工维护） */
-    @Transactional
+    // v8.10.1（A2 残）：去 @Transactional，锁内包事务
     public void updateFees(String orderNo, BigDecimal laborFee, BigDecimal overheadFee) {
         if (laborFee == null || laborFee.compareTo(BigDecimal.ZERO) < 0) throw new IllegalArgumentException("人工费不能为负");
         if (overheadFee == null || overheadFee.compareTo(BigDecimal.ZERO) < 0) throw new IllegalArgumentException("制造费用不能为负");
-        int updated = jdbc.update("UPDATE production_order SET labor_fee = ?, overhead_fee = ?, update_time = ? WHERE order_no = ?",
-                laborFee, overheadFee, System.currentTimeMillis(), orderNo);
-        if (updated == 0) throw new IllegalArgumentException("生产订单不存在: " + orderNo);
+        writeQueue.executeTx(() -> {
+            int updated = jdbc.update("UPDATE production_order SET labor_fee = ?, overhead_fee = ?, update_time = ? WHERE order_no = ?",
+                    laborFee, overheadFee, System.currentTimeMillis(), orderNo);
+            if (updated == 0) throw new IllegalArgumentException("生产订单不存在: " + orderNo);
+            return null;
+        });
     }
 
     // ===== 工具：SQLite 聚合可能返回 Integer/Double/BigDecimal，统一兼容转 BigDecimal（历史坑） =====

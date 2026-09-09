@@ -75,10 +75,20 @@ public class InvoiceController {
 
     @GetMapping("/export")
     @SaCheckPermission("finance:read")
-    public void export(jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+    public void export(jakarta.servlet.http.HttpServletResponse response,
+                       @RequestParam(required = false) String keyword,
+                       @RequestParam(required = false) String direction) throws java.io.IOException {
         boolean amtPerm = FieldFilter.hasAmountPerm("invoice");
+        // v8.10.1：导出与页面筛选同口径（原无参全量导出）
+        final String kw = keyword == null ? "" : keyword.trim().toLowerCase();
+        final String dir = direction == null ? "" : direction.trim();
         List<Object[]> rows = new java.util.ArrayList<>();
         for (Invoice i : service.list()) {
+            if (!dir.isEmpty() && !dir.equals(i.direction)) continue;
+            if (!kw.isEmpty()) {
+                String hay = String.valueOf(i.docNo) + "|" + i.invoiceNo + "|" + i.partnerName + "|" + i.partnerTaxNo + "|" + i.refOrderNo;
+                if (!hay.toLowerCase().contains(kw)) continue;
+            }
             if (amtPerm) {
                 rows.add(new Object[]{ i.docNo, i.invoiceNo, "OUTPUT".equals(i.direction) ? "销项" : "进项",
                         i.partnerName, i.partnerTaxNo, i.amount, i.taxRate, i.taxAmount, i.totalAmount,

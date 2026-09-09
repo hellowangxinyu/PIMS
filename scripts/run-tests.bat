@@ -1,6 +1,7 @@
 @echo off
-rem v8.9 本地测试入口：发版前先跑（与 GitHub Actions CI 同一套）
+rem v8.10.1 本地测试入口：先删基线（Hibernate create-target 追加写，不删会重复）再跑
 cd /d %~dp0..\pims-server
+if exist ..\dbaseline-schema.sql del ..\dbaseline-schema.sql
 call mvn test -B
 if errorlevel 1 (echo. & echo [FAIL] 测试未通过，禁止发版 & exit /b 1)
 echo. & echo [OK] 全部测试通过

@@ -50,9 +50,12 @@ public class AiService {
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public AiService(JdbcTemplate jdbc) {
+    public AiService(JdbcTemplate jdbc, com.pengyuan.pims.common.WriteQueue writeQueue) {
         this.jdbc = jdbc;
+        this.writeQueue = writeQueue;
     }
+
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.10.1
 
     // ============ 配置读写 ============
 
@@ -94,8 +97,11 @@ public class AiService {
     }
 
     private void setConfig(String key, String value) {
-        jdbc.update("INSERT INTO ai_config (key_name, value_text) VALUES (?, ?) " +
-                "ON CONFLICT(key_name) DO UPDATE SET value_text = excluded.value_text", key, value == null ? "" : value);
+        writeQueue.executeTx(() -> {   // v8.10.1（A2 残）：写进全局锁
+            jdbc.update("INSERT INTO ai_config (key_name, value_text) VALUES (?, ?) " +
+                    "ON CONFLICT(key_name) DO UPDATE SET value_text = excluded.value_text", key, value == null ? "" : value);
+            return null;
+        });
     }
 
     // ============ 对话（agent loop，双协议） ============

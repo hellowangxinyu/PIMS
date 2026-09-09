@@ -29,15 +29,20 @@ cd pims-web && npm install && npm run build
 cd pims-server && mvn test            # 先跑测试（凭证平衡/库存守恒/结账/请购闭环等）
 cd pims-server && mvn clean package -DskipTests
 
-# 运行（data/pims.db 不在本仓库——需从数据库备份恢复，或空库启动自动初始化）
-java -jar pims-server/target/pims-server-1.0.0.jar
+# 运行（data/pims.db 不在本仓库）
+# 空库自举（推荐）：--init-db 用内置基线 DDL 建表后启动，无需 sqlite3 CLI
+java -jar pims-server/target/pims-server-1.0.0.jar --init-db
+# 或：先导基线再启动（生产 ddl-auto=none，空库直接启动会在建表前查库报错）
+#   sqlite3 data/pims.db < db/baseline-schema.sql
+#   java -jar pims-server/target/pims-server-1.0.0.jar
+# 或：从数据库备份恢复（服务器每日 04:30 自动热备）
 ```
 
 > **本仓库只有源码**。数据库、日志、部署包均在 .gitignore 中。完整恢复系统 = 克隆本仓库 + 部署最新数据库备份（服务器每日 04:30 自动热备）。
 
 ## 版本管理
 
-每个功能批次一个 git tag（如 `v8.0-p0-hotfix`、`v8.5-final-scope`），tag message 即变更清单。当前最新：`v8.6-review-round1`。
+每个功能批次一个 git tag（如 `v8.0-p0-hotfix`、`v8.5-final-scope`），tag message 即变更清单。当前最新：`v8.10-a2-complete`。
 
 ## 核心设计约定（改代码前必读）
 

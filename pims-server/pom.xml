@@ -108,6 +108,16 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- v8.10.1: baseline DDL packaged into jar root for the init-db bootstrap flag -->
+            <resource>
+                <directory>${project.basedir}/../db</directory>
+                <includes><include>baseline-schema.sql</include></includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
