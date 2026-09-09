@@ -6,10 +6,10 @@
 
 | 层 | 技术 |
 |---|---|
-| 后端 | Spring Boot 3.3 / Java 21 / Spring Data JPA / SQLite（单文件 WAL，全局写锁 WriteQueue 串行化） |
+| 后端 | Spring Boot 3.3 / Java 17 / Spring Data JPA / SQLite（单文件 WAL，全局写锁 WriteQueue 串行化） |
 | 前端 | Vue 3 + Vite + Element Plus（构建产物打进 jar 的 static/） |
 | 认证 | Sa-Token（HttpOnly Cookie + 粗细权限码双向展开 + 字段级金额脱敏） |
-| 部署 | 单 jar + 数据库文件；Linux systemd（`-Xmx768m -Duser.timezone=Asia/Shanghai`），Windows start.bat |
+| 部署 | 单 jar + 数据库文件；Linux systemd（`-Xms256m -Xmx768m -Duser.timezone=Asia/Shanghai`，低配机；高配见 start.bat `-Xmx4g`），Windows start.bat |
 
 ## 目录结构
 
@@ -26,6 +26,7 @@ docs/          PRD、API（522 端点）、SOP 流程图版、数据字典、操
 cd pims-web && npm install && npm run build
 
 # 后端打包（跳过测试）
+cd pims-server && mvn test            # 先跑测试（凭证平衡/库存守恒/结账/请购闭环等）
 cd pims-server && mvn clean package -DskipTests
 
 # 运行（data/pims.db 不在本仓库——需从数据库备份恢复，或空库启动自动初始化）

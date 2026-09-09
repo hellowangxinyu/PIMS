@@ -8,7 +8,6 @@ import com.pengyuan.pims.entity.WarehouseZone;
 import com.pengyuan.pims.repository.InventoryLedgerRepository;
 import com.pengyuan.pims.repository.MaterialRepository;
 import com.pengyuan.pims.repository.WarehouseZoneRepository;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -75,16 +74,15 @@ public class ExpiryQuarantineService {
         this.qcService = qcService;
     }
 
-    /** 启动即扫描一次，之后每日 04:15 扫描（避开 03:00 日志归档 / 03:30 流水归档） */
-    @PostConstruct
-    public void init() {
-        quarantineOnly();
-    }
-
-    /** v5.39：应用完全就绪后再触发复检评估单——@PostConstruct 阶段质检服务 bean 可能尚未就绪（循环引用） */
+    /**
+     * v8.9：启动扫描合并到 ApplicationReadyEvent——原 @PostConstruct 在表结构就绪前查库，
+     * 测试环境（ddl-auto=create-drop）下 bean 创建期 inventory_ledger 尚不存在直接炸上下文；
+     * Ready 时机更晚且语义相同（仅扫描提前几百毫秒之差）。之后每日 04:15 扫描。
+     */
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     public void onReady() {
-        quarantineExpiredBatches();  // 隔离幂等（已处理直接跳过），此处主要补触发复检评估单
+        quarantineOnly();              // v5.39 原启动扫描
+        quarantineExpiredBatches();    // 隔离幂等（已处理直接跳过），补触发复检评估单
     }
 
     @Scheduled(cron = "0 15 4 * * ?")

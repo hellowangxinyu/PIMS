@@ -22,10 +22,14 @@ public class PackagingStandardController {
     private final PackagingStandardRepository repo;
     private final PackagingStandardItemRepository itemRepo;
 
-    public PackagingStandardController(PackagingStandardRepository repo, PackagingStandardItemRepository itemRepo) {
+    public PackagingStandardController(PackagingStandardRepository repo, PackagingStandardItemRepository itemRepo,
+                                      com.pengyuan.pims.common.WriteQueue writeQueue) {
         this.repo = repo;
         this.itemRepo = itemRepo;
+        this.writeQueue = writeQueue;
     }
+
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.9（A2）
 
     @GetMapping
     @cn.dev33.satoken.annotation.SaCheckPermission(value = "recipe:read")   // v6.1.4 补权限
@@ -57,40 +61,45 @@ public class PackagingStandardController {
 
     @PostMapping
     @cn.dev33.satoken.annotation.SaCheckPermission(value = "recipe:write")   // v6.1.4 补权限
-    @Transactional
+    // v8.9（A2）：去 @Transactional，锁内包事务
     public Result<PackagingStandard> create(@RequestBody Map<String, Object> body) {
-        PackagingStandard p = parse(body);
-        p.createTime = java.time.LocalDateTime.now();
-        PackagingStandard saved = repo.save(p);
-        saveItems(saved.id, body.get("items"));
-        return Result.ok(saved);
+        return writeQueue.executeTx(() -> {
+            PackagingStandard p = parse(body);
+            p.createTime = java.time.LocalDateTime.now();
+            PackagingStandard saved = repo.save(p);
+            saveItems(saved.id, body.get("items"));
+            return Result.ok(saved);
+        });
     }
 
     @PutMapping("/{id}")
     @cn.dev33.satoken.annotation.SaCheckPermission(value = "recipe:write")   // v6.1.4 补权限
-    @Transactional
     public Result<PackagingStandard> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        PackagingStandard exist = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("包装标准不存在"));
-        PackagingStandard in = parse(body);
-        exist.name = in.name;
-        exist.packType = in.packType;
-        exist.spec = in.spec;
-        exist.capacityKg = in.capacityKg;
-        exist.unitPrice = in.unitPrice;
-        exist.remark = in.remark;
-        exist.enabled = in.enabled;
-        exist.updateTime = java.time.LocalDateTime.now();
-        repo.save(exist);
-        saveItems(id, body.get("items"));
-        return Result.ok(exist);
+        return writeQueue.executeTx(() -> {
+            PackagingStandard exist = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("包装标准不存在"));
+            PackagingStandard in = parse(body);
+            exist.name = in.name;
+            exist.packType = in.packType;
+            exist.spec = in.spec;
+            exist.capacityKg = in.capacityKg;
+            exist.unitPrice = in.unitPrice;
+            exist.remark = in.remark;
+            exist.enabled = in.enabled;
+            exist.updateTime = java.time.LocalDateTime.now();
+            repo.save(exist);
+            saveItems(id, body.get("items"));
+            return Result.ok(exist);
+        });
     }
 
     @DeleteMapping("/{id}")
     @cn.dev33.satoken.annotation.SaCheckPermission(value = "recipe:write")   // v6.1.4 补权限
-    @Transactional
     public Result<?> delete(@PathVariable Long id) {
-        itemRepo.deleteByPackagingId(id);
-        repo.deleteById(id);
+        writeQueue.executeTx(() -> {
+            itemRepo.deleteByPackagingId(id);
+            repo.deleteById(id);
+            return null;
+        });
         return Result.ok();
     }
 

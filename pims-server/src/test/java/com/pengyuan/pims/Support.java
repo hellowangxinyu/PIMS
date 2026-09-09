@@ -11,8 +11,9 @@ import java.nio.file.Path;
 
 /**
  * v8.8 测试基础设施：每个测试类独立临时 SQLite 库 + JPA 建表（ddl-auto=create-drop）。
- * 测试不跑 CommandLineRunner（@SpringBootTest 不触发），实体表由 Hibernate 按实体自动创建；
- * 业务直接调 Service（绕过 Sa-Token 登录态，Service 层不依赖会话）。
+ * 事实（v8.9 三次复查纠正）：@SpringBootTest 下 CommandLineRunner 会执行——36 个初始化器在测试库
+ * 完整跑一遍且幂等（InitializerRunsTest 固化此行为）。实体表由 ddl-auto=create-drop 先建，
+ * 初始化器随后补建非实体表与种子。业务直接调 Service（绕过 Sa-Token 登录态）。
  */
 @SpringBootTest
 @ActiveProfiles("test")

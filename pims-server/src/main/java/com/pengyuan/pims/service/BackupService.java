@@ -59,9 +59,8 @@ public class BackupService {
         try {
             jdbc.execute("VACUUM INTO 'backups/" + filename + ".tmp'");
             // 完整性校验：对临时文件开门检查（只读），损坏则删除重抛（明天/手动重试）
-            java.util.Properties props = new java.util.Properties();
-            props.put("open", "readonly");
-            try (java.sql.Connection c = java.sql.DriverManager.getConnection("jdbc:sqlite:backups/" + filename + ".tmp", props)) {
+            // v8.9（三次复查）：只读开门——URL 加 mode=ro（原 Properties "open" 不是 sqlite-jdbc 参数，实际以读写打开）
+            try (java.sql.Connection c = java.sql.DriverManager.getConnection("jdbc:sqlite:backups/" + filename + ".tmp?mode=ro")) {
                 var rs = c.createStatement().executeQuery("PRAGMA integrity_check");
                 rs.next();
                 if (!"ok".equalsIgnoreCase(rs.getString(1))) {

@@ -1,10 +1,22 @@
 # v8.8 测试专属配置：静默日志 + 关闭定时任务
+# v8.9：同时把 Hibernate 建表 DDL 导出到基线（幂等：每次跑测试刷新 db/baseline-schema.sql，空库自举用）
 spring:
   task:
     scheduling:
       enabled: false
   main:
     lazy-initialization: false
+  jpa:
+    properties:
+      jakarta:
+        persistence:
+          schema-generation:
+            database:
+              action: drop-and-create   # 标准 JPA 属性接管后 ddl-auto 失效——库和脚本都要生成
+            scripts:
+              action: create
+              create-target: ../db/baseline-schema.sql
+              create-source: metadata
 
 logging:
   level:
