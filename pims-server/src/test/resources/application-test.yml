@@ -1,0 +1,12 @@
+# v8.8 测试专属配置：静默日志 + 关闭定时任务
+spring:
+  task:
+    scheduling:
+      enabled: false
+  main:
+    lazy-initialization: false
+
+logging:
+  level:
+    root: warn
+    com.pengyuan.pims: info

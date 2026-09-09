@@ -19,11 +19,13 @@ public class MaterialService {
 
     private static final Logger log = LoggerFactory.getLogger(MaterialService.class);
 
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.8（A2）：写路径收口
     private final MaterialRepository repo;
     private final CodingRuleService codingRuleService;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     public MaterialService(MaterialRepository repo, CodingRuleService codingRuleService,
-                           org.springframework.jdbc.core.JdbcTemplate jdbc) {
+                           org.springframework.jdbc.core.JdbcTemplate jdbc, com.pengyuan.pims.common.WriteQueue writeQueue) {
+        this.writeQueue = writeQueue;
         this.repo = repo;
         this.codingRuleService = codingRuleService;
         this.jdbc = jdbc;
@@ -107,7 +109,7 @@ public class MaterialService {
         }
     }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     /** v5.40 编码防呆 + v5.65 新体系：按大类分流格式——原料类 6 位（小类+序号）、半成品 B 7 位（小类+主材+序号）、成品 C 8 位（小类+主材+色系+序号）；首位字母必须等于大类；public 供 Excel 导入复用 */
     public void validateCodeFormat(String code, String category) {
         if (code == null) throw new IllegalArgumentException("物料编码不能为空");
@@ -137,92 +139,101 @@ public class MaterialService {
     }
 
     public Material create(Material m) {
-        // v5.42.2：编码在保存成功那一刻才取号（保存时自动生成）——填单中途放弃/取消不占号，
-        // 全局连续号永不出空洞；此前"选完小类即预生成"会浪费放弃的号（用户要求：未保存编码可复用，不跳号）
-        if (m.code == null || m.code.isBlank()) {
-            // v5.65 取号分流：成品=漆型+主材+色系+分组流水（8位）、半成品=小类+主材+分组流水（7位）、原料=原全局连续体系（6位）
-            if ("C".equals(m.category)) {
-                m.code = codingRuleService.generateProductCode(m.subCategory, m.mainMaterial, m.colorSeries);
-            } else if ("B".equals(m.category)) {
-                m.code = codingRuleService.generateSemiCode(m.subCategory, m.mainMaterial);
-            } else {
-                m.code = codingRuleService.generateCode(m.subCategory);
+        return writeQueue.executeTx(() -> {
+            // v5.42.2：编码在保存成功那一刻才取号（保存时自动生成）——填单中途放弃/取消不占号，
+            // 全局连续号永不出空洞；此前"选完小类即预生成"会浪费放弃的号（用户要求：未保存编码可复用，不跳号）
+            if (m.code == null || m.code.isBlank()) {
+                // v5.65 取号分流：成品=漆型+主材+色系+分组流水（8位）、半成品=小类+主材+分组流水（7位）、原料=原全局连续体系（6位）
+                if ("C".equals(m.category)) {
+                    m.code = codingRuleService.generateProductCode(m.subCategory, m.mainMaterial, m.colorSeries);
+                } else if ("B".equals(m.category)) {
+                    m.code = codingRuleService.generateSemiCode(m.subCategory, m.mainMaterial);
+                } else {
+                    m.code = codingRuleService.generateCode(m.subCategory);
+                }
             }
-        }
-        // v5.40 防呆校验：新码 6 位格式（小类码2位+序号4位），且小类码首字母必须=物料大类字母
-        validateCodeFormat(m.code, m.category);
-        // v5.16：所有字段必填（后端兜底）
-        if (m.name == null || m.name.isBlank()) throw new IllegalArgumentException("品名不能为空");
-        if (m.brand == null || m.brand.isBlank()) throw new IllegalArgumentException("牌号不能为空");
-        if (m.category == null || m.category.isBlank()) throw new IllegalArgumentException("大类不能为空");
-        if (m.subCategory == null || m.subCategory.isBlank()) throw new IllegalArgumentException("小类不能为空");
-        if (m.shelfLifeDays == null) throw new IllegalArgumentException("质保期不能为空（无限制填 0）");
-        // v5.16：成品默认品牌归属=芃远（自产），仅外购（选成品供应商）时才为供应商名称
-        if ("C".equals(m.category) && (m.brandOwner == null || m.brandOwner.isBlank())) {
-            m.brandOwner = "芃远";
-        }
-        // v5.17：成品主材必填（聚酯/氟碳/环氧/丙烯酸）
-        if ("C".equals(m.category) && (m.mainMaterial == null || m.mainMaterial.isBlank())) {
-            throw new IllegalArgumentException("成品请选择主材（聚酯/氟碳/环氧/丙烯酸）");
-        }
-        if (repo.existsByCode(m.code)) {
-            throw new IllegalArgumentException("物料编码 " + m.code + " 已存在，不允许重复录入");
-        }
-        if (repo.existsByNameAndBrandAndCategoryAndSubCategory(m.name, m.brand, m.category, m.subCategory)) {
-            throw new IllegalArgumentException("已存在完全相同的物料（品名+牌号+分类一致），不允许重复录入");
-        }
-        // 成品物料默认品牌归属为「芃远」（自产），外购成品可由前端传入成品供应商名称
-        if ("C".equals(m.category) && (m.brandOwner == null || m.brandOwner.isBlank())) {
-            m.brandOwner = "芃远";
-        }
-        validateAlternatives(m);
-        Material saved = repo.save(m);
-        syncAlternativeBacklinks(saved, null);
-        return saved;
+            // v5.40 防呆校验：新码 6 位格式（小类码2位+序号4位），且小类码首字母必须=物料大类字母
+            validateCodeFormat(m.code, m.category);
+            // v5.16：所有字段必填（后端兜底）
+            if (m.name == null || m.name.isBlank()) throw new IllegalArgumentException("品名不能为空");
+            if (m.brand == null || m.brand.isBlank()) throw new IllegalArgumentException("牌号不能为空");
+            if (m.category == null || m.category.isBlank()) throw new IllegalArgumentException("大类不能为空");
+            if (m.subCategory == null || m.subCategory.isBlank()) throw new IllegalArgumentException("小类不能为空");
+            if (m.shelfLifeDays == null) throw new IllegalArgumentException("质保期不能为空（无限制填 0）");
+            // v5.16：成品默认品牌归属=芃远（自产），仅外购（选成品供应商）时才为供应商名称
+            if ("C".equals(m.category) && (m.brandOwner == null || m.brandOwner.isBlank())) {
+                m.brandOwner = "芃远";
+            }
+            // v5.17：成品主材必填（聚酯/氟碳/环氧/丙烯酸）
+            if ("C".equals(m.category) && (m.mainMaterial == null || m.mainMaterial.isBlank())) {
+                throw new IllegalArgumentException("成品请选择主材（聚酯/氟碳/环氧/丙烯酸）");
+            }
+            if (repo.existsByCode(m.code)) {
+                throw new IllegalArgumentException("物料编码 " + m.code + " 已存在，不允许重复录入");
+            }
+            if (repo.existsByNameAndBrandAndCategoryAndSubCategory(m.name, m.brand, m.category, m.subCategory)) {
+                throw new IllegalArgumentException("已存在完全相同的物料（品名+牌号+分类一致），不允许重复录入");
+            }
+            // 成品物料默认品牌归属为「芃远」（自产），外购成品可由前端传入成品供应商名称
+            if ("C".equals(m.category) && (m.brandOwner == null || m.brandOwner.isBlank())) {
+                m.brandOwner = "芃远";
+            }
+            validateAlternatives(m);
+            Material saved = repo.save(m);
+            syncAlternativeBacklinks(saved, null);
+            return saved;
+    
+        });
     }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public Material update(Long id, Material m) {
-        Material exist = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("物料不存在"));
-        // v5.91：编码修改需单独权限 material:code-edit（未授权任何人不可改码）；新码须过格式+唯一校验
-        if (m.code != null && !m.code.isBlank() && !m.code.equals(exist.code)) {
-            if (!cn.dev33.satoken.stp.StpUtil.hasPermission("material:code-edit")) {
-                throw new IllegalArgumentException("物料编码修改需要「修改编码」权限（material:code-edit），请联系管理员授权");
+        return writeQueue.executeTx(() -> {
+            Material exist = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("物料不存在"));
+            // v5.91：编码修改需单独权限 material:code-edit（未授权任何人不可改码）；新码须过格式+唯一校验
+            if (m.code != null && !m.code.isBlank() && !m.code.equals(exist.code)) {
+                if (!cn.dev33.satoken.stp.StpUtil.hasPermission("material:code-edit")) {
+                    throw new IllegalArgumentException("物料编码修改需要「修改编码」权限（material:code-edit），请联系管理员授权");
+                }
+                if (repo.existsByCode(m.code)) throw new IllegalArgumentException("编码 " + m.code + " 已被其他物料使用");
+                validateCodeFormat(m.code, exist.category);
+                codingRuleService.validateCustomCode(m.code, exist.category);   // v5.92 有权限也必须符合全部编码规则
+                exist.code = m.code;
             }
-            if (repo.existsByCode(m.code)) throw new IllegalArgumentException("编码 " + m.code + " 已被其他物料使用");
-            validateCodeFormat(m.code, exist.category);
-            codingRuleService.validateCustomCode(m.code, exist.category);   // v5.92 有权限也必须符合全部编码规则
-            exist.code = m.code;
-        }
-        String oldCodes = exist.alternativeCodes;
-        // 牌号必填（与新建一致）：编辑/恢复启用均不允许置空
-        if (m.brand == null || m.brand.isBlank()) {
-            throw new IllegalArgumentException("牌号不能为空");
-        }
-        exist.name = m.name;
-        exist.brand = m.brand;
-        exist.category = m.category;
-        exist.subCategory = m.subCategory;
-        exist.shelfLifeDays = m.shelfLifeDays;
-        exist.brandOwner = m.brandOwner;
-        exist.alternativeCodes = m.alternativeCodes;
-        exist.updateTime = java.time.LocalDateTime.now();
-        validateAlternatives(exist);
-        Material saved = repo.save(exist);
-        syncAlternativeBacklinks(saved, oldCodes);
-        return saved;
+            String oldCodes = exist.alternativeCodes;
+            // 牌号必填（与新建一致）：编辑/恢复启用均不允许置空
+            if (m.brand == null || m.brand.isBlank()) {
+                throw new IllegalArgumentException("牌号不能为空");
+            }
+            exist.name = m.name;
+            exist.brand = m.brand;
+            exist.category = m.category;
+            exist.subCategory = m.subCategory;
+            exist.shelfLifeDays = m.shelfLifeDays;
+            exist.brandOwner = m.brandOwner;
+            exist.alternativeCodes = m.alternativeCodes;
+            exist.updateTime = java.time.LocalDateTime.now();
+            validateAlternatives(exist);
+            Material saved = repo.save(exist);
+            syncAlternativeBacklinks(saved, oldCodes);
+            return saved;
+    
+        });
     }
 
     /**
      * v5.43.1 禁用/启用物料：被单据引用删不掉的物料走禁用——禁用后不可再被新单据选用（前端下拉过滤），
      * 不可采购/销售下单（后端硬校验）；已有库存的出入库不受限（存量清理通道：正常出库消化或其他出库-报废）。
      */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public void setEnabled(Long id, boolean enabled) {
-        Material m = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("物料不存在"));
-        m.enabled = enabled;
-        m.updateTime = java.time.LocalDateTime.now();
-        repo.save(m);
+        writeQueue.executeTx(() -> {
+            Material m = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("物料不存在"));
+            m.enabled = enabled;
+            m.updateTime = java.time.LocalDateTime.now();
+            repo.save(m);
+    
+        });
     }
 
     /** v5.43.1 物料可用性校验（采购/销售等新单据创建时硬校验，防绕过前端过滤） */
@@ -249,31 +260,34 @@ public class MaterialService {
      * ① 被任何单据引用或有台账记录 → 禁止删除（提示占用来源）；
      * ② 确实无引用无库存（没用的物料）→ 真删除，且编码数字回收入池——新建物料时优先复用释放的编码。
      */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public void delete(Long id) {
-        Material m = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("物料不存在"));
-        // 引用检查：23 张单据表 + 台账（台账行本身即出入库痕迹，无论剩余数量）
-        for (String table : REF_TABLES) {
-            Integer cnt = jdbc.queryForObject(
-                    "SELECT COUNT(*) FROM " + table + " WHERE material_code = ?", Integer.class, m.code);
-            if (cnt != null && cnt > 0) {
-                throw new IllegalArgumentException(String.format(
-                        "物料 %s（%s）已被业务数据引用（%s 有 %d 条记录），不能删除；如需停用请使用停用功能", m.code, m.name, table, cnt));
+        writeQueue.executeTx(() -> {
+            Material m = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("物料不存在"));
+            // 引用检查：23 张单据表 + 台账（台账行本身即出入库痕迹，无论剩余数量）
+            for (String table : REF_TABLES) {
+                Integer cnt = jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM " + table + " WHERE material_code = ?", Integer.class, m.code);
+                if (cnt != null && cnt > 0) {
+                    throw new IllegalArgumentException(String.format(
+                            "物料 %s（%s）已被业务数据引用（%s 有 %d 条记录），不能删除；如需停用请使用停用功能", m.code, m.name, table, cnt));
+                }
             }
-        }
-        // 平替反向链接清理（被删物料挂在别的物料平替列表里时解除）
-        clearAlternativeBacklinks(m.code);
-        // 真删除 + 编码回池（数字位回收，新建任何类别物料时优先复用）
-        String code = m.code;
-        repo.delete(m);
-        if (code != null && code.length() == 6) {
-            try {
-                jdbc.update("INSERT OR IGNORE INTO released_code_seq (seq) VALUES (?)", Integer.valueOf(code.substring(2)));
-                log.info("物料删除: {} {} — 编码数字 {} 已回收待复用", code, m.name, code.substring(2));
-            } catch (Exception e) {
-                log.warn("编码回收失败（不影响删除）: {}", e.getMessage());
+            // 平替反向链接清理（被删物料挂在别的物料平替列表里时解除）
+            clearAlternativeBacklinks(m.code);
+            // 真删除 + 编码回池（数字位回收，新建任何类别物料时优先复用）
+            String code = m.code;
+            repo.delete(m);
+            if (code != null && code.length() == 6) {
+                try {
+                    jdbc.update("INSERT OR IGNORE INTO released_code_seq (seq) VALUES (?)", Integer.valueOf(code.substring(2)));
+                    log.info("物料删除: {} {} — 编码数字 {} 已回收待复用", code, m.name, code.substring(2));
+                } catch (Exception e) {
+                    log.warn("编码回收失败（不影响删除）: {}", e.getMessage());
+                }
             }
-        }
+    
+        });
     }
 
     /** 清理其他物料平替列表里对本编码的引用（平替是软引用，不算"被单据使用"） */

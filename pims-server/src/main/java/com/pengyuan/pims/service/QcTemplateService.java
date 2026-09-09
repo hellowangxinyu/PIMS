@@ -30,6 +30,7 @@ public class QcTemplateService {
     /** 物料大类合法值（对齐 material_category 字典） */
     private static final List<String> VALID_CATEGORIES = List.of("A", "P", "F", "R", "S", "B", "C");
 
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.8（A2）：写路径收口
     private final QcTemplateRepository templateRepo;
     private final QcTemplateItemRepository itemRepo;
     private final QualityInspectionItemRepository inspectionItemRepo;
@@ -38,7 +39,8 @@ public class QcTemplateService {
     public QcTemplateService(QcTemplateRepository templateRepo,
                              QcTemplateItemRepository itemRepo,
                              QualityInspectionItemRepository inspectionItemRepo,
-                             UserService userService) {
+                             UserService userService, com.pengyuan.pims.common.WriteQueue writeQueue) {
+        this.writeQueue = writeQueue;
         this.templateRepo = templateRepo;
         this.itemRepo = itemRepo;
         this.inspectionItemRepo = inspectionItemRepo;
@@ -72,64 +74,73 @@ public class QcTemplateService {
     // ==================== 保存/删除/设默认 ====================
 
     /** 聚合保存（id=null 新建，否则更新；检测项先删后插，参照工艺路线 saveRoute） */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     @SuppressWarnings("unchecked")
     public Long save(Long id, Map<String, Object> body) {
-        QcTemplate t = id != null
-                ? templateRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("质检模板不存在: " + id))
-                : new QcTemplate();
-        Object name = body.get("name");
-        if (!(name instanceof String) || ((String) name).isBlank()) throw new IllegalArgumentException("模板名称不能为空");
-        t.name = ((String) name).trim();
-        Object cat = body.get("applyCategory");
-        if (!(cat instanceof String) || !VALID_CATEGORIES.contains(cat)) {
-            throw new IllegalArgumentException("适用类别必须为 A/P/F/R/S/B/C 之一");
-        }
-        t.applyCategory = (String) cat;
-        // v5.81 三维匹配字段（空=不限）：成品 小类+主材+色系；半成品 小类+主材
-        t.subCategory = strOrNull(body.get("subCategory"));
-        t.mainMaterial = strOrNull(body.get("mainMaterial"));
-        t.colorSeries = strOrNull(body.get("colorSeries"));
-        Object remark = body.get("remark");
-        t.remark = remark instanceof String r && !r.isBlank() ? r : null;
-        if (id == null) t.createdBy = operatorOf(body);   // v5.60 制单人：仅创建时记录
-        Object en = body.get("enabled");
-        t.enabled = en == null || Boolean.parseBoolean(en.toString());
-        boolean wantDefault = body.get("isDefault") != null && Boolean.parseBoolean(body.get("isDefault").toString());
-        if (wantDefault) clearDefault(t.applyCategory, t.id);
-        t.isDefault = wantDefault;
-        t.updateTime = LocalDateTime.now();
-        templateRepo.save(t);
+        return writeQueue.executeTx(() -> {
+            QcTemplate t = id != null
+                    ? templateRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("质检模板不存在: " + id))
+                    : new QcTemplate();
+            Object name = body.get("name");
+            if (!(name instanceof String) || ((String) name).isBlank()) throw new IllegalArgumentException("模板名称不能为空");
+            t.name = ((String) name).trim();
+            Object cat = body.get("applyCategory");
+            if (!(cat instanceof String) || !VALID_CATEGORIES.contains(cat)) {
+                throw new IllegalArgumentException("适用类别必须为 A/P/F/R/S/B/C 之一");
+            }
+            t.applyCategory = (String) cat;
+            // v5.81 三维匹配字段（空=不限）：成品 小类+主材+色系；半成品 小类+主材
+            t.subCategory = strOrNull(body.get("subCategory"));
+            t.mainMaterial = strOrNull(body.get("mainMaterial"));
+            t.colorSeries = strOrNull(body.get("colorSeries"));
+            Object remark = body.get("remark");
+            t.remark = remark instanceof String r && !r.isBlank() ? r : null;
+            if (id == null) t.createdBy = operatorOf(body);   // v5.60 制单人：仅创建时记录
+            Object en = body.get("enabled");
+            t.enabled = en == null || Boolean.parseBoolean(en.toString());
+            boolean wantDefault = body.get("isDefault") != null && Boolean.parseBoolean(body.get("isDefault").toString());
+            if (wantDefault) clearDefault(t.applyCategory, t.id);
+            t.isDefault = wantDefault;
+            t.updateTime = LocalDateTime.now();
+            templateRepo.save(t);
 
-        itemRepo.deleteByTemplateId(t.id);
-        itemRepo.flush();
-        insertItems(t.id, (List<Map<String, Object>>) body.get("items"));
-        log.info("质检模板已保存：{} (类别={}, {} 项)", t.name, t.applyCategory,
-                body.get("items") == null ? 0 : ((List<?>) body.get("items")).size());
-        return t.id;
+            itemRepo.deleteByTemplateId(t.id);
+            itemRepo.flush();
+            insertItems(t.id, (List<Map<String, Object>>) body.get("items"));
+            log.info("质检模板已保存：{} (类别={}, {} 项)", t.name, t.applyCategory,
+                    body.get("items") == null ? 0 : ((List<?>) body.get("items")).size());
+            return t.id;
+    
+        });
     }
 
     /** 删除模板：默认模板拦截（防止该类别失去默认模板）；质检单已快照，历史单不受影响 */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public void delete(Long id) {
-        QcTemplate t = templateRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("质检模板不存在: " + id));
-        if (Boolean.TRUE.equals(t.isDefault)) throw new IllegalArgumentException("默认模板不能删除，请先将默认设置转移到其他模板");
-        itemRepo.deleteByTemplateId(id);
-        templateRepo.delete(t);
-        log.info("质检模板已删除：{} (类别={})", t.name, t.applyCategory);
+        writeQueue.executeTx(() -> {
+            QcTemplate t = templateRepo.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("质检模板不存在: " + id));
+            if (Boolean.TRUE.equals(t.isDefault)) throw new IllegalArgumentException("默认模板不能删除，请先将默认设置转移到其他模板");
+            itemRepo.deleteByTemplateId(id);
+            templateRepo.delete(t);
+            log.info("质检模板已删除：{} (类别={})", t.name, t.applyCategory);
+    
+        });
     }
 
     /** 设为该类别默认（同类别其他模板取消默认） */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public void setDefault(Long id) {
-        QcTemplate t = templateRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("质检模板不存在: " + id));
-        clearDefault(t.applyCategory, id);
-        t.isDefault = true;
-        t.updateTime = LocalDateTime.now();
-        templateRepo.save(t);
-        log.info("质检模板设为默认：{} (类别={})", t.name, t.applyCategory);
+        writeQueue.executeTx(() -> {
+            QcTemplate t = templateRepo.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("质检模板不存在: " + id));
+            clearDefault(t.applyCategory, id);
+            t.isDefault = true;
+            t.updateTime = LocalDateTime.now();
+            templateRepo.save(t);
+            log.info("质检模板设为默认：{} (类别={})", t.name, t.applyCategory);
+    
+        });
     }
 
     private String strOrNull(Object o) {
@@ -149,7 +160,7 @@ public class QcTemplateService {
      * 无默认模板/无检测项时静默跳过（质检单退回自由文本判定）。
      * @return 快照条数（0=无模板可快照）
      */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public int snapshotTo(Long inspectionId, String materialCategory) {
         return snapshotTo(inspectionId, materialCategory, null, null, null, null);
     }
@@ -159,44 +170,47 @@ public class QcTemplateService {
      * 否则在同大类启用模板中按 小类/主材/色系 打分取最优（每命中一维 +1，模板维度空=不限也计弱命中 +0.1），
      * 同分取 isDefault。全部模板都无命中时回落大类默认。
      */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public int snapshotTo(Long inspectionId, String materialCategory,
                           Long boundTemplateId, String subCategory, String mainMaterial, String colorSeries) {
-        if (materialCategory == null && boundTemplateId == null) return 0;
-        QcTemplate t = null;
-        if (boundTemplateId != null) {
-            t = templateRepo.findById(boundTemplateId).filter(x -> !Boolean.FALSE.equals(x.enabled)).orElse(null);
-        }
-        if (t == null) {
-            var candidates = templateRepo.findByApplyCategoryAndEnabledTrue(materialCategory);
-            QcTemplate best = null; double bestScore = -1;
-            for (QcTemplate c : candidates) {
-                double score = 0;
-                score += dimScore(c.subCategory, subCategory);
-                score += dimScore(c.mainMaterial, mainMaterial);
-                if (colorSeries != null) score += dimScore(c.colorSeries, colorSeries);   // 半成品无色系不参与
-                if (Boolean.TRUE.equals(c.isDefault)) score += 0.05;
-                if (score > bestScore) { bestScore = score; best = c; }
+        return writeQueue.executeTx(() -> {
+            if (materialCategory == null && boundTemplateId == null) return 0;
+            QcTemplate t = null;
+            if (boundTemplateId != null) {
+                t = templateRepo.findById(boundTemplateId).filter(x -> !Boolean.FALSE.equals(x.enabled)).orElse(null);
             }
-            t = best;
-        }
-        if (t == null) return 0;
-        List<QcTemplateItem> items = itemRepo.findByTemplateIdOrderBySortOrderAscIdAsc(t.id);
-        if (items.isEmpty()) return 0;
-        int sort = 1;
-        for (QcTemplateItem item : items) {
-            QualityInspectionItem qi = new QualityInspectionItem();
-            qi.inspectionId = inspectionId;
-            qi.templateId = t.id;
-            qi.name = item.name;
-            qi.standard = item.standard;
-            qi.unit = item.unit;
-            qi.method = item.method;
-            qi.sortOrder = sort++;
-            inspectionItemRepo.save(qi);
-        }
-        log.info("质检单 #{} 快照检测模板：{}（{} 项）", inspectionId, t.name, items.size());
-        return items.size();
+            if (t == null) {
+                var candidates = templateRepo.findByApplyCategoryAndEnabledTrue(materialCategory);
+                QcTemplate best = null; double bestScore = -1;
+                for (QcTemplate c : candidates) {
+                    double score = 0;
+                    score += dimScore(c.subCategory, subCategory);
+                    score += dimScore(c.mainMaterial, mainMaterial);
+                    if (colorSeries != null) score += dimScore(c.colorSeries, colorSeries);   // 半成品无色系不参与
+                    if (Boolean.TRUE.equals(c.isDefault)) score += 0.05;
+                    if (score > bestScore) { bestScore = score; best = c; }
+                }
+                t = best;
+            }
+            if (t == null) return 0;
+            List<QcTemplateItem> items = itemRepo.findByTemplateIdOrderBySortOrderAscIdAsc(t.id);
+            if (items.isEmpty()) return 0;
+            int sort = 1;
+            for (QcTemplateItem item : items) {
+                QualityInspectionItem qi = new QualityInspectionItem();
+                qi.inspectionId = inspectionId;
+                qi.templateId = t.id;
+                qi.name = item.name;
+                qi.standard = item.standard;
+                qi.unit = item.unit;
+                qi.method = item.method;
+                qi.sortOrder = sort++;
+                inspectionItemRepo.save(qi);
+            }
+            log.info("质检单 #{} 快照检测模板：{}（{} 项）", inspectionId, t.name, items.size());
+            return items.size();
+    
+        });
     }
 
     /** 同类别其他模板取消默认 */

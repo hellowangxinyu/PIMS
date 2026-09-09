@@ -21,6 +21,7 @@ public class RoleService {
 
     private static final Logger log = LoggerFactory.getLogger(RoleService.class);
 
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.8（A2）：写路径收口
     private final RoleRepository roleRepo;
     private final RolePermissionRepository permRepo;
     private final UserRepository userRepo;
@@ -318,7 +319,8 @@ public class RoleService {
         Map.entry("QC", List.of("supplier:read","customer:read","material:read","warehouse:read","inventory:read","purchase:read","sales:read","outsource:read","production:read","finance:read","dict:read","qc:read","qc:write"))
     );
 
-    public RoleService(RoleRepository roleRepo, RolePermissionRepository permRepo, UserRepository userRepo) {
+    public RoleService(RoleRepository roleRepo, RolePermissionRepository permRepo, UserRepository userRepo, com.pengyuan.pims.common.WriteQueue writeQueue) {
+        this.writeQueue = writeQueue;
         this.roleRepo = roleRepo;
         this.permRepo = permRepo;
         this.userRepo = userRepo;
@@ -330,35 +332,44 @@ public class RoleService {
 
     public Optional<Role> getRole(Long id) { return roleRepo.findById(id); }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public Role createRole(Role role) {
-        if (roleRepo.findByCode(role.code).isPresent())
-            throw new IllegalArgumentException("角色编码已存在: " + role.code);
-        role.createTime = LocalDateTime.now();
-        return roleRepo.save(role);
+        return writeQueue.executeTx(() -> {
+            if (roleRepo.findByCode(role.code).isPresent())
+                throw new IllegalArgumentException("角色编码已存在: " + role.code);
+            role.createTime = LocalDateTime.now();
+            return roleRepo.save(role);
+    
+        });
     }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public Role updateRole(Long id, Role role) {
-        Role exist = roleRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("角色不存在"));
-        exist.name = role.name;
-        exist.enabled = role.enabled;
-        exist.updateTime = LocalDateTime.now();
-        return roleRepo.save(exist);
+        return writeQueue.executeTx(() -> {
+            Role exist = roleRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("角色不存在"));
+            exist.name = role.name;
+            exist.enabled = role.enabled;
+            exist.updateTime = LocalDateTime.now();
+            return roleRepo.save(exist);
+    
+        });
     }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public void deleteRole(Long id) {
-        Role role = roleRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("角色不存在"));
-        // 踢出所有使用此角色的用户
-        List<User> users = userRepo.findByRole(role.code);
-        for (User u : users) {
-            try { StpUtil.logout(u.id); } catch (Exception ignored) {}
-        }
-        permRepo.deleteByRoleCode(role.code);
-        role.enabled = false;
-        roleRepo.save(role);
-        log.info("角色已禁用: {} ({}), 已踢出 {} 个用户", role.code, role.name, users.size());
+        writeQueue.executeTx(() -> {
+            Role role = roleRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("角色不存在"));
+            // 踢出所有使用此角色的用户
+            List<User> users = userRepo.findByRole(role.code);
+            for (User u : users) {
+                try { StpUtil.logout(u.id); } catch (Exception ignored) {}
+            }
+            permRepo.deleteByRoleCode(role.code);
+            role.enabled = false;
+            roleRepo.save(role);
+            log.info("角色已禁用: {} ({}), 已踢出 {} 个用户", role.code, role.name, users.size());
+    
+        });
     }
 
     // ============ 权限配置 ============
@@ -371,28 +382,31 @@ public class RoleService {
     }
 
     /** 设置某角色的权限（覆盖式，先删后增），同时踢出该角色下所有已登录用户 */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public void setRolePermissions(String roleCode, List<String> permCodes) {
-        // 白名单校验
-        List<String> validPerms = permCodes.stream()
-                .filter(ALL_PERMISSIONS::contains)
-                .collect(Collectors.toList());
-        if (validPerms.size() != permCodes.size()) {
-            log.warn("角色 {} 权限配置包含无效权限码，已过滤", roleCode);
-        }
-        permRepo.deleteByRoleCode(roleCode);
-        for (String code : validPerms) {
-            RolePermission rp = new RolePermission();
-            rp.roleCode = roleCode;
-            rp.permCode = code;
-            permRepo.save(rp);
-        }
-        // 踢出该角色的所有已登录用户，使权限变更立即生效
-        List<User> users = userRepo.findByRole(roleCode);
-        for (User u : users) {
-            try { StpUtil.logout(u.id); } catch (Exception ignored) {}
-        }
-        log.info("角色 {} 权限已更新 ({}个权限), 已踢出 {} 个用户", roleCode, validPerms.size(), users.size());
+        writeQueue.executeTx(() -> {
+            // 白名单校验
+            List<String> validPerms = permCodes.stream()
+                    .filter(ALL_PERMISSIONS::contains)
+                    .collect(Collectors.toList());
+            if (validPerms.size() != permCodes.size()) {
+                log.warn("角色 {} 权限配置包含无效权限码，已过滤", roleCode);
+            }
+            permRepo.deleteByRoleCode(roleCode);
+            for (String code : validPerms) {
+                RolePermission rp = new RolePermission();
+                rp.roleCode = roleCode;
+                rp.permCode = code;
+                permRepo.save(rp);
+            }
+            // 踢出该角色的所有已登录用户，使权限变更立即生效
+            List<User> users = userRepo.findByRole(roleCode);
+            for (User u : users) {
+                try { StpUtil.logout(u.id); } catch (Exception ignored) {}
+            }
+            log.info("角色 {} 权限已更新 ({}个权限), 已踢出 {} 个用户", roleCode, validPerms.size(), users.size());
+    
+        });
     }
 
     /** 查询所有可用权限码（前端勾选用） */

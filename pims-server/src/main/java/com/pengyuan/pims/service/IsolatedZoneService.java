@@ -24,12 +24,14 @@ public class IsolatedZoneService {
 
     private static final Logger log = LoggerFactory.getLogger(IsolatedZoneService.class);
 
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.8（A2）：写路径收口
     private final WarehouseRepository warehouseRepo;
     private final WarehouseZoneRepository zoneRepo;
     private final WarehouseLocationRepository locationRepo;
 
     public IsolatedZoneService(WarehouseRepository warehouseRepo, WarehouseZoneRepository zoneRepo,
-                               WarehouseLocationRepository locationRepo) {
+                               WarehouseLocationRepository locationRepo, com.pengyuan.pims.common.WriteQueue writeQueue) {
+        this.writeQueue = writeQueue;
         this.warehouseRepo = warehouseRepo;
         this.zoneRepo = zoneRepo;
         this.locationRepo = locationRepo;

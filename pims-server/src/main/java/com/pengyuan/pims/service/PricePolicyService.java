@@ -24,10 +24,12 @@ public class PricePolicyService {
 
     private static final Logger log = LoggerFactory.getLogger(PricePolicyService.class);
 
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.8（A2）：写路径收口
     private final PricePolicyRepository repo;
     private final MaterialRepository materialRepo;
 
-    public PricePolicyService(PricePolicyRepository repo, MaterialRepository materialRepo) {
+    public PricePolicyService(PricePolicyRepository repo, MaterialRepository materialRepo, com.pengyuan.pims.common.WriteQueue writeQueue) {
+        this.writeQueue = writeQueue;
         this.repo = repo;
         this.materialRepo = materialRepo;
     }
@@ -36,34 +38,43 @@ public class PricePolicyService {
         return repo.findAllByOrderByCreateTimeDescIdDesc();
     }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public PricePolicy create(PricePolicy p) {
-        validate(p);
-        if (p.createdBy == null || p.createdBy.isBlank()) p.createdBy = "系统";
-        PricePolicy saved = repo.save(p);
-        log.info("价格政策新增: 物料={} 大类={} 阶梯≥{} 单价={}",
-                p.materialCode, p.materialCategory, p.minQty, p.unitPrice);
-        return saved;
+        return writeQueue.executeTx(() -> {
+            validate(p);
+            if (p.createdBy == null || p.createdBy.isBlank()) p.createdBy = "系统";
+            PricePolicy saved = repo.save(p);
+            log.info("价格政策新增: 物料={} 大类={} 阶梯≥{} 单价={}",
+                    p.materialCode, p.materialCategory, p.minQty, p.unitPrice);
+            return saved;
+    
+        });
     }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public PricePolicy update(Long id, PricePolicy in) {
-        PricePolicy p = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("价格政策不存在"));
-        validate(in);
-        p.materialCode = blankToNull(in.materialCode);
-        p.materialCategory = blankToNull(in.materialCategory);
-        p.minQty = in.minQty;
-        p.unitPrice = in.unitPrice;
-        p.effectiveDate = in.effectiveDate;
-        p.expiryDate = in.expiryDate;
-        p.status = "DISABLED".equals(in.status) ? "DISABLED" : "ENABLED";
-        p.remark = in.remark;
-        return repo.save(p);
+        return writeQueue.executeTx(() -> {
+            PricePolicy p = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("价格政策不存在"));
+            validate(in);
+            p.materialCode = blankToNull(in.materialCode);
+            p.materialCategory = blankToNull(in.materialCategory);
+            p.minQty = in.minQty;
+            p.unitPrice = in.unitPrice;
+            p.effectiveDate = in.effectiveDate;
+            p.expiryDate = in.expiryDate;
+            p.status = "DISABLED".equals(in.status) ? "DISABLED" : "ENABLED";
+            p.remark = in.remark;
+            return repo.save(p);
+    
+        });
     }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public void delete(Long id) {
-        repo.deleteById(id);
+        writeQueue.executeTx(() -> {
+            repo.deleteById(id);
+    
+        });
     }
 
     private void validate(PricePolicy p) {

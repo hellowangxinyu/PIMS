@@ -19,6 +19,7 @@ import java.util.*;
 public class ProcessService {
 
     private static final Logger log = LoggerFactory.getLogger(ProcessService.class);
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.8（A2）：写路径收口
     private final ProcessTemplateRepository templateRepo;
     private final ProcessStageRepository stageRepo;
     private final ProcessStepRepository stepRepo;
@@ -28,7 +29,8 @@ public class ProcessService {
 
     public ProcessService(ProcessTemplateRepository templateRepo, ProcessStageRepository stageRepo,
                           ProcessStepRepository stepRepo, ProcessQcItemRepository qcRepo,
-                          RecipeRepository recipeRepo, UserService userService) {
+                          RecipeRepository recipeRepo, UserService userService, com.pengyuan.pims.common.WriteQueue writeQueue) {
+        this.writeQueue = writeQueue;
         this.templateRepo = templateRepo;
         this.stageRepo = stageRepo;
         this.stepRepo = stepRepo;
@@ -81,64 +83,70 @@ public class ProcessService {
     }
 
     /** 全量保存路线（id=null 新建，否则更新；工序先删后插） */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     @SuppressWarnings("unchecked")
     public Long saveRoute(Long id, Map<String, Object> body) {
-        ProcessTemplate t = id != null
-                ? templateRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("工艺路线不存在: " + id))
-                : new ProcessTemplate();
-        if (id == null) {
-            t.createTime = LocalDateTime.now();
-            t.createdBy = userService.currentOperatorName();   // v5.60 制单人：仅创建时记录
-        }
-        Object name = body.get("name");
-        if (!(name instanceof String) || ((String) name).isBlank()) throw new IllegalArgumentException("路线名称不能为空");
-        t.name = ((String) name).trim();
-        Object rt = body.get("recipeType");
-        if (!(rt instanceof String) || ((String) rt).isBlank()) throw new IllegalArgumentException("路线类型不能为空");
-        t.recipeType = (String) rt;
-        t.packingRequirement = body.get("packingRequirement") != null ? body.get("packingRequirement").toString() : null;
-        Object en = body.get("enabled");
-        t.enabled = en == null || Boolean.parseBoolean(en.toString());
-        boolean wantDefault = body.get("isDefault") != null && Boolean.parseBoolean(body.get("isDefault").toString());
-        if (wantDefault) clearDefault(t.recipeType, t.id);
-        t.isDefault = wantDefault;
-        t.updateTime = LocalDateTime.now();
-        templateRepo.save(t);
+        return writeQueue.executeTx(() -> {
+            ProcessTemplate t = id != null
+                    ? templateRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("工艺路线不存在: " + id))
+                    : new ProcessTemplate();
+            if (id == null) {
+                t.createTime = LocalDateTime.now();
+                t.createdBy = userService.currentOperatorName();   // v5.60 制单人：仅创建时记录
+            }
+            Object name = body.get("name");
+            if (!(name instanceof String) || ((String) name).isBlank()) throw new IllegalArgumentException("路线名称不能为空");
+            t.name = ((String) name).trim();
+            Object rt = body.get("recipeType");
+            if (!(rt instanceof String) || ((String) rt).isBlank()) throw new IllegalArgumentException("路线类型不能为空");
+            t.recipeType = (String) rt;
+            t.packingRequirement = body.get("packingRequirement") != null ? body.get("packingRequirement").toString() : null;
+            Object en = body.get("enabled");
+            t.enabled = en == null || Boolean.parseBoolean(en.toString());
+            boolean wantDefault = body.get("isDefault") != null && Boolean.parseBoolean(body.get("isDefault").toString());
+            if (wantDefault) clearDefault(t.recipeType, t.id);
+            t.isDefault = wantDefault;
+            t.updateTime = LocalDateTime.now();
+            templateRepo.save(t);
 
-        List<ProcessStage> oldStages = stageRepo.findByTemplateIdOrderBySortOrderAsc(t.id);
-        if (!oldStages.isEmpty()) {
-            List<Long> stageIds = oldStages.stream().map(s -> s.id).toList();
-            stepRepo.deleteByStageIdIn(stageIds);
-            qcRepo.deleteByStageIdIn(stageIds);
-            stageRepo.deleteByTemplateId(t.id);
-            stageRepo.flush();
-        }
-        insertStages(t.id, (List<Map<String, Object>>) body.get("stages"));
-        log.info("工艺路线已保存：{} ({})", t.name, t.recipeType);
-        return t.id;
+            List<ProcessStage> oldStages = stageRepo.findByTemplateIdOrderBySortOrderAsc(t.id);
+            if (!oldStages.isEmpty()) {
+                List<Long> stageIds = oldStages.stream().map(s -> s.id).toList();
+                stepRepo.deleteByStageIdIn(stageIds);
+                qcRepo.deleteByStageIdIn(stageIds);
+                stageRepo.deleteByTemplateId(t.id);
+                stageRepo.flush();
+            }
+            insertStages(t.id, (List<Map<String, Object>>) body.get("stages"));
+            log.info("工艺路线已保存：{} ({})", t.name, t.recipeType);
+            return t.id;
+    
+        });
     }
 
     /** 删除路线：被配方引用或是默认路线时拦截 */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public void deleteRoute(Long id) {
-        ProcessTemplate t = templateRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("工艺路线不存在: " + id));
-        long used = recipeRepo.countByProcessTemplateId(id);
-        if (used > 0) throw new IllegalArgumentException("该路线被 " + used + " 个配方使用，不能删除");
-        if (Boolean.TRUE.equals(t.isDefault)) throw new IllegalArgumentException("默认路线不能删除，请先将默认设置转移到其他路线");
-        List<Long> stageIds = stageRepo.findByTemplateIdOrderBySortOrderAsc(id).stream().map(s -> s.id).toList();
-        if (!stageIds.isEmpty()) {
-            stepRepo.deleteByStageIdIn(stageIds);
-            qcRepo.deleteByStageIdIn(stageIds);
-            stageRepo.deleteByTemplateId(id);
-        }
-        templateRepo.delete(t);
-        log.info("工艺路线已删除：{}", t.name);
+        writeQueue.executeTx(() -> {
+            ProcessTemplate t = templateRepo.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("工艺路线不存在: " + id));
+            long used = recipeRepo.countByProcessTemplateId(id);
+            if (used > 0) throw new IllegalArgumentException("该路线被 " + used + " 个配方使用，不能删除");
+            if (Boolean.TRUE.equals(t.isDefault)) throw new IllegalArgumentException("默认路线不能删除，请先将默认设置转移到其他路线");
+            List<Long> stageIds = stageRepo.findByTemplateIdOrderBySortOrderAsc(id).stream().map(s -> s.id).toList();
+            if (!stageIds.isEmpty()) {
+                stepRepo.deleteByStageIdIn(stageIds);
+                qcRepo.deleteByStageIdIn(stageIds);
+                stageRepo.deleteByTemplateId(id);
+            }
+            templateRepo.delete(t);
+            log.info("工艺路线已删除：{}", t.name);
+    
+        });
     }
 
     /** 复制路线（副本不继承默认标记） */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public Long copyRoute(Long id) {
         Map<String, Object> src = getRoute(id);
         Map<String, Object> body = new LinkedHashMap<>(src);
@@ -149,15 +157,18 @@ public class ProcessService {
     }
 
     /** 设为该类型默认（同类型其他路线取消默认） */
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public void setDefault(Long id) {
-        ProcessTemplate t = templateRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("工艺路线不存在: " + id));
-        clearDefault(t.recipeType, id);
-        t.isDefault = true;
-        t.updateTime = LocalDateTime.now();
-        templateRepo.save(t);
-        log.info("工艺路线设为默认：{} ({})", t.name, t.recipeType);
+        writeQueue.executeTx(() -> {
+            ProcessTemplate t = templateRepo.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("工艺路线不存在: " + id));
+            clearDefault(t.recipeType, id);
+            t.isDefault = true;
+            t.updateTime = LocalDateTime.now();
+            templateRepo.save(t);
+            log.info("工艺路线设为默认：{} ({})", t.name, t.recipeType);
+    
+        });
     }
 
     private void clearDefault(String recipeType, Long excludeId) {

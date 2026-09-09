@@ -52,11 +52,35 @@ public class BackupService {
             return filename;  // 当天已备份（幂等）
         }
         long start = System.currentTimeMillis();
-        jdbc.execute("VACUUM INTO 'backups/" + filename + "'");
+        // v8.8（D8）：临时文件 + 完整性校验 + 原子改名——原直接 VACUUM INTO 目标名，
+        // 中断会留半截文件，下次启动 target.exists() 即视为"当天已备份"，当天不再重试
+        File tmp = new File(dir, filename + ".tmp");
+        if (tmp.exists()) tmp.delete();   // 上次中断的半截临时文件
+        try {
+            jdbc.execute("VACUUM INTO 'backups/" + filename + ".tmp'");
+            // 完整性校验：对临时文件开门检查（只读），损坏则删除重抛（明天/手动重试）
+            java.util.Properties props = new java.util.Properties();
+            props.put("open", "readonly");
+            try (java.sql.Connection c = java.sql.DriverManager.getConnection("jdbc:sqlite:backups/" + filename + ".tmp", props)) {
+                var rs = c.createStatement().executeQuery("PRAGMA integrity_check");
+                rs.next();
+                if (!"ok".equalsIgnoreCase(rs.getString(1))) {
+                    throw new IllegalStateException("备份完整性校验失败: " + rs.getString(1));
+                }
+            } catch (java.sql.SQLException se) {
+                throw new IllegalStateException("备份完整性校验无法执行", se);
+            }
+            if (!tmp.renameTo(target)) {
+                throw new IllegalStateException("备份改名失败（tmp→正式名）: " + tmp.getAbsolutePath());
+            }
+        } catch (RuntimeException e) {
+            tmp.delete();   // 清理半截临时文件，保持"未备份"状态可重试
+            throw e;
+        }
         long size = target.length();
         recordMeta(filename, size);
         cleanExpired();
-        log.info("数据库自动备份完成: {} ({}KB, 耗时{}ms)", filename, size / 1024, System.currentTimeMillis() - start);
+        log.info("数据库自动备份完成: {} ({}KB, 含完整性校验, 耗时{}ms)", filename, size / 1024, System.currentTimeMillis() - start);
         return filename;
     }
 

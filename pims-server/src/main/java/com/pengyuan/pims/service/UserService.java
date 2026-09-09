@@ -13,6 +13,7 @@ import java.util.Optional;
 @Service
 public class UserService {
 
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.8（A2）：写路径收口
     private final UserRepository repo;
     private final PasswordEncoder passwordEncoder;
     private final com.pengyuan.pims.config.MustChangePwdCache pwdCache;
@@ -152,7 +153,8 @@ public class UserService {
 
     public UserService(UserRepository repo, PasswordEncoder passwordEncoder,
                         com.pengyuan.pims.config.MustChangePwdCache pwdCache,
-                        com.pengyuan.pims.repository.RoleRepository roleRepo) {
+                        com.pengyuan.pims.repository.RoleRepository roleRepo, com.pengyuan.pims.common.WriteQueue writeQueue) {
+        this.writeQueue = writeQueue;
         this.repo = repo;
         this.passwordEncoder = passwordEncoder;
         this.pwdCache = pwdCache;
@@ -196,58 +198,70 @@ public class UserService {
         }
     }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public User create(User u) {
-        // v5.70 P2 防呆：密码至少 6 位
-        if (u.password != null && u.password.length() < 6) {
-            throw new IllegalArgumentException("密码至少 6 位");
-        }
-        if (repo.findByUsername(u.username).isPresent()) {
-            throw new IllegalArgumentException("用户名已存在");
-        }
-        u.createTime = LocalDateTime.now();
-        u.password = passwordEncoder.encode(u.password);
-        u.mustChangePwd = true;   // v6.1.2：新建用户使用管理员设置的初始密码，首登强制改密
-        return repo.save(u);
+        return writeQueue.executeTx(() -> {
+            // v5.70 P2 防呆：密码至少 6 位
+            if (u.password != null && u.password.length() < 6) {
+                throw new IllegalArgumentException("密码至少 6 位");
+            }
+            if (repo.findByUsername(u.username).isPresent()) {
+                throw new IllegalArgumentException("用户名已存在");
+            }
+            u.createTime = LocalDateTime.now();
+            u.password = passwordEncoder.encode(u.password);
+            u.mustChangePwd = true;   // v6.1.2：新建用户使用管理员设置的初始密码，首登强制改密
+            return repo.save(u);
+    
+        });
     }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public User update(Long id, User u) {
-        User exist = repo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
-        // v6.1.7：角色白名单改读角色表（含自定义角色）——原硬编码 10 个预置角色，自定义角色用户会被误拒
-        if (u.role != null && !roleRepo.existsByCode(u.role)) {
-            throw new IllegalArgumentException("非法角色: " + u.role);
-        }
-        exist.realName = u.realName;
-        exist.phone = u.phone;
-        exist.role = u.role;
-        exist.enabled = u.enabled;
-        exist.updateTime = LocalDateTime.now();
-        // 不更新 username 和 password
-        return repo.save(exist);
+        return writeQueue.executeTx(() -> {
+            User exist = repo.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
+            // v6.1.7：角色白名单改读角色表（含自定义角色）——原硬编码 10 个预置角色，自定义角色用户会被误拒
+            if (u.role != null && !roleRepo.existsByCode(u.role)) {
+                throw new IllegalArgumentException("非法角色: " + u.role);
+            }
+            exist.realName = u.realName;
+            exist.phone = u.phone;
+            exist.role = u.role;
+            exist.enabled = u.enabled;
+            exist.updateTime = LocalDateTime.now();
+            // 不更新 username 和 password
+            return repo.save(exist);
+    
+        });
     }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public void resetPassword(Long id, String newPassword) {
-        // v6.1.4：补 null/长度校验（原可置 1 位弱密码）
-        if (newPassword == null || newPassword.length() < 6) {
-            throw new IllegalArgumentException("新密码至少 6 位");
-        }
-        User u = repo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
-        u.password = passwordEncoder.encode(newPassword);
-        u.mustChangePwd = true;   // v6.1.1：管理员重置后强制下次登录改密
-        u.updateTime = LocalDateTime.now();
-        repo.save(u);
-        pwdCache.invalidate(id);   // v6.1.5：拦截器缓存主动失效（否则标记最长延迟 60 秒生效）
+        writeQueue.executeTx(() -> {
+            // v6.1.4：补 null/长度校验（原可置 1 位弱密码）
+            if (newPassword == null || newPassword.length() < 6) {
+                throw new IllegalArgumentException("新密码至少 6 位");
+            }
+            User u = repo.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
+            u.password = passwordEncoder.encode(newPassword);
+            u.mustChangePwd = true;   // v6.1.1：管理员重置后强制下次登录改密
+            u.updateTime = LocalDateTime.now();
+            repo.save(u);
+            pwdCache.invalidate(id);   // v6.1.5：拦截器缓存主动失效（否则标记最长延迟 60 秒生效）
+    
+        });
     }
 
-    @Transactional
+    // v8.8（A2）：去 @Transactional——写路径已收口 executeTx（锁内包事务）
     public void delete(Long id) {
-        User u = repo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
-        u.enabled = false;
-        repo.save(u);
+        writeQueue.executeTx(() -> {
+            User u = repo.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
+            u.enabled = false;
+            repo.save(u);
+    
+        });
     }
 }
