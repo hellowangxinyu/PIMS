@@ -7,6 +7,35 @@
 
 ---
 
+## 界面预览
+
+| 工作台（待办聚合+看板） | 库存查询（仓库→分库两级+大类小类列+周转天数） |
+|:---:|:---:|
+| ![工作台](docs/screenshots/dashboard.png) | ![库存查询](docs/screenshots/inventory.png) |
+
+| 配方管理（两级配方树+成本） | 打样任务（打样员工作台：接收→录配方→打印） |
+|:---:|:---:|
+| ![配方管理](docs/screenshots/recipe.png) | ![打样任务](docs/screenshots/sample-task.png) |
+
+| 银行对账（流水导入+自动勾对+余额调节表） | 期末结账（结账前置校验链） |
+|:---:|:---:|
+| ![银行对账](docs/screenshots/bank-reconciliation.png) | ![期末结账](docs/screenshots/period-close.png) |
+
+| 经营看板（驾驶舱） | 资产负债表 |
+|:---:|:---:|
+| ![经营看板](docs/screenshots/report-overview.png) | ![资产负债表](docs/screenshots/report-balance-sheet.png) |
+
+<details>
+<summary>更多截图（登录页 / 生产订单 / 移动端适配等）</summary>
+
+| 登录页 | 生产订单 |
+|:---:|:---:|
+| ![登录页](docs/screenshots/login.png) | ![生产订单](docs/screenshots/production-order.png) |
+
+</details>
+
+---
+
 ## 一、这是什么系统
 
 覆盖涂料厂从**请购 → 采购 → 来料质检 → 库存 → 生产/委外 → 销售发货 → 财务总账**的完整闭环：
