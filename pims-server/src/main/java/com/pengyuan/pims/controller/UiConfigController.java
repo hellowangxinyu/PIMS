@@ -18,7 +18,9 @@ public class UiConfigController {
 
     private final JdbcTemplate jdbc;
 
-    public UiConfigController(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+    public UiConfigController(JdbcTemplate jdbc, com.pengyuan.pims.common.WriteQueue writeQueue) { this.jdbc = jdbc; this.writeQueue = writeQueue; }
+
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.10（A2 三批）
 
     @GetMapping
     public Result<String> get(@RequestParam String key) {
@@ -38,8 +40,11 @@ public class UiConfigController {
         if (key == null || key.isBlank()) throw new IllegalArgumentException("key 不能为空");
         assertOwnKey(key);
         if (value != null && value.length() > 100_000) throw new IllegalArgumentException("配置值过大");
-        jdbc.update("INSERT INTO sys_config (key_name, value_text) VALUES (?, ?) " +
-                "ON CONFLICT(key_name) DO UPDATE SET value_text = excluded.value_text", key, value);
+        writeQueue.executeTx(() -> {
+            jdbc.update("INSERT INTO sys_config (key_name, value_text) VALUES (?, ?) " +
+                    "ON CONFLICT(key_name) DO UPDATE SET value_text = excluded.value_text", key, value);
+            return null;
+        });
         return Result.ok();
     }
 

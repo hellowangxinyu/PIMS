@@ -20,6 +20,7 @@ import java.util.*;
  */
 @Service
 public class AbnormalOrderService {
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.10
 
     private static final Logger log = LoggerFactory.getLogger(AbnormalOrderService.class);
 
@@ -29,7 +30,8 @@ public class AbnormalOrderService {
 
     public AbnormalOrderService(ProductionOrderRepository orderRepo,
                                 ProductionOrderService productionOrderService,
-                                ProductionOrderExceptionRepository exceptionRepo) {
+                                ProductionOrderExceptionRepository exceptionRepo, com.pengyuan.pims.common.WriteQueue writeQueue) {
+        this.writeQueue = writeQueue;
         this.orderRepo = orderRepo;
         this.productionOrderService = productionOrderService;
         this.exceptionRepo = exceptionRepo;
@@ -94,9 +96,10 @@ public class AbnormalOrderService {
     /**
      * 提交异常处置（upsert）。首次提交时写入投出比快照便于追溯。
      */
-    @Transactional
+    // v8.10（A2 三批）：去 @Transactional，锁内包事务
     public ProductionOrderException handle(String orderNo, String reason, String measure,
                                            String status, String remark, String operator) {
+        return writeQueue.executeTx(() -> {
         ProductionOrder order = orderRepo.findByOrderNo(orderNo)
                 .orElseThrow(() -> new IllegalArgumentException("生产订单不存在: " + orderNo));
         ProductionOrderException ex = exceptionRepo.findByOrderNo(orderNo).orElse(null);
@@ -127,6 +130,7 @@ public class AbnormalOrderService {
         ex.updateTime = LocalDateTime.now();
         log.info("异常订单处置：{} 状态={} 处理人={}", orderNo, ex.status, operator);
         return exceptionRepo.save(ex);
+        });
     }
 
     public ProductionOrderException get(String orderNo) {

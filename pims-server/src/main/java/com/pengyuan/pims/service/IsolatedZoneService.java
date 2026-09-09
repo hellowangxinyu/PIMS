@@ -68,7 +68,7 @@ public class IsolatedZoneService {
     }
 
     /** 启动巡检：所有启用中的一级仓幂等补齐 5 个隔离分库（原 DataInitializer 启动行为，v5.58 抽出） */
-    @Transactional
+    // v8.10：去 @Transactional（逐仓走 ensureForWarehouse 各自锁内事务）
     public void ensureAll() {
         for (Warehouse wh : warehouseRepo.findAll()) {
             ensureForWarehouse(wh);
@@ -76,12 +76,15 @@ public class IsolatedZoneService {
     }
 
     /** v5.58：单仓幂等补齐——新增/启用仓库时即时调用，消除「等重启才补建」的空窗。非启用仓跳过（与启动巡检口径一致）。 */
-    @Transactional
+    // v8.10（A2 三批）：去 @Transactional，锁内包事务（被 WarehouseService.create 锁内调用时可重入安全）
     public void ensureForWarehouse(Warehouse wh) {
         if (wh == null || wh.id == null || !Boolean.TRUE.equals(wh.enabled)) return;
-        for (ZoneSpec spec : SPECS) {
-            ensureZone(wh, spec);
-        }
+        writeQueue.executeTx(() -> {
+            for (ZoneSpec spec : SPECS) {
+                ensureZone(wh, spec);
+            }
+            return null;
+        });
     }
 
     private void ensureZone(Warehouse wh, ZoneSpec spec) {

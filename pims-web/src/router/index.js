@@ -125,10 +125,10 @@ router.beforeEach((to, from, next) => {
 // 避免出现"点击菜单无反应"（ChunkLoadError / No static resource 404）
 router.onError((error) => {
   const msg = error?.message || ''
+  // v8.10（E6）：去掉裸 '404' 匹配——业务接口 404（如单据不存在）也会触发整页刷新死循环；只认 chunk 缺失特征
   const isChunkMissing = error?.name === 'ChunkLoadError'
     || msg.includes('Loading chunk')
     || msg.includes('No static resource')
-    || msg.includes('404')
   if (isChunkMissing) {
     window.location.reload()
   }

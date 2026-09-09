@@ -15,13 +15,15 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.10（A2 三批）
 
     private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final RoleService roleService;
     private final com.pengyuan.pims.config.MustChangePwdCache pwdCache;
     public AuthController(UserRepository userRepo, PasswordEncoder passwordEncoder, RoleService roleService,
-                          com.pengyuan.pims.config.MustChangePwdCache pwdCache) {
+                          com.pengyuan.pims.config.MustChangePwdCache pwdCache, com.pengyuan.pims.common.WriteQueue writeQueue) {
+        this.writeQueue = writeQueue;
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
         this.roleService = roleService;
@@ -131,7 +133,7 @@ public class AuthController {
         if (!passwordEncoder.matches(oldPwd, user.password)) throw new IllegalArgumentException("原密码错误");
         user.password = passwordEncoder.encode(newPwd);
         user.mustChangePwd = false;
-        userRepo.save(user);
+        writeQueue.executeTx(() -> userRepo.save(user));
         pwdCache.invalidate(userId);   // v6.1.3：拦截器缓存主动失效，改完立即可用
         return Result.ok("密码已修改");
     }

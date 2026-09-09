@@ -146,7 +146,7 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Microsoft YaHei', sans-serif;
+  font-family: -apple-system,   /* v8.10（E7）：Google Fonts 移除，回退系统栈 */ BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Microsoft YaHei', sans-serif;
   color: var(--pims-text);
   background: var(--pims-bg);
   -webkit-font-smoothing: antialiased;

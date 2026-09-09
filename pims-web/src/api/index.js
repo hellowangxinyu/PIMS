@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus'
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 10000
+  timeout: 30000   // v8.10（E2）：报表类聚合接口 10s 偏紧
 })
 
 let redirecting = false

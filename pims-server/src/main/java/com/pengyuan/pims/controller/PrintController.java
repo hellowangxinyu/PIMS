@@ -13,12 +13,13 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/print-count")
 public class PrintController {
+    private final com.pengyuan.pims.common.WriteQueue writeQueue;   // v8.10（A2 三批）
 
     private final JdbcTemplate jdbc;
 
-    public PrintController(JdbcTemplate jdbc) {
+    public PrintController(JdbcTemplate jdbc, com.pengyuan.pims.common.WriteQueue writeQueue) {
         this.jdbc = jdbc;
-    }
+     this.writeQueue = writeQueue; }
 
     /** 单据类型 → {表名, 单号列}（表名/列名硬编码常量，无注入风险） */
     private static final Map<String, String[]> DOC_TABLES = Map.of(
@@ -45,7 +46,7 @@ public class PrintController {
         if (table == null) {
             throw new IllegalArgumentException("不支持的打印单据类型: " + docType);
         }
-        int updated = jdbc.update("UPDATE " + table[0] + " SET print_count = print_count + 1 WHERE " + table[1] + " = ?", docNo);
+        int updated = writeQueue.executeTx(() -> jdbc.update("UPDATE " + table[0] + " SET print_count = print_count + 1 WHERE " + table[1] + " = ?", docNo));
         if (updated == 0) {
             throw new IllegalArgumentException("单据不存在: " + docNo);
         }
