@@ -1,6 +1,6 @@
 # 芃远综合管理系统（PIMS）数据字典
 
-> **版本**: v1.0（对应系统 v7.3，git tag v7.3-bucket-labels）
+> **版本**: v1.1（对应系统 v8.10，git tag v8.10.2-review5；v1.0→v1.1 增补打样任务三表与字段变更）
 > **日期**: 2026-09-05
 > **数据库**: SQLite 单文件（`data/pims.db`，WAL 模式），Hibernate ddl-auto=none——建表/补列由 30+ SchemaInitializer（CommandLineRunner）启动时幂等执行
 > **通用约定**：
@@ -247,7 +247,10 @@
 
 - **crm_contact / crm_opportunity / crm_follow_up**（v5.50）：管道阶段机。
 - **quotation / quotation_item**（报价单，v5.52）：状态机+转订单。
-- **sample_request**（打样，v5.53）：APPLIED→COLORING→SENT→SATISFIED/ADJUST（adjustCount 累计）→WON/LOST。
+- **sample_request**（打样，v5.53；v7.7 增派发字段）：APPLIED→ASSIGNED(已派发)→COLORING(已接收)→FORMULATED(已录配方)→SENT→SATISFIED/ADJUST（adjustCount 累计）→WON/LOST。v7.7 新列：assignee（派发的打样员账号）、assign_time、receive_time；v7.7.2 增 ref_sample_id（关联打样，复样参考）、sample_size（NORMAL 常规/A4）。寄样允许 COLORING/FORMULATED。
+- **sample_formula**（打样配方，v7.7；与打样单 1:1）：formula_no（FY-日期-NNNN）、sample_request_id 唯一、material_code/material_name（首次保存自动生成的 C 类成品，9 位属性码）、sub_category/main_material/color_series（分类首存后锁定）、total_qty（明细合计，单位=**克**）、est_cost（估算成本 元/kg=Σ用量×移动加权均价÷总量）、sample_location（留样柜位）、converted_recipe_id/converted_time（转制漆回写防重复）。
+- **sample_formula_item**（打样配方明细）：material_code/name/category/sub_category/qty（克，自由用量不强制 100——转制漆时按 100kg÷总量折算）。
+- **sample_formula_history**（打样配方快照，纯存档无 UI）：saveFormula 覆盖前旧明细 JSON（round 对齐 adjustCount），「找回历史版本」用。
 - **customer_complaint**（投诉）：批次追溯（含归档表关联）。
 
 ---

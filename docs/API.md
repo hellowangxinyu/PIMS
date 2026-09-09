@@ -1,12 +1,20 @@
 # 芃远综合管理系统（PIMS）外部系统对接接口文档
 
-> **版本**: v2.0（对应系统 v7.3，git tag v7.3-bucket-labels）
-> **日期**: 2026-09-05
+> **版本**: v2.1（对应系统 v8.10，git tag v8.10.2-review5）
+> **日期**: 2026-09-09
 > **适用对象**: 需要与本系统做数据对接的外部系统（ERP、MES、WMS、客户门户等）的开发者
 > **对接方式**: HTTP RESTful API，JSON 数据格式
-> **v2.0 变更**（v5.28→v7.3 累计，接口总数 265→**513**，55 个 Controller）：
+> **v2.1 变更**（v7.3→v8.10，接口总数 513→**523**）：
+> - **打样任务全链路（v7.7）**：派发/接收/打样配方/转制漆——`POST /api/sample/{id}/assign`、`/{id}/accept`、`/{id}/formula`（保存自动生成 C 类成品物料）、`GET /formula/materials`（选料聚合）、`GET /formulas`、`GET /formula/{fid}/convert-check`（色浆匹配校验）、`POST /formula/{fid}/to-recipe`（一键转制漆配方树，用量÷打样总量×100kg 折算）、`GET /assignees`（派发人选）
+> - **请购明细改价（v8.6）**：`PUT /api/purchase-order/{id}/items`（DRAFT/APPROVED 批量改单价，MRP 无价单补价入口——转采购前置）
+> - **库存分库筛选+分类列（v7.5）**：`GET /inventory/summary?zoneId=`（按分库过滤）；返回新增 category/subCategory
+> - **应收应付周转（v7.6）**：`GET /finance/ar/total?start=&end=` / `ap/total` 返回行级+整体周转率/周转天数（365 基数）
+> - **权限归口（v8.3+）**：库存单价/金额需 purchase:price（无权限返回 null）；价格走势端点双权限；打印模板转义
+> - **到货三道防线（v8.6+）**：createArrival 校验订单存在+APPROVED+物料在明细；反审核拦已付 AP
+>
+> **v2.0 变更**（v5.28→v7.3 累计，接口总数 265→513，55 个 Controller）：
 > - **新增模块**：出纳银行对账（/api/bank 10 端点）、MRP 采购建议（/api/mrp）、价格政策（/api/price-policy）、任务督办（/api/task）、供应商质量追溯（/api/quality-trace）、质检模板（/api/qc-template）、包装标准（/api/packaging-standard）、账号级 UI 配置（/api/ui-config）、异常订单处置（/api/abnormal-order）
-> - **请购单闭环**：POST 支持明细、PUT /{id}/header（补供应商）、POST /{id}/audit、POST /{id}/to-purchase（转采购）、DELETE（草稿）
+> - **请购单闭环**：POST 支持明细、PUT /{id}/header（补供应商）、`PUT /{id}/items`（批量改明细单价，DRAFT/APPROVED；v8.6 转采购前置——MRP 无价单补价入口）、POST /{id}/audit、POST /{id}/to-purchase（转采购，明细单价必须>0）、DELETE（草稿）
 > - **新报表端点**：GET /api/qc/statistics（不良率统计）、GET /api/report/turnover（周转率）、GET /api/finance-report/supplier-statement（供应商对账单）、POST /api/voucher/year-end-close（年结）、GET /api/recipe/{id}/changes（配方变更日志）
 > - **安全**：Token 改 HttpOnly Cookie（header 兼容）、登录 5 次锁定 10 分钟、must_change_pwd 强制改密、AI 查询敏感表黑名单
 > - **口径**：对账单/调节表时点口径（未达账项截至对账日全量）、REWORK_OUT 返工不计用量、时区统一 +8 hours、物料/大类阶梯价
@@ -521,6 +529,15 @@ pims-token: <token>
   - `GET /api/sample?customerId=&status=` 列表（statusLabel 中文状态）
   - `POST /api/sample` `{customerName(必填,可为线索公司), customerId?, materialCode?, materialDesc(必填), qty?, applicant?}` 建申请（单号 DY-YYYY-NNNN）
   - `PUT /api/sample/{id}` 编辑（仅 APPLIED）
+  - `GET /api/sample/assignees` 派发人选（启用用户 username+realName，sample:read 即可）
+  - `POST /api/sample/{id}/assign` `{assignee}` 派发/改派（APPLIED/ADJUST/ASSIGNED → ASSIGNED，打样员工作台出现待接收）
+  - `POST /api/sample/{id}/accept` 打样员接收（仅 assignee 本人；ASSIGNED → COLORING，研发进度联动）
+  - `POST /api/sample/{id}/formula` 保存打样配方（COLORING/ADJUST/FORMULATED；首次自动创建 C 类成品物料+9 位编码；明细单位=克；覆盖前旧版 JSON 快照存档；返回估算成本 estCost 元/kg）
+  - `GET /api/sample/{id}/formula` 配方详情（含明细；未录过返回 null）
+  - `GET /api/sample/formula/materials` 选料+参考价聚合（sample:read 即可，打样员无需 material:read/recipe:read）
+  - `GET /api/sample/formulas` 打样配方列表
+  - `GET /api/sample/formula/{fid}/convert-check` 转制漆校验——色浆须全部能匹配「已发布制浆配方」，缺失返回清单（严格拦截）
+  - `POST /api/sample/formula/{fid}/to-recipe` `{processTemplateId, qcTemplateId, packagingStandardId}` 一键转制漆配方（用量 ÷ 打样总量(g) × 100kg 折算，尾差归末行 Σ=100.000；幂等：已转拦截）
   - `POST /api/sample/{id}/coloring` `{colorist, colorNote}` 开始/回炉调色——**首次自动在研发进度建条目**，回炉更新轮次备注
   - `POST /api/sample/{id}/send` `{sendDate?, expressNo}` 寄样
   - `POST /api/sample/{id}/feedback` `{satisfied: bool, content, feedbackDate?}` 客户反馈（false=需调整回炉，adjustCount+1）
@@ -717,6 +734,11 @@ pims-token: <token>
 - 备份：`POST /api/dashboard/backup`（手动触发）、健康状态含 backupStale
 - 物料编码权限：`PUT /api/material/{id}/enabled`（生命周期）+ 编码手填需 material:code-edit 权限
 - 入库标签分桶：打印标签时弹桶数+微调（Σ守恒禁打），标签带第 N/M 桶序号+批量合计
+- v7.5 库存：`GET /inventory/summary?zoneId=` 分库过滤（'-'=未落库位行）；返回行增 category/subCategory
+- v7.6 周转：`GET /finance/ar/total?start=yyyy-MM-dd&end=` / `ap/total` 行级+整体 turnover/turnoverDays（365 基数，期间立账÷平均余额）
+- v8.2 口径：库存接口价格需 purchase:price 权限（无权限 unitPrice/amount=null）；price-trend 需 inventory:read AND purchase:price
+- v8.6 到货防线：POST /purchase-arrival 校验 refOrderNo→订单存在+APPROVED+物料在明细；reverse-audit 拦已付款 AP（引导红冲）
+- v8.8 幽灵单：POST /purchase-arrival 对不存在订单/DRAFT 订单/物料不在明细各返回 400
 
 ## 5. 核心接口对接示例
 
