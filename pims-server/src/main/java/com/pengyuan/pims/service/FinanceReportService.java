@@ -43,7 +43,11 @@ public class FinanceReportService {
                 ? revenueGross.divide(BigDecimal.ONE.add(taxRate.divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP)), 2, RoundingMode.HALF_UP)
                 : revenueGross;
         // v8.5（B2）：销售退货冲减当月收入与成本（退货金额=完成态退货单 qty×unitPrice；成本按退货批次加回台账的口径同步冲回）
-        BigDecimal salesReturn = sumOrZero("SELECT SUM(qty * unit_price) FROM return_order WHERE type = 'SALES_RETURN' AND status = 'DONE' AND " + monthOf("create_time"), month, month);
+        BigDecimal salesReturnGross = sumOrZero("SELECT SUM(qty * unit_price) FROM return_order WHERE type = 'SALES_RETURN' AND status = 'DONE' AND " + monthOf("create_time"), month, month);
+        // v8.7（复查尾巴2）：退货单价=含税销售价，收入已折不含税——退货冲减同折，否则净收入少计退货额×13%
+        BigDecimal salesReturn = taxRate.compareTo(BigDecimal.ZERO) > 0
+                ? salesReturnGross.divide(BigDecimal.ONE.add(taxRate.divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP)), 2, RoundingMode.HALF_UP)
+                : salesReturnGross;
         // v8.5（B2）退货成本：按退货单 qty×对应出库批次单位成本（sales_outbound 按 ref 单号关联）
         BigDecimal returnCost = sumOrZero("SELECT COALESCE(SUM(ro.qty * so.unit_price), 0) FROM return_order ro " +
                 "LEFT JOIN sales_outbound so ON so.doc_no = ro.ref_sales_outbound_no " +

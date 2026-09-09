@@ -64,13 +64,16 @@ public class AdvancePaymentService {
         });
     }
 
-    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
+    // v8.7（复查尾巴1）：去注解时该方法本就没有 executeTx（注解属下方 applyToAr），被一并删成了裸删——补锁内包事务
     public void delete(Long id) {
-        AdvancePayment a = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("预存单不存在"));
-        if (a.usedAmount != null && a.usedAmount.compareTo(BigDecimal.ZERO) > 0) {
-            throw new IllegalArgumentException("已冲抵 " + a.usedAmount + " 元，不可删除");
-        }
-        repo.deleteById(id);
+        writeQueue.executeTx(() -> {
+            AdvancePayment a = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("预存单不存在"));
+            if (a.usedAmount != null && a.usedAmount.compareTo(BigDecimal.ZERO) > 0) {
+                throw new IllegalArgumentException("已冲抵 " + a.usedAmount + " 元，不可删除");
+            }
+            repo.deleteById(id);
+            return null;
+        });
     }
 
     /** 预收冲应收：advance.usedAmount += amount，AR 按收款处理（receivedAmount/状态流转） */

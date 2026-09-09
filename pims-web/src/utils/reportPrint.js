@@ -22,7 +22,7 @@ export function printTableHtml(title, subtitle, bodyHtml) {
   .indent { padding-left: 18px; }
 </style></head><body>
   <div class="head"><h1>${esc(title)}</h1></div>
-  <div class="sub">${subtitle || ''}</div>
+  <div class="sub">${esc(subtitle)}</div>
   ${bodyHtml}
 </body></html>`
   const iframe = document.createElement('iframe')

@@ -62,14 +62,14 @@
         <el-table-column prop="receivedQty" label="已到货" width="90" align="right" />
         <el-table-column label="单价(含税)" width="150" align="right">
           <template #default="{ row }">
-            <el-input-number v-if="viewRow?.status === 'DRAFT'" v-model="row.unitPrice" :min="0.01" :precision="2" size="small" style="width:120px" />
+            <el-input-number v-if="viewRow?.status === 'DRAFT' || viewRow?.status === 'APPROVED'" v-model="row.unitPrice" :min="0.01" :precision="2" size="small" style="width:120px" />
             <span v-else>{{ row.unitPrice ?? '—' }}</span>
           </template>
         </el-table-column>
       </p-table>
       <template #footer>
         <el-button @click="itemsVisible = false">关闭</el-button>
-        <el-button v-if="viewRow?.status === 'DRAFT'" type="primary" :loading="savingPrices" @click="savePrices">保存单价</el-button>
+        <el-button v-if="viewRow?.status === 'DRAFT' || viewRow?.status === 'APPROVED'" type="primary" :loading="savingPrices" @click="savePrices">保存单价</el-button>
       </template>
     </el-dialog>
 

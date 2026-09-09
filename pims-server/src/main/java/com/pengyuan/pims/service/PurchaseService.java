@@ -761,17 +761,22 @@ public class PurchaseService {
             throw new IllegalArgumentException("到货必须关联采购订单（refOrderNo 不能为空）");
         }
         {
+            // v8.7（复查尾巴4）：订单状态也必须 APPROVED——对 DRAFT 单到货会绕过审核（与"审核后才到货"口径一致）
             boolean orderOk = false, materialInOrder = false;
+            String orderStatus = null;
             if ("RAW".equals(pa.type)) {
                 var rp = rawRepo.findFirstByOrderNoAndMaterialCode(pa.refOrderNo, pa.materialCode);
-                orderOk = rawRepo.existsByOrderNo(pa.refOrderNo);
                 materialInOrder = rp.isPresent();
+                orderStatus = rawRepo.findAllByOrderNo(pa.refOrderNo).stream().findFirst()
+                        .map(x -> x.status).orElse(null);
             } else {
-                orderOk = finishedRepo.existsByOrderNo(pa.refOrderNo);
-                materialInOrder = finishedRepo.findAllByOrderNo(pa.refOrderNo).stream()
-                        .anyMatch(f -> pa.materialCode.equals(f.materialCode));
+                var fl = finishedRepo.findAllByOrderNo(pa.refOrderNo);
+                materialInOrder = fl.stream().anyMatch(f -> pa.materialCode.equals(f.materialCode));
+                orderStatus = fl.stream().findFirst().map(x -> x.status).orElse(null);
             }
+            orderOk = orderStatus != null;
             if (!orderOk) throw new IllegalArgumentException("采购订单 " + pa.refOrderNo + " 不存在，不能到货");
+            if (!"APPROVED".equals(orderStatus)) throw new IllegalArgumentException("采购订单 " + pa.refOrderNo + " 尚未审核（状态 " + orderStatus + "），不能到货");
             if (!materialInOrder) throw new IllegalArgumentException("物料 " + pa.materialCode + " 不在采购订单 " + pa.refOrderNo + " 明细中，不能到货");
         }
         if (pa.qty == null || pa.qty.doubleValue() <= 0)

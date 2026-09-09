@@ -114,6 +114,8 @@ public class PurchaseOrderService {
     public java.util.List<com.pengyuan.pims.entity.PurchaseOrderItem> updateItemPrices(Long id, java.util.List<java.util.Map<String, Object>> itemsInput) {
         return writeQueue.executeTx(() -> {
             var order = orderRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("请购单不存在"));
+            // v8.7（复查尾巴5）口径拍板：DRAFT 与 APPROVED 均可改价——请购单无反审核端点，
+            // 只放 DRAFT 会把"审核后才发现没价"的单卡死（N1 重演）；真正的控制点在转采购（须单价>0）与采购单审核
             if (!"DRAFT".equals(order.status) && !"APPROVED".equals(order.status))
                 throw new IllegalArgumentException("只有草稿/已审核状态可改明细单价（已转采购或关闭的不可改）");
             var items = itemRepo.findByOrderId(id);
