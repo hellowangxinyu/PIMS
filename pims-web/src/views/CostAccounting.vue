@@ -110,6 +110,7 @@
 </template>
 
 <script setup>
+import { msToDateLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -130,7 +131,7 @@ function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.
 // v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function fmtMs(v) {
   if (v == null) return ''
-  if (typeof v === 'number' || /^\d{10,}$/.test(String(v))) return new Date(Number(v)).toISOString().slice(0, 10)
+  if (typeof v === 'number' || /^\d{10,}$/.test(String(v))) return msToDateLocal(v)
   return String(v).replace('T', ' ').substring(0, 10)
 }
 function statusLabel(s) { return { DRAFT: '草稿', CONFIRMED: '已确认', COMPLETED: '已完工' }[s] || s }

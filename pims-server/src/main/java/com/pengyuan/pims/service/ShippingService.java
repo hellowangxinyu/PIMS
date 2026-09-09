@@ -44,7 +44,7 @@ public class ShippingService {
         return result;
     }
 
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public ShippingLog create(ShippingLog s) {
         if (s.salesOrderNo == null || s.salesOrderNo.isBlank()) throw new IllegalArgumentException("销售订单号不能为空");
         orderRepo.findByOrderNo(s.salesOrderNo)

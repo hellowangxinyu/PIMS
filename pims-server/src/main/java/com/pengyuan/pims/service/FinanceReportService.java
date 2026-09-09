@@ -34,8 +34,14 @@ public class FinanceReportService {
     public Map<String, Object> profitTrial(String month) {
         if (month == null || !month.matches("\\d{4}-\\d{2}")) throw new IllegalArgumentException("月份格式应为 YYYY-MM");
 
-        BigDecimal revenue = sumOrZero("SELECT SUM(amount) FROM accounts_receivable WHERE " + monthOf("create_time"), month, month);
+        BigDecimal revenueGross = sumOrZero("SELECT SUM(amount) FROM accounts_receivable WHERE " + monthOf("create_time"), month, month);
         BigDecimal cogs = sumOrZero("SELECT SUM(cost) FROM sales_outbound WHERE status = 'CONFIRMED' AND " + monthOf("create_time"), month, month);
+        // v8.6（N2）：收入折不含税——v8.2 成本已折不含税而收入仍是含税，毛利虚高约成本×13%；
+        // 税率与入库折算同源（字典 tax_rate 默认 13）
+        BigDecimal taxRate = taxRatePercent();
+        BigDecimal revenue = taxRate.compareTo(BigDecimal.ZERO) > 0
+                ? revenueGross.divide(BigDecimal.ONE.add(taxRate.divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP)), 2, RoundingMode.HALF_UP)
+                : revenueGross;
         // v8.5（B2）：销售退货冲减当月收入与成本（退货金额=完成态退货单 qty×unitPrice；成本按退货批次加回台账的口径同步冲回）
         BigDecimal salesReturn = sumOrZero("SELECT SUM(qty * unit_price) FROM return_order WHERE type = 'SALES_RETURN' AND status = 'DONE' AND " + monthOf("create_time"), month, month);
         // v8.5（B2）退货成本：按退货单 qty×对应出库批次单位成本（sales_outbound 按 ref 单号关联）
@@ -70,7 +76,9 @@ public class FinanceReportService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("month", month);
         result.put("salesReturn", salesReturn);   // v8.5（B2）：退货金额（收入已净额化，此值供展示）
-        result.put("note", "本表为业务口径快算（出库/退货当月即计，含未结账数据）；与利润表（凭证口径）存在记账时间差，对外报数以结账后利润表为准");   // v8.5（B1）
+        result.put("revenueGross", revenueGross);   // v8.6（N2）：含税收入（毛利计算用不含税口径）
+        result.put("taxRate", taxRate);
+        result.put("note", "业务口径快算（出库/退货当月即计，含未结账数据）；收入与成本均为不含税口径；与利润表（凭证口径）存在记账时间差，对外报数以结账后利润表为准。注：下方资金占用参考中采购应付/委外加工费为含税口径");   // v8.6（N2）更新
         result.put("revenue", revenue);
         result.put("cogs", cogs);
         result.put("grossProfit", grossProfit);
@@ -277,6 +285,15 @@ public class FinanceReportService {
     }
 
     /** 两个 ? 均为 yyyy-MM：列在当月 [月初, 次月初) 毫秒范围内 */
+    /** v8.6（N2）：字典 tax_rate 税率百分数（默认 13，与入库价税分离同源） */
+    private BigDecimal taxRatePercent() {
+        try {
+            var rows = jdbc.queryForList("SELECT value FROM dict_item WHERE type = 'tax_rate' AND enabled = 1 ORDER BY sort_order ASC LIMIT 1");
+            if (!rows.isEmpty()) return new BigDecimal(String.valueOf(rows.get(0).get("value")));
+        } catch (Exception ignored) { }
+        return new BigDecimal("13");
+    }
+
     private static String monthOf(String col) {
         return col + " >= 1000 * (CAST(strftime('%s', ? || '-01') AS INTEGER) - 28800)" +
                 " AND " + col + " < 1000 * (CAST(strftime('%s', ? || '-01', '+1 month') AS INTEGER) - 28800)";

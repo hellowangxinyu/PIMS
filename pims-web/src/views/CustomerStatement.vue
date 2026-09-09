@@ -75,7 +75,7 @@ const perms = ref([])
 function firstDayOfQuarter() {
   const d = new Date()
   const from = new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1)
-  return [from.toISOString().slice(0, 10), d.toISOString().slice(0, 10)]
+  const f2 = `${from.getFullYear()}-${String(from.getMonth()+1).padStart(2,'0')}-${String(from.getDate()).padStart(2,'0')}`; const d2 = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; return [f2, d2]
 }
 
 function hasPerm(c) { return perms.value.includes(c) }

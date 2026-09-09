@@ -755,6 +755,25 @@ public class PurchaseService {
         // v5.70.1 防呆：到货核心字段必填
         if (pa.materialCode == null || pa.materialCode.isBlank())
             throw new IllegalArgumentException("到货物料编码不能为空");
+        // v8.6（P0-8 另一半）：幽灵到货单拦截——refOrderNo 必须指向存在且已审核的采购单，物料必须在明细内。
+        // 原实现不校验来源：挂不存在单号的到货可一路审过，货到无应付无质检，账面零痕迹
+        if (pa.refOrderNo == null || pa.refOrderNo.isBlank()) {
+            throw new IllegalArgumentException("到货必须关联采购订单（refOrderNo 不能为空）");
+        }
+        {
+            boolean orderOk = false, materialInOrder = false;
+            if ("RAW".equals(pa.type)) {
+                var rp = rawRepo.findFirstByOrderNoAndMaterialCode(pa.refOrderNo, pa.materialCode);
+                orderOk = rawRepo.existsByOrderNo(pa.refOrderNo);
+                materialInOrder = rp.isPresent();
+            } else {
+                orderOk = finishedRepo.existsByOrderNo(pa.refOrderNo);
+                materialInOrder = finishedRepo.findAllByOrderNo(pa.refOrderNo).stream()
+                        .anyMatch(f -> pa.materialCode.equals(f.materialCode));
+            }
+            if (!orderOk) throw new IllegalArgumentException("采购订单 " + pa.refOrderNo + " 不存在，不能到货");
+            if (!materialInOrder) throw new IllegalArgumentException("物料 " + pa.materialCode + " 不在采购订单 " + pa.refOrderNo + " 明细中，不能到货");
+        }
         if (pa.qty == null || pa.qty.doubleValue() <= 0)
             throw new IllegalArgumentException("到货数量必须大于 0");
         // v5.70 P1 防呆：到货数量为 0 或负数拦截

@@ -103,7 +103,7 @@ public class ExcelImportService {
         }
     }
 
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public int importSuppliers(MultipartFile file, String operator) {
         List<Map<String, Object>> raw = readAll(file, SUPPLIER_HEADERS, "供应商");
         List<Map<String, Object>> errors = new ArrayList<>();
@@ -192,7 +192,7 @@ public class ExcelImportService {
         }
     }
 
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public int importMaterials(MultipartFile file, String operator) {
         List<Map<String, Object>> raw = readAll(file, MATERIAL_HEADERS, "物料");
         // 批量预取（编码规范：主数据一次建 Map）
@@ -337,7 +337,7 @@ public class ExcelImportService {
         int firstRowNo;
     }
 
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public int importRecipes(MultipartFile file, String operator) {
         List<Map<String, Object>> raw = readAll(file, RECIPE_HEADERS, "配方");
         // 批量预取：物料档案 + 现有配方名 + 工艺路线

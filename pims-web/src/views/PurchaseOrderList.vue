@@ -60,7 +60,17 @@
         <el-table-column prop="qty" label="数量" width="100" align="right" />
         <el-table-column prop="unit" label="单位" width="70" align="center" />
         <el-table-column prop="receivedQty" label="已到货" width="90" align="right" />
+        <el-table-column label="单价(含税)" width="150" align="right">
+          <template #default="{ row }">
+            <el-input-number v-if="viewRow?.status === 'DRAFT'" v-model="row.unitPrice" :min="0.01" :precision="2" size="small" style="width:120px" />
+            <span v-else>{{ row.unitPrice ?? '—' }}</span>
+          </template>
+        </el-table-column>
       </p-table>
+      <template #footer>
+        <el-button @click="itemsVisible = false">关闭</el-button>
+        <el-button v-if="viewRow?.status === 'DRAFT'" type="primary" :loading="savingPrices" @click="savePrices">保存单价</el-button>
+      </template>
     </el-dialog>
 
     <!-- v6.5 B3 编辑头（MRP 单补供应商等） -->
@@ -107,6 +117,10 @@
         </el-table-column>
         <el-table-column label="数量" width="150">
           <template #default="{ row }"><el-input-number v-model="row.qty" :min="0.001" :precision="3" size="small" style="width:120px" /></template>
+        </el-table-column>
+        <!-- v8.6（N1）：转采购要求单价>0（P0-9），无价列时 MRP 闭环死路 -->
+        <el-table-column label="单价(含税)" width="150">
+          <template #default="{ row }"><el-input-number v-model="row.unitPrice" :min="0.01" :precision="2" size="small" style="width:120px" placeholder="必填" /></template>
         </el-table-column>
         <el-table-column label="操作" width="70" align="center">
           <template #default="{ $index }"><el-button size="small" link type="danger" @click="form.items.splice($index, 1)">删</el-button></template>
@@ -177,6 +191,20 @@ async function fetch() {
   try { list.value = await api.get('/purchase-order') } catch {}
 }
 
+async // v8.6（N1）：DRAFT 态保存明细单价（转采购前置）
+const savingPrices = ref(false)
+async function savePrices() {
+  if (!viewRow.value) return
+  const payload = (viewItems.value || []).map(it => ({ materialCode: it.materialCode, unitPrice: it.unitPrice }))
+  savingPrices.value = true
+  try {
+    await api.put(`/purchase-order/${viewRow.value.id}/items`, payload)
+    ElMessage.success('明细单价已保存')
+    itemsVisible.value = false
+    fetch()
+  } catch (e) { /* 拦截器已提示 */ } finally { savingPrices.value = false }
+}
+
 async function showItems(row) {
   viewRow.value = row
   try { viewItems.value = await api.get(`/purchase-order/${row.id}/items`) } catch { viewItems.value = [] }
@@ -187,7 +215,7 @@ function openCreate() {
   form.value = { supplierId: null, orderDate: todayLocal(), expectedDeliveryDate: null, remark: '', items: [{ materialCode: '', qty: 1 }] }
   createVisible.value = true
 }
-function addItem() { form.value.items.push({ materialCode: '', qty: 1 }) }
+function addItem() { form.value.items.push({ materialCode: '', qty: 1, unitPrice: null }) }
 
 async function save() {
   const items = form.value.items.filter(it => it.materialCode && it.qty > 0)

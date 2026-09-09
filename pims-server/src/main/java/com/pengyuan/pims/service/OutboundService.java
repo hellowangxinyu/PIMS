@@ -705,7 +705,7 @@ public class OutboundService {
                     if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
                     BigDecimal take = ba.qty.compareTo(remaining) <= 0 ? ba.qty : remaining;
                     // 全仓 FIFO 扣减该批次，并拿到每个库位的扣减明细（按库位拆行记录，精确到出库自哪个库位）
-                    String fifoDocNo = String.format("PROD-OUT-%d-F%04d", LocalDateTime.now().getYear(), fifoSeq + 1);
+                    String fifoDocNo = String.format("PROD-OUT-%d-F%04d", LocalDateTime.now().getYear(), ++fifoSeq);
                     List<InventoryService.LocationDeduct> locDetails =
                             inventoryService.outboundFifoWithDetail("PRODUCTION_OUT", fifoDocNo, item.materialCode, ba.batchNo, take, operator, false, ownWarehouseIds);
                     // 每个库位生成一行出库明细记录
@@ -1424,7 +1424,7 @@ public class OutboundService {
                 for (BatchAvail ba : sorted) {
                     if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
                     BigDecimal take = ba.qty.compareTo(remaining) <= 0 ? ba.qty : remaining;
-                    String fifoDocNo = String.format("OUT-IO-%d-F%04d", LocalDateTime.now().getYear(), fifoSeq + 1);
+                    String fifoDocNo = String.format("OUT-IO-%d-F%04d", LocalDateTime.now().getYear(), ++fifoSeq);
                     List<InventoryService.LocationDeduct> locDetails = inventoryService.outboundFifoWithDetail(
                             "OUTSOURCE_OUT", fifoDocNo, item.materialCode, ba.batchNo, take, operator, false, factoryWarehouseIds);
                     for (InventoryService.LocationDeduct ld : locDetails) {

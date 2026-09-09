@@ -46,7 +46,7 @@ public class AdvancePaymentService {
 
     public List<AdvancePayment> list() { return repo.findAllByOrderByCreateTimeDescIdDesc(); }
 
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public AdvancePayment create(AdvancePayment a) {
         if (a.direction == null || a.direction.isBlank()) a.direction = "RECEIVE";
         if (!"RECEIVE".equals(a.direction) && !"PAY".equals(a.direction)) {
@@ -64,7 +64,7 @@ public class AdvancePaymentService {
         });
     }
 
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public void delete(Long id) {
         AdvancePayment a = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("预存单不存在"));
         if (a.usedAmount != null && a.usedAmount.compareTo(BigDecimal.ZERO) > 0) {

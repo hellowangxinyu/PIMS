@@ -163,7 +163,7 @@ const perms = ref([])
 function hasPerm(c) { return perms.value.includes(c) }
 
 function today() { return todayLocal() }
-function monthStart() { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10) }
+function monthStart() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01` }
 // v6.4 金额格式统一（utils/fmt 千分位 2 位）
 const bindable = computed(() => (journal.value.rows || []).filter(r => !r.matched))
 

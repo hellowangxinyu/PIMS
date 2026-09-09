@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RawMaterialPurchaseRepository extends JpaRepository<RawMaterialPurchase, Long>, JpaSpecificationExecutor<RawMaterialPurchase> {
+
+    /** v8.6（P0-8）：幽灵到货拦截——订单存在性 */
+    boolean existsByOrderNo(String orderNo);
     List<RawMaterialPurchase> findByOrderNoStartingWithOrderByCreateTimeDesc(String prefix);
 
     /** v5.11：工作台最新采购订单（按创建时间倒序） */

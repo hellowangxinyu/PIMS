@@ -61,7 +61,7 @@ public class EmployeeService {
         return repo.save(e);
     }
 
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public void delete(Long id) {
         if (salaryItemRepo.existsByEmployeeId(id)) {
             throw new IllegalArgumentException("该员工已出现在工资单中，不能删除（请改用离职/停用）");

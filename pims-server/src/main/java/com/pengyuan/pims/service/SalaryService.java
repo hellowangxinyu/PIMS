@@ -91,7 +91,7 @@ public class SalaryService {
     }
 
     /** 编辑明细（仅 DRAFT）：全量替换行，重算 gross/net/合计 */
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public SalarySheet update(Long id, List<SalaryItem> items) {
         // v5.70 P2 防呆：某个员工应发环比波动超 100% 时日志预警
         try {

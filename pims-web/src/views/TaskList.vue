@@ -247,7 +247,7 @@ const myOverdue = computed(() => list.value.filter(r => isOverdue(r)
   && (currentUser.value === r.owner || (r.collaborators || '').split(',').includes(currentUser.value))).length)
 const inProgress = computed(() => list.value.filter(r => r.status === 'IN_PROGRESS').length)
 const thisWeekDone = computed(() => {
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
+  const weekAgo = (() => { const d = new Date(Date.now() - 7 * 86400000); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, "0")}-${String(d.getDate()).padStart(2,"0")}T00:00:00` })()   // v8.6 本地时区
   return list.value.filter(r => r.status === 'COMPLETED' && (r.completedAt || '') >= weekAgo).length
 })
 

@@ -113,6 +113,7 @@
 </template>
 
 <script setup>
+import { monthsAgoLocal } from '../utils/date'
 import { todayLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
@@ -127,7 +128,7 @@ const visible = ref(false)
 const loading = ref(false)
 const exporting = ref(false)
 const editing = ref(null)
-const depPeriod = ref(new Date(Date.now() - 2678400000).toISOString().slice(0, 7))
+const depPeriod = ref(monthsAgoLocal(1))
 const historyVisible = ref(false)
 const historyAsset = ref(null)
 const history = ref([])

@@ -444,7 +444,7 @@ public class VoucherService {
     }
 
     /** 结账：该期无草稿、损益已结转，锁定期间 */
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public void closePeriod(String period, String operator) {
         checkPeriod(period);
         if (periodRepo.findByPeriod(period).filter(p -> Boolean.TRUE.equals(p.closed)).isPresent()) {

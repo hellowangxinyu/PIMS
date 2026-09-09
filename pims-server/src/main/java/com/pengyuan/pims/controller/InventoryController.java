@@ -125,6 +125,7 @@ public class InventoryController {
         if ("batch".equals(view)) {
             var rows = ledgerRepo.sumByBatch(kw, wh, zn, pr);
             List<Map<String, Object>> list = new ArrayList<>();
+            final boolean canPrice = canSeePrice();   // v8.6：提循环外（原每行查一次权限≈2-3 条 SQL × 200 行）
             for (Object[] r : rows.getContent()) {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("materialCode", r[0]);
@@ -133,8 +134,8 @@ public class InventoryController {
                 m.put("unit", r[3]);
                 m.put("qty", r[4]);
                 m.put("availableQty", r[5]);
-                m.put("unitPrice", canSeePrice() ? r[6] : null);
-                m.put("amount", canSeePrice() ? r[7] : null);
+                m.put("unitPrice", canPrice ? r[6] : null);
+                m.put("amount", canPrice ? r[7] : null);
                 m.put("inboundDate", msToDate(r[8]));
                 m.put("expiryDate", msToDate(r[9]));
                 // v5.31：批次所在库位（跨库位也精确到库位）
@@ -157,6 +158,7 @@ public class InventoryController {
         // view=code
         var rows = ledgerRepo.sumByCode(kw, wh, zn, pr);
         List<Map<String, Object>> list = new ArrayList<>();
+        final boolean canPrice = canSeePrice();   // v8.6：提循环外
         for (Object[] r : rows.getContent()) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("materialCode", r[0]);
@@ -165,8 +167,8 @@ public class InventoryController {
             m.put("batchCount", r[3]);
             m.put("qty", r[4]);
             m.put("availableQty", r[5]);
-            m.put("unitPrice", canSeePrice() ? r[6] : null);
-            m.put("amount", canSeePrice() ? r[7] : null);
+            m.put("unitPrice", canPrice ? r[6] : null);
+            m.put("amount", canPrice ? r[7] : null);
             m.put("inboundDate", msToDate(r[8]));
             m.put("stockDays", stockDays().get(r[0]));   // v7.4 周转天数（null=无出库/无库存）
             m.put("category", r.length > 9 ? nz(r[9]) : null);         // v7.5 大类
@@ -338,6 +340,7 @@ public class InventoryController {
         if ("batch".equals(view)) {
             var rows = ledgerRepo.sumByBatch(kw, wh, zn, pr);
             List<Map<String, Object>> list = new ArrayList<>();
+            final boolean canPrice = canSeePrice();   // v8.6：提循环外（原每行查一次权限≈2-3 条 SQL × 200 行）
             for (Object[] r : rows.getContent()) {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("materialCode", r[0]);
@@ -346,8 +349,8 @@ public class InventoryController {
                 m.put("unit", r[3]);
                 m.put("qty", r[4]);
                 m.put("availableQty", r[5]);
-                m.put("unitPrice", canSeePrice() ? r[6] : null);
-                m.put("amount", canSeePrice() ? r[7] : null);
+                m.put("unitPrice", canPrice ? r[6] : null);
+                m.put("amount", canPrice ? r[7] : null);
                 m.put("inboundDate", msToDate(r[8]));
                 m.put("expiryDate", msToDate(r[9]));
                 m.put("category", r.length > 16 ? nz(r[16]) : null);

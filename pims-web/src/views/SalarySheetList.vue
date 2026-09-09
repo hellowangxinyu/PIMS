@@ -128,6 +128,7 @@
 </template>
 
 <script setup>
+import { monthsAgoLocal } from '../utils/date'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -141,7 +142,7 @@ const exporting = ref(false)
 const createVisible = ref(false)
 const editVisible = ref(false)
 const editing = ref(null)
-const newPeriod = ref(new Date(Date.now() - 2678400000).toISOString().slice(0, 7))   // 默认上个月
+const newPeriod = ref(monthsAgoLocal(1))   // 默认上个月
 const items = ref([])
 
 function hasPerm(c) { return perms.value.includes(c) }
@@ -159,7 +160,7 @@ async function fetch() {
 }
 
 function openCreate() {
-  newPeriod.value = new Date(Date.now() - 2678400000).toISOString().slice(0, 7)
+  newPeriod.value = monthsAgoLocal(1)
   createVisible.value = true
 }
 

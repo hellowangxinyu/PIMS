@@ -86,7 +86,7 @@ public class WeeklyMeetingService {
 
     public List<RdProgress> listRd() { return rdRepo.findAllByOrderByRaiseDateDescIdDesc(); }
 
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public RdProgress createRd(RdProgress r, String operator) {
         if (r.owner == null || r.owner.isBlank()) throw new IllegalArgumentException("提出人不能为空");
         if (r.content == null || r.content.isBlank()) throw new IllegalArgumentException("内容不能为空");

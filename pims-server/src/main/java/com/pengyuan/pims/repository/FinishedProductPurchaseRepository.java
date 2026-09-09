@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface FinishedProductPurchaseRepository extends JpaRepository<FinishedProductPurchase, Long>, JpaSpecificationExecutor<FinishedProductPurchase> {
+
+    /** v8.6（P0-8）：幽灵到货拦截——订单存在性 */
+    boolean existsByOrderNo(String orderNo);
     java.util.Optional<FinishedProductPurchase> findByOrderNo(String orderNo);
 
     /** v5.95 多物料批量单：按 单号+物料 精确取行（同单号多行时 findByOrderNo 会 non-unique） */

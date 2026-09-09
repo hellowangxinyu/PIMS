@@ -90,6 +90,13 @@ public class PurchaseOrderController {
                 dlv, body.get("remark") != null ? String.valueOf(body.get("remark")) : null));
     }
 
+    /** v8.6（N1）：批量改明细单价（DRAFT 态；MRP 请购补价入口） */
+    @PutMapping("/{id}/items")
+    @SaCheckPermission(value = "purchase:write")
+    public Result<?> updateItems(@PathVariable Long id, @RequestBody java.util.List<java.util.Map<String, Object>> items) {
+        return Result.ok(service.updateItemPrices(id, items));
+    }
+
     /** v6.5 B3：审核 DRAFT→APPROVED */
     @PostMapping("/{id}/audit")
     @SaCheckPermission(value = "purchase:write")

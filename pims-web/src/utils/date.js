@@ -22,3 +22,22 @@ export function daysAgoLocal(n) {
   d.setDate(d.getDate() - n)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+
+/** 毫秒时间戳 → 本地日期 yyyy-MM-dd（替代 new Date(ms).toISOString()——UTC 坑） */
+export function msToDateLocal(ms) {
+  const d = new Date(Number(ms))
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** Date 对象 → 本地日期 yyyy-MM-dd（替代 d.toISOString().slice(0,10)） */
+export function dateToLocal(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** N 个月前的本月 yyyy-MM（折旧/工资默认期间用） */
+export function monthsAgoLocal(n) {
+  const d = new Date()
+  d.setMonth(d.getMonth() - n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}

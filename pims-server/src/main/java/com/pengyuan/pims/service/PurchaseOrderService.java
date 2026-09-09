@@ -109,6 +109,31 @@ public class PurchaseOrderService {
         });
     }
 
+    // v8.6（N1）：DRAFT 态批量改明细单价——P0-9 要求转采购前单价>0，MRP 生成的请购无价，
+    // 原来没有任何界面/端点能补价 → MRP→请购→转采购闭环死路
+    public java.util.List<com.pengyuan.pims.entity.PurchaseOrderItem> updateItemPrices(Long id, java.util.List<java.util.Map<String, Object>> itemsInput) {
+        return writeQueue.executeTx(() -> {
+            var order = orderRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("请购单不存在"));
+            if (!"DRAFT".equals(order.status) && !"APPROVED".equals(order.status))
+                throw new IllegalArgumentException("只有草稿/已审核状态可改明细单价（已转采购或关闭的不可改）");
+            var items = itemRepo.findByOrderId(id);
+            java.util.Map<String, java.math.BigDecimal> priceByMat = new java.util.HashMap<>();
+            for (var m : itemsInput) {
+                String code = String.valueOf(m.get("materialCode"));
+                Object p = m.get("unitPrice");
+                if (p == null || new java.math.BigDecimal(String.valueOf(p)).compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                    throw new IllegalArgumentException("明细 " + code + " 单价必须大于 0");
+                }
+                priceByMat.put(code, new java.math.BigDecimal(String.valueOf(p)));
+            }
+            for (var it : items) {
+                java.math.BigDecimal np = priceByMat.get(it.materialCode);
+                if (np != null) { it.unitPrice = np; itemRepo.save(it); }
+            }
+            return itemRepo.findByOrderId(id);
+        });
+    }
+
     /** v6.5 B3：审核 DRAFT→APPROVED（须已定供应商且有明细） */
     public PurchaseOrder audit(Long id) {
         PurchaseOrder order = orderRepo.findById(id)

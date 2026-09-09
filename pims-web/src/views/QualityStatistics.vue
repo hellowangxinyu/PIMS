@@ -97,7 +97,7 @@ const loading = ref(false)
 function today() { return todayLocal() }
 function halfYearAgo() {
   const d = new Date(); d.setMonth(d.getMonth() - 6)
-  return d.toISOString().slice(0, 10)
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 function catLabel(c) {
   return { A: '原料', B: '半成品', C: '成品', P: '包装', F: '辅料', R: '五金', S: '其他' }[c] || c

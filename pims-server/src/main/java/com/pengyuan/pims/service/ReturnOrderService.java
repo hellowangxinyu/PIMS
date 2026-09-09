@@ -83,7 +83,7 @@ public class ReturnOrderService {
      * 审核通过后需退货出库（按锁定批号扣库存并冲减应付）
      * @return 退货单（DRAFT）
      */
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public ReturnOrder createManual(Long arrivalId, BigDecimal qty, BigDecimal unitPrice,
                                     String remark, String operator) {
         PurchaseArrival arrival = arrivalRepo.findById(arrivalId)

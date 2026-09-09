@@ -75,7 +75,7 @@ public class AccountSubjectService {
      * 校验：损益类科目期初必须为 0（上年末损益已结转）；借方期初合计 = 贷方期初合计。
      * 传 List<{code, openingBalance, openingDirection}>，不在列表中的科目期初清零。
      */
-    @Transactional
+    // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public Map<String, Object> saveOpeningBalance(List<Map<String, Object>> itemsInput) {
         // v5.70 期初锁定：由凭证记账间接保障（有已记账凭证时修改期初会导致余额表不平，科目余额表可发现）
         // v6.1 收紧：存在已记账凭证直接拒绝——期初一旦启用（有 POSTED 凭证）即锁定，防止改期初导致试算平衡被破坏
