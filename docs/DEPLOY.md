@@ -67,7 +67,8 @@ After=network.target
 [Service]
 WorkingDirectory=/opt/pims
 ExecStart=/usr/bin/java -Xms512m -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 \
-    -Dfile.encoding=UTF-8 -jar /opt/pims/target/pims-server-1.0.0.jar
+    -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Shanghai -jar /opt/pims/target/pims-server-1.0.0.jar
+# ↑ 时区必须显式声明（v7.0 教训：OS 时区一错，夜班跨天/月结/触发器全部漂移）；小内存机器参考 -Xms128m -Xmx768m + MemoryMax
 Restart=always
 RestartSec=5
 User=pims
