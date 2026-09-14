@@ -325,7 +325,7 @@
     );
 
     create table inventory_ledger (
-        amount numeric(14,2),
+        amount numeric(16,2),
         available_qty numeric(14,3),
         expiry_date date,
         in_transit_qty numeric(14,3),
@@ -334,7 +334,7 @@
         produce_date date,
         qc_date date,
         qty numeric(14,3),
-        unit_price numeric(14,2),
+        unit_price numeric(16,6),
         create_time timestamp,
         id integer,
         last_update_time timestamp,

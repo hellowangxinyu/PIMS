@@ -51,9 +51,9 @@ public class InventoryLedger {
     @com.fasterxml.jackson.annotation.JsonIgnore
     @Column(precision = 14, scale = 3) public BigDecimal inTransitQty = BigDecimal.ZERO;
 
-    @Column(precision = 14, scale = 2) public BigDecimal unitPrice;
+    @Column(precision = 16, scale = 6) public BigDecimal unitPrice;   // v9.0 P1-5：价税分离成本多位小数，2位承载不了
 
-    @Column(precision = 14, scale = 2) public BigDecimal amount = BigDecimal.ZERO;
+    @Column(precision = 16, scale = 2) public BigDecimal amount = BigDecimal.ZERO;
 
     /** 生产日期 */
     public LocalDate produceDate;

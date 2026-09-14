@@ -29,13 +29,14 @@ public class FinanceService {
     private final CustomerRepository customerRepo;
     private final PurchaseArrivalRepository arrivalRepo;
     // v5.24：全局写锁（财务单号生成+保存共用，防并发撞号）
+    private final PeriodGuard periodGuard;
     private final WriteQueue writeQueue;
 
     public FinanceService(AccountsReceivableRepository arRepo, AccountsPayableRepository apRepo,
                           PaymentReceiptRepository receiptRepo, PaymentDisbursementRepository disbursementRepo,
                           SupplierRepository supplierRepo, CustomerRepository customerRepo,
                           PurchaseArrivalRepository arrivalRepo,
-                          WriteQueue writeQueue) {
+                          WriteQueue writeQueue, PeriodGuard periodGuard) {
         this.arRepo = arRepo;
         this.apRepo = apRepo;
         this.receiptRepo = receiptRepo;
@@ -44,6 +45,7 @@ public class FinanceService {
         this.customerRepo = customerRepo;
         this.arrivalRepo = arrivalRepo;
         this.writeQueue = writeQueue;
+        this.periodGuard = periodGuard;
     }
 
     public List<AccountsReceivable> listAR() {
@@ -287,6 +289,8 @@ public class FinanceService {
      */
     // v6.1（高#12）：锁内包事务（executeTx），提交后才放锁——防取号窗口撞号，不再用外层 @Transactional
     public PaymentReceipt createReceipt(PaymentReceipt r) {
+        // v9.0（P1-4 审计）：收款单业务日期落在已结账期间则拒绝
+        periodGuard.checkOpen(r.receiptDate);
         // v5.24：单号生成+冲减+保存整体排队（WriteQueue 全局锁），防并发撞号
         return writeQueue.executeTx(() -> {
             if (r.amount == null || r.amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -365,6 +369,8 @@ public class FinanceService {
      */
     // v6.1（高#12）：锁内包事务（executeTx），提交后才放锁——防取号窗口撞号，不再用外层 @Transactional
     public PaymentDisbursement createDisbursement(PaymentDisbursement d) {
+        // v9.0（P1-4 审计）：付款单业务日期落在已结账期间则拒绝
+        periodGuard.checkOpen(d.payDate);
         // v5.24：单号生成+冲减+保存整体排队（WriteQueue 全局锁），防并发撞号
         return writeQueue.executeTx(() -> {
             if (d.amount == null || d.amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -467,7 +473,7 @@ public class FinanceService {
     }
 
     // v8.1（P0-5）：锁内包事务——核销读-校验-写整体串行，防并发超额
-    public void receivePayment(Long arId, BigDecimal amount) {        writeQueue.executeTx(() -> {
+    public void receivePayment(Long arId, BigDecimal amount) {        periodGuard.checkCurrentOpen();        writeQueue.executeTx(() -> {
 
         AccountsReceivable ar = arRepo.findById(arId).orElseThrow(() -> new IllegalArgumentException("应收单不存在"));
         // v6.1 防呆：收款金额必须为正（负数曾是"无流水冲减已收"后门），且不得超过应收余额
@@ -491,7 +497,7 @@ public class FinanceService {
     }
 
     // v8.1（P0-5）：锁内包事务——核销读-校验-写整体串行，防并发超额
-    public void makePayment(Long apId, BigDecimal amount) {        writeQueue.executeTx(() -> {
+    public void makePayment(Long apId, BigDecimal amount) {        periodGuard.checkCurrentOpen();        writeQueue.executeTx(() -> {
 
         AccountsPayable ap = apRepo.findById(apId).orElseThrow(() -> new IllegalArgumentException("应付单不存在"));
         // v6.1 防呆：付款金额必须为正，且不得超过应付余额
@@ -525,7 +531,7 @@ public class FinanceService {
      * @return 实际冲减金额（可能小于入参：当该订单 AR 已全部结清时返回 0）
      */
     // v8.1（P0-5）：锁内包事务——核销读-校验-写整体串行，防并发超额
-    public BigDecimal applySalesReturn(String salesOrderNo, BigDecimal amount, String refDocNo) {        return writeQueue.executeTx(() -> {
+    public BigDecimal applySalesReturn(String salesOrderNo, BigDecimal amount, String refDocNo) {        periodGuard.checkCurrentOpen();        return writeQueue.executeTx(() -> {
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("退货冲减金额必须大于 0");
@@ -565,7 +571,7 @@ public class FinanceService {
      * @return 实际冲减金额
      */
     // v8.1（P0-5）：锁内包事务——核销读-校验-写整体串行，防并发超额
-    public BigDecimal applyPurchaseReturn(String purchaseOrderNo, BigDecimal amount, String refDocNo, Long arrivalId) {        return writeQueue.executeTx(() -> {
+    public BigDecimal applyPurchaseReturn(String purchaseOrderNo, BigDecimal amount, String refDocNo, Long arrivalId) {        periodGuard.checkCurrentOpen();        return writeQueue.executeTx(() -> {
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("退货冲减金额必须大于 0");
@@ -590,7 +596,7 @@ public class FinanceService {
      * @return 实际冲减金额
      */
     // v8.1（P0-5）：锁内包事务——核销读-校验-写整体串行，防并发超额
-    public BigDecimal applyPurchaseReturnBySupplier(Long supplierId, BigDecimal amount, String refDocNo) {        return writeQueue.executeTx(() -> {
+    public BigDecimal applyPurchaseReturnBySupplier(Long supplierId, BigDecimal amount, String refDocNo) {        periodGuard.checkCurrentOpen();        return writeQueue.executeTx(() -> {
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("退货冲减金额必须大于 0");

@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class PeriodCloseTest extends Support {
 
     @Autowired VoucherService voucherService;
+    @Autowired com.pengyuan.pims.service.InventoryService inventoryService;
+    @Autowired com.pengyuan.pims.service.FinanceService financeService;
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
@@ -25,6 +27,7 @@ class PeriodCloseTest extends Support {
         jdbc.update("DELETE FROM voucher_entry");
         jdbc.update("DELETE FROM voucher");
         jdbc.update("DELETE FROM account_period WHERE period = '2026-08'");
+        jdbc.update("DELETE FROM account_period WHERE period = ?", java.time.LocalDate.now().toString().substring(0, 7));
     }
 
     private Voucher makePostedVoucher(LocalDate d, String dr, String cr, String drSub, String crSub) {
@@ -87,5 +90,36 @@ class PeriodCloseTest extends Support {
             var es = new ArrayList<VoucherEntry>(); es.add(e1); es.add(e2); v.entries = es;
             voucherService.create(v);
         }, "反结账后期间应可写");
+    }
+
+    /** v9.0（P1-4 审计）：结账期间业务写路径全拦截——出入库（无业务日期按记账时刻）、
+     *  收款单（按单据业务日期）。口径：已结账期间绝对禁补录，调整先反结账 */
+    @Test
+    void closedPeriodBlocksBusinessWrites() {
+        // 基础仓/分库/库位（入库须指定库位，铁律）
+        Integer wc = jdbc.queryForObject("SELECT COUNT(*) FROM warehouse", Integer.class);
+        if (wc == null || wc == 0) {
+            jdbc.update("INSERT INTO warehouse (id, code, name, enabled) VALUES (1, 'TWH', '测试仓', 1)");
+            jdbc.update("INSERT INTO warehouse_zone (id, warehouse_id, code, name, enabled) VALUES (1, 1, 'TZN', '测试分库', 1)");
+            jdbc.update("INSERT INTO warehouse_location (id, zone_id, code, name, enabled) VALUES (1, 1, 'T-01', '测试库位', 1)");
+        }
+        jdbc.update("DELETE FROM inventory_ledger WHERE material_code = 'T-LOCK'");
+        String cur = java.time.LocalDate.now().toString().substring(0, 7);
+        jdbc.update("INSERT INTO account_period (period, closed) VALUES (?, 1)", cur);
+        try {
+            IllegalArgumentException e1 = assertThrows(IllegalArgumentException.class, () ->
+                    inventoryService.purchaseInbound("OTHER_IN", "T-LOCK-1", "T-LOCK", "锁期测试料",
+                            "B-LOCK-1", "1", "1", new BigDecimal("1"), new BigDecimal("1"), "tester"));
+            assertTrue(e1.getMessage().contains("已结账"), e1.getMessage());
+
+            com.pengyuan.pims.entity.PaymentReceipt r = new com.pengyuan.pims.entity.PaymentReceipt();
+            r.receiptDate = java.time.LocalDate.now();
+            r.amount = new BigDecimal("1");
+            r.customerId = 1L;
+            IllegalArgumentException e2 = assertThrows(IllegalArgumentException.class, () -> financeService.createReceipt(r));
+            assertTrue(e2.getMessage().contains("已结账"), e2.getMessage());
+        } finally {
+            jdbc.update("DELETE FROM account_period WHERE period = ?", cur);
+        }
     }
 }

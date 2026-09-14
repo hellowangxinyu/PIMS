@@ -37,6 +37,7 @@ public class SalesReturnService {
     // v6.1：退货按成本价入账，反查库存台账批次成本
     private final InventoryLedgerRepository ledgerRepo;
     // v5.24：全局写锁（单号生成+保存共用，防并发撞号）
+    private final PeriodGuard periodGuard;
     private final WriteQueue writeQueue;
 
     public SalesReturnService(ReturnOrderRepository returnOrderRepo,
@@ -47,7 +48,7 @@ public class SalesReturnService {
                               InventoryService inventoryService,
                               FinanceService financeService,
                               InventoryLedgerRepository ledgerRepo,
-                              WriteQueue writeQueue) {
+                              WriteQueue writeQueue, PeriodGuard periodGuard) {
         this.returnOrderRepo = returnOrderRepo;
         this.otherInRepo = otherInRepo;
         this.salesOrderRepo = salesOrderRepo;
@@ -57,6 +58,7 @@ public class SalesReturnService {
         this.financeService = financeService;
         this.ledgerRepo = ledgerRepo;
         this.writeQueue = writeQueue;
+        this.periodGuard = periodGuard;
     }
 
     /** 查询销售退货单（可选状态过滤） */
@@ -90,6 +92,8 @@ public class SalesReturnService {
                               String refSalesOutboundNo, String batchNo, String materialCode, String materialName,
                               String unit, BigDecimal qty, BigDecimal unitPrice,
                               String remark, String operator) {
+        // v9.0（P1-4 审计）：退货创建按记账时刻锁期（台账冲减在 InventoryService 收口处另有校验）
+        periodGuard.checkCurrentOpen();
         if (customerName == null || customerName.isBlank()) {
             throw new IllegalArgumentException("请选择退货客户");
         }

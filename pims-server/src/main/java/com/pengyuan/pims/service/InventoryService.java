@@ -35,6 +35,7 @@ public class InventoryService {
     private final ProductionOutboundRepository prodOutRepo;
     private final OtherOutboundRepository otherOutRepo;
     private final MaterialRepository materialRepo;
+    private final PeriodGuard periodGuard;
     private final WriteQueue writeQueue;
 
     /** 批号日期内序号（同一天内递增） */
@@ -49,7 +50,7 @@ public class InventoryService {
                             ProductionOutboundRepository prodOutRepo,
                             OtherOutboundRepository otherOutRepo,
                             MaterialRepository materialRepo,
-                            WriteQueue writeQueue) {
+                            WriteQueue writeQueue, PeriodGuard periodGuard) {
         this.ledgerRepo = ledgerRepo;
         this.movementRepo = movementRepo;
         this.locationRepo = locationRepo;
@@ -59,6 +60,7 @@ public class InventoryService {
         this.otherOutRepo = otherOutRepo;
         this.materialRepo = materialRepo;
         this.writeQueue = writeQueue;
+        this.periodGuard = periodGuard;
     }
 
     // ==================== 查询 ====================
@@ -170,6 +172,8 @@ public class InventoryService {
                                 String materialName, String batchNo, String warehouseId,
                                 String locationId, BigDecimal qty,
                                 BigDecimal unitPrice, String operator) {
+        // v9.0（P1-4 审计）：已结账期间禁止业务流水写入（此为独立实现不经 WithDate，需单独收口）
+        periodGuard.checkCurrentOpen();
         // 所有入库一律自动生成批号；v5.4：销售退货入库传入显式批号（与退货入库单一致），null 时自动生成
         // v5.7：显式批号必须全局唯一（手工录入批号不允许与既有批次重复）
         if (batchNo != null && !batchNo.isBlank() && ledgerRepo.existsByBatchNo(batchNo)) {
@@ -258,6 +262,8 @@ public class InventoryService {
         if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("入库数量必须大于 0");
         }
+        // v9.0（P1-4 审计）：已结账期间禁止业务流水写入（口径：绝对禁补录，调整先反结账）
+        periodGuard.checkCurrentOpen();
         // 入库批号：v5.7 支持显式批号（单据自动生成后传入，保证单据与台账一致）；null 时自动生成
         // v5.7：显式批号必须全局唯一；v5.35 油尾退回带原批号时可跳过
         if (!skipBatchUniqueCheck && batchNo != null && !batchNo.isBlank() && ledgerRepo.existsByBatchNo(batchNo)) {
@@ -384,6 +390,8 @@ public class InventoryService {
         if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("出库数量必须大于 0");
         }
+        // v9.0（P1-4 审计）：已结账期间禁止业务流水写入（口径：绝对禁补录，调整先反结账）
+        periodGuard.checkCurrentOpen();
         // v5.30/5.35（v5.38 改库位级）：隔离分库出库拦截——正常业务出库一律禁止，
         // 仅「其他出库」（报废/退货处理通道）放行不合格区；油尾区另放行生产领料（制漆配方消化）。
         // 拦截锚点为台账行库位（隔离货必有库位；无库位匹配路径不可能是隔离行，FIFO 路径由过滤兜底）
@@ -581,10 +589,22 @@ public class InventoryService {
         // v8.2（P0-3）：金额按"本次出库金额=量×单价"等额扣减——原按剩余量重估（amount=剩余量×单价），
         // unitPrice 只有 2 位小数，非整数倍批次每次出库都把舍入差静默吸收，Σ金额不守恒、移动加权均价漂移
         if (ledger.amount != null) {
-            BigDecimal amt = ledger.unitPrice != null
-                    ? qty.multiply(ledger.unitPrice).setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+            // v9.0（P1-5 审计）：金额守恒收口——批次清零时金额全额带走（尾差归末次出库，
+            // 杜绝"数量清零但剩余几分钱被钳零湮灭"导致的 Σ金额不守恒/移动加权均价漂移）
+            boolean lastOut = ledger.qty.compareTo(BigDecimal.ZERO) == 0;
+            BigDecimal amt = lastOut
+                    ? ledger.amount
+                    : (ledger.unitPrice != null
+                        ? qty.multiply(ledger.unitPrice).setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
             ledger.amount = ledger.amount.subtract(amt).setScale(2, java.math.RoundingMode.HALF_UP);
-            if (ledger.amount.compareTo(BigDecimal.ZERO) < 0) ledger.amount = BigDecimal.ZERO;   // 防御历史脏数据
+            // v9.0（P1-5）：钳零分级——负值超过 1 分=台账异常应暴露（原静默钳零吞掉尾差与脏数据），
+            // 1 分内（末次担差后的浮点残渣）吸收为 0
+            if (ledger.amount.compareTo(BigDecimal.ZERO) < 0) {
+                if (ledger.amount.compareTo(new BigDecimal("-0.01")) < 0)
+                    throw new IllegalStateException("库存台账金额异常：" + ledger.materialCode + " 批次 " + ledger.batchNo
+                            + " 出库后余额 " + ledger.amount + "，请先核对台账（出库已回滚）");
+                ledger.amount = BigDecimal.ZERO;
+            }
         }
         ledger.lastUpdateTime = LocalDateTime.now();
         ledgerRepo.save(ledger);
