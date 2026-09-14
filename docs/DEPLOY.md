@@ -84,6 +84,23 @@ sudo systemctl status pims        # 查看状态
 sudo journalctl -u pims -f        # 查看日志
 ```
 
+**部署后数据完整性抽查**（审计 2026-09-14 建议纳入清单，两条 SQL 各一秒）：
+
+```bash
+# ① 时间落库格式必须为 integer 毫秒——14 个统计触发器按此取值，
+#    若返回 text/其他（说明有代码路径绕过 LocalDateTime 规范），触发器口径全错需立即排查
+sqlite3 /opt/pims/data/pims.db \
+  "SELECT typeof(create_time), create_time FROM purchase_order ORDER BY id DESC LIMIT 3;"
+# 期望：integer | 13位毫秒（如 1788482217885）
+
+# ② 订单月度汇总近期期间应只有北京时区月份（如 2026-09），
+#    出现相邻上一个月（如 2026-08）= 触发器曾按 UTC 归月（已修，历史脏行需核对）
+sqlite3 /opt/pims/data/pims.db \
+  "SELECT DISTINCT period FROM stat_order_monthly ORDER BY period DESC LIMIT 5;"
+```
+
+> 2026-09-14 留档基线：生产库与当日备份库双跑，①=integer 毫秒 ✓、②=仅 2026-09 ✓（v9.0 触发器 +8 修复后 14/14 全带 +8）。
+
 ---
 
 ## 二点五、数据库自动备份与恢复（v5.48）
