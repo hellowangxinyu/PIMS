@@ -199,7 +199,7 @@ MemoryMax=1200M
 | [docs/操作手册.pdf](docs/芃远PIMS系统操作手册.pdf) | 零基础新人全模块操作指引（十三章 + 财务重点章 + 常见问题索引，约 50 页） |
 | [docs/SOP.md](docs/SOP.md) | 16 张 mermaid 流程图版标准操作流程 |
 | [docs/API.md](docs/API.md) | 522 个 REST 接口文档 |
-| [docs/DataDictionary.md](docs/DataDictionary.md) | 97 张表数据字典与口径速查 |
+| [docs/DataDictionary.md](docs/DataDictionary.md) | 91 张实体表数据字典与口径速查 |
 | [docs/DEPLOY.md](docs/DEPLOY.md) | 部署与备份恢复 SOP |
 | [docs/PRD.md](docs/PRD.md) | 产品需求（151KB 版本流水） |
 | [docs/指标口径对照表.md](docs/指标口径对照表.md) | 利润两数/退货冲减/现金流量分摊等口径决策记录 |

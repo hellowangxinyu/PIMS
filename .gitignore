@@ -9,3 +9,7 @@ pims-server/*.bak*
 pims-server/pims-deploy.zip
 tmp/
 .zcode/
+# v9.3 P3：文档生成产物不入库（SOP.docx/pdf 由 .docx-build 脚本重建，发版时挂 GitHub Release）
+.docx-build/
+docs/SOP.docx
+docs/SOP.pdf
