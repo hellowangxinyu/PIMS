@@ -43,6 +43,7 @@ public class ReportService {
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;   // v6.3 周转率聚合
     private final DictItemRepository dictItemRepo;
     private final SalesOutboundRepository salesOutRepo;
+    private final com.pengyuan.pims.repository.ReturnOrderRepository returnOrderRepo;
     private final SalesOrderRepository salesOrderRepo;
     private final SalesOrderItemRepository salesOrderItemRepo;
     private final QualityInspectionRepository qcRepo;
@@ -77,7 +78,8 @@ public class ReportService {
                          FinishedProductPurchaseRepository finishedPurchaseRepo,
                          CustomerRepository customerRepo,
                          SupplierRepository supplierRepo,
-                         org.springframework.jdbc.core.JdbcTemplate jdbc) {
+                         org.springframework.jdbc.core.JdbcTemplate jdbc,
+                         com.pengyuan.pims.repository.ReturnOrderRepository returnOrderRepo) {
         this.purchaseRepo = purchaseRepo;
         this.inventoryDailyRepo = inventoryDailyRepo;
         this.ledgerRepo = ledgerRepo;
@@ -94,6 +96,7 @@ public class ReportService {
         this.jdbc = jdbc;
         this.dictItemRepo = dictItemRepo;
         this.salesOutRepo = salesOutRepo;
+        this.returnOrderRepo = returnOrderRepo;
         this.salesOrderRepo = salesOrderRepo;
         this.salesOrderItemRepo = salesOrderItemRepo;
         this.qcRepo = qcRepo;
@@ -784,21 +787,32 @@ private Map<String, Object> doSalesReport(int months) {
         String since = sinceDate(months);
         Map<String, Object> result = new LinkedHashMap<>();
 
-        List<Object[]> monthly = salesOutRepo.monthlySalesSince(since);
-        List<String> periods = new ArrayList<>();
+        // v9.4（审计口径缺陷）：销售退货按负数冲当月收入/成本/数量——原报表只统计出库，
+        // 退货只冲了应收台账不冲报表，有退货的月份收入虚高。成本按原出库加权单位成本回溯（见 ReturnOrderRepository 注释）
+        Map<String, BigDecimal[]> byMonth = new java.util.TreeMap<>();
+        for (Object[] row : salesOutRepo.monthlySalesSince(since)) {
+            byMonth.put((String) row[0], new BigDecimal[]{toBigDecimal(row[1]), toBigDecimal(row[2]), toBigDecimal(row[3])});
+        }
+        for (Object[] row : returnOrderRepo.monthlySalesReturnSince(since)) {
+            BigDecimal[] agg = byMonth.computeIfAbsent((String) row[0], k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO});
+            agg[0] = agg[0].add(toBigDecimal(row[1]));
+            agg[1] = agg[1].add(toBigDecimal(row[2]));
+            agg[2] = agg[2].add(toBigDecimal(row[3]));
+        }
+        List<String> periods = new ArrayList<>(byMonth.keySet());
         List<BigDecimal> incomes = new ArrayList<>();
         List<BigDecimal> costs = new ArrayList<>();
         List<BigDecimal> qtys = new ArrayList<>();
-        for (Object[] row : monthly) {
-            periods.add((String) row[0]);
-            incomes.add(toBigDecimal(row[1]));
-            costs.add(toBigDecimal(row[2]));
-            qtys.add(toBigDecimal(row[3]));
+        for (BigDecimal[] v : byMonth.values()) {
+            incomes.add(v[0]);
+            costs.add(v[1]);
+            qtys.add(v[2]);
         }
         result.put("monthlyTrend", Map.of("labels", periods, "income", incomes, "cost", costs, "qty", qtys));
 
-        result.put("customerRank", toRank(salesOutRepo.customerRankSince(since)));
-        result.put("materialRank", toRank(salesOutRepo.materialRankSince(since)));
+        // v9.4：客户/产品排行同口径并入退货负值；制单人行不冲（退货制单人多为内勤，冲错人）
+        result.put("customerRank", mergeRankWithReturns(salesOutRepo.customerRankSince(since), returnOrderRepo.customerReturnRankSince(since)));
+        result.put("materialRank", mergeRankWithReturns(salesOutRepo.materialRankSince(since), returnOrderRepo.materialReturnRankSince(since)));
         result.put("salesmanRank", toRank(salesOutRepo.salesmanRankSince(since)));
 
         // 订单状态分布（订单口径金额）
@@ -1481,6 +1495,22 @@ private Map<String, Object> doOverviewReport(int months) {
     }
 
     /** Object[]{name, value} 排名行转 List<Map> */
+    /** v9.4：排行并入退货冲减——负值抵减同名列后按降序重排 */
+    private List<Map<String, Object>> mergeRankWithReturns(List<Object[]> outbound, List<Object[]> returns) {
+        Map<String, BigDecimal> m = new LinkedHashMap<>();
+        for (Object[] r : outbound) m.put(r[0] != null ? r[0].toString() : "未知", toBigDecimal(r[1]));
+        for (Object[] r : returns) m.merge(r[0] != null ? r[0].toString() : "未知", toBigDecimal(r[1]), BigDecimal::add);
+        return m.entrySet().stream()
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .map(e -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("name", e.getKey());
+                    item.put("value", e.getValue());
+                    return item;
+                })
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     private List<Map<String, Object>> toRank(List<Object[]> rows) {
         List<Map<String, Object>> rank = new ArrayList<>();
         for (Object[] row : rows) {
