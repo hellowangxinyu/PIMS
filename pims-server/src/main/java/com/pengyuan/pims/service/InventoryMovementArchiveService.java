@@ -41,7 +41,7 @@ public class InventoryMovementArchiveService {
     }
 
     /** 每日凌晨 3:30 归档（与操作日志 3:00 错开） */
-    @Scheduled(cron = "0 30 3 * * ?")
+    @Scheduled(cron = "0 30 3 * * ?", zone = "Asia/Shanghai")
     public void archiveTask() {
         archive();
     }

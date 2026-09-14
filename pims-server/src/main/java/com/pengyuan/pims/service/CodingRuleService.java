@@ -14,23 +14,23 @@ public class CodingRuleService {
 
     public List<CodingRule> listAll() { return repo.findByEnabledTrueOrderByCategoryCodeAscSubCategoryCodeAsc(); }
 
-    @Transactional
-    public CodingRule create(CodingRule rule) { return repo.save(rule); }
+    // v9.2（P2-1 审计）：写路径收口 executeTx（原裸 @Transactional 绕过全局写锁）
+    public CodingRule create(CodingRule rule) { return writeQueue.executeTx(() -> repo.save(rule)); }
 
-    @Transactional
     public CodingRule update(Long id, CodingRule rule) {
-        CodingRule exist = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("编码规则不存在"));
-        exist.category = rule.category;
-        exist.categoryCode = rule.categoryCode;
-        exist.subCategory = rule.subCategory;
-        exist.subCategoryCode = rule.subCategoryCode;
-        exist.numberStart = rule.numberStart;
-        exist.updateTime = java.time.LocalDateTime.now();
-        return repo.save(exist);
+        return writeQueue.executeTx(() -> {
+            CodingRule exist = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("编码规则不存在"));
+            exist.category = rule.category;
+            exist.categoryCode = rule.categoryCode;
+            exist.subCategory = rule.subCategory;
+            exist.subCategoryCode = rule.subCategoryCode;
+            exist.numberStart = rule.numberStart;
+            exist.updateTime = java.time.LocalDateTime.now();
+            return repo.save(exist);
+        });
     }
 
-    @Transactional
-    public void delete(Long id) { repo.deleteById(id); }
+    public void delete(Long id) { writeQueue.executeTx(() -> { repo.deleteById(id); return null; }); }
 
     /**
      * 根据小类代码自动生成物料编码。
@@ -39,7 +39,6 @@ public class CodingRuleService {
      * 都是 0002，任何两个物料的数字都不相同，工人只看数字也绝不拿错料；无跳号（容量全 9999）。
      * 全局游标 = 全部规则行 currentSeq 最大值（每次发放记录在该小类行上），writeQueue 内调用并发安全。
      */
-    @Transactional
     public String generateCode(String subCategoryCode) {
         if (subCategoryCode == null || subCategoryCode.isBlank()) {
             throw new IllegalArgumentException("小类代码不能为空");
@@ -60,6 +59,11 @@ public class CodingRuleService {
     }
 
     private String doGenerate(String sub) {
+        // v9.2（P2-1 审计）：自锁——原靠"调用方持锁"约定，直接调用即并发裸奔（可重入，外层已持锁不重复加锁）
+        return writeQueue.executeTx(() -> doGenerateTx(sub));
+    }
+
+    private String doGenerateTx(String sub) {
         validateNoConfusing(sub);
         CodingRule rule = repo.findBySubCategoryCodeAndEnabledTrue(sub)
                 .orElseThrow(() -> new IllegalArgumentException("未找到小类 \"" + sub + "\" 的编码规则"));
@@ -68,7 +72,11 @@ public class CodingRuleService {
         try {
             var pool = jdbc.queryForList("SELECT seq FROM released_code_seq ORDER BY seq LIMIT 1");
             if (!pool.isEmpty()) released = ((Number) pool.get(0).get("seq")).intValue();
-        } catch (Exception ignored) { }
+        } catch (Exception e) {
+            // v9.2（P2-1 审计）：回收码池不可用时降级走全局 MAX+1，但不再静默——留下排查线索
+            org.slf4j.LoggerFactory.getLogger(CodingRuleService.class)
+                    .warn("编码回收池查询失败，降级全局取号: {}", e.getMessage());
+        }
         int next;
         if (released != null) {
             jdbc.update("DELETE FROM released_code_seq WHERE seq = ?", released);
@@ -114,7 +122,7 @@ public class CodingRuleService {
      * 半成品（色浆）取号：色浆小类(2) + 主材(1) + 流水(5) = 8 位，如 BWFT00010 = 白浆/氟碳系。
      * v5.89 起序号 5 位全局池（v5.65 原为 4 位 7 位码，扩位后此注释同步修正）。
      */
-    @Transactional
+    // v9.2（P2-1 审计）：去外层 @Transactional——内部 seqFor 已锁内包事务，外层注解=事务先于锁开启（旧时序）
     public String generateSemiCode(String subCategoryCode, String mainMaterial) {
         if (subCategoryCode == null || !subCategoryCode.trim().toUpperCase().matches("[A-Z]{2}"))
             throw new IllegalArgumentException("小类代码须为两位字母: " + subCategoryCode);
@@ -129,7 +137,6 @@ public class CodingRuleService {
      * 成品取号：漆型(2) + 主材(1) + 色系(1) + 流水(5) = 9 位，如 CWTH00010 = 面漆/聚酯/白。
      * v5.89 起序号 5 位全局池（v5.65 原为 4 位 8 位码，扩位后此注释同步修正）。
      */
-    @Transactional
     public String generateProductCode(String subCategoryCode, String mainMaterial, String colorSeries) {
         if (subCategoryCode == null || !subCategoryCode.trim().toUpperCase().matches("[A-Z]{2}"))
             throw new IllegalArgumentException("小类代码须为两位字母: " + subCategoryCode);

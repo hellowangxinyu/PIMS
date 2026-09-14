@@ -34,9 +34,15 @@ public class BackupService {
     }
 
     /** 每日 04:30 自动备份 */
-    @Scheduled(cron = "0 30 4 * * ?")
+    // v9.2（P2-5 审计）：zone 固定 Asia/Shanghai——原依赖 OS 时区，系统时区一错备份日切全错
+    @Scheduled(cron = "0 30 4 * * ?", zone = "Asia/Shanghai")
     public void scheduledBackup() {
-        backupNow();
+        try {
+            backupNow();
+        } catch (Exception e) {
+            // v9.2（P2-12 审计）：备份失败此前仅 log.error 于 backupNow 内部细节，这里统一以告警级留痕
+            log.error("[备份告警] 定时备份失败，请立即排查！{}", e.getMessage(), e);
+        }
     }
 
     /** 执行一次备份（定时触发；也可手动调用）。返回备份文件名，失败抛异常。 */
@@ -45,6 +51,15 @@ public class BackupService {
         File dir = new File("backups");
         if (!dir.exists() && !dir.mkdirs()) {
             throw new IllegalStateException("备份目录创建失败: " + dir.getAbsolutePath());
+        }
+        // v9.2（P2-12 审计）：磁盘预检——剩余空间不足库体积 5 倍（VACUUM 全量拷贝+余量）时拒绝执行并明示
+        long usable = dir.getUsableSpace();
+        File dbFile = new File("data/pims.db");
+        long need = Math.max(dbFile.length() * 5, 200L * 1024 * 1024);
+        if (usable < need) {
+            throw new IllegalStateException(String.format(
+                    "磁盘剩余空间不足（可用 %.1fMB，备份至少需 %.1fMB），请先清理 backups 目录或扩容",
+                    usable / 1048576.0, need / 1048576.0));
         }
         String filename = "pims-db-" + date + ".db";
         File target = new File(dir, filename);

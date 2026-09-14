@@ -29,6 +29,7 @@ public class FinanceService {
     private final CustomerRepository customerRepo;
     private final PurchaseArrivalRepository arrivalRepo;
     // v5.24：全局写锁（财务单号生成+保存共用，防并发撞号）
+    private final com.pengyuan.pims.repository.AdvancePaymentRepository advRepo;
     private final PeriodGuard periodGuard;
     private final WriteQueue writeQueue;
 
@@ -36,6 +37,7 @@ public class FinanceService {
                           PaymentReceiptRepository receiptRepo, PaymentDisbursementRepository disbursementRepo,
                           SupplierRepository supplierRepo, CustomerRepository customerRepo,
                           PurchaseArrivalRepository arrivalRepo,
+                          com.pengyuan.pims.repository.AdvancePaymentRepository advRepo,
                           WriteQueue writeQueue, PeriodGuard periodGuard) {
         this.arRepo = arRepo;
         this.apRepo = apRepo;
@@ -46,6 +48,7 @@ public class FinanceService {
         this.arrivalRepo = arrivalRepo;
         this.writeQueue = writeQueue;
         this.periodGuard = periodGuard;
+        this.advRepo = advRepo;
     }
 
     public List<AccountsReceivable> listAR() {
@@ -351,7 +354,12 @@ public class FinanceService {
                 }
                 r.arDocNo = String.join(",", hitDocNos);
                 if (remaining.compareTo(BigDecimal.ZERO) > 0) {
-                    log.info("收款单 {} 金额超过未结清AR总额，剩余 {} 作为预收", r.docNo, remaining);
+                    // v9.2（P2-3 审计）：超收差额自动落预收单——原仅 log，差额只在客户对账单体现为负余额，与预存模块不闭环
+                    String custName = customerRepo.findById(r.customerId).map(c -> c.name).orElse(null);
+                    var adv = createAdvanceTx("RECEIVE", r.customerId, custName, remaining,
+                            "收款单 " + r.docNo + " 超收自动转预收");
+                    r.remark = (r.remark == null || r.remark.isBlank() ? "" : r.remark + ";") + "超收转预收 " + adv.docNo;
+                    log.info("收款单 {} 超收 {} 自动落预收单 {}", r.docNo, remaining, adv.docNo);
                 }
                 log.info("收款单 {} 按客户 {} FIFO 冲减 AR: {}", r.docNo, r.customerId, r.arDocNo);
             }
@@ -431,8 +439,12 @@ public class FinanceService {
                 }
                 d.apDocNo = String.join(",", hitDocNos);
                 if (remaining.compareTo(BigDecimal.ZERO) > 0) {
-                    // 付款金额超过该供应商全部未结清AP总额，提示但仍然保存付款单（预付款场景）
-                    log.info("付款单 {} 金额超过未结清AP总额，剩余 {} 作为预付", d.docNo, remaining);
+                    // v9.2（P2-3 审计）：超付差额自动落预付单（原仅提示，与预存模块不闭环）
+                    String supName = supplierRepo.findById(d.supplierId).map(sp -> sp.name).orElse(null);
+                    var adv = createAdvanceTx("PAY", d.supplierId, supName, remaining,
+                            "付款单 " + d.docNo + " 超付自动转预付");
+                    d.remark = (d.remark == null || d.remark.isBlank() ? "" : d.remark + ";") + "超付转预付 " + adv.docNo;
+                    log.info("付款单 {} 超付 {} 自动落预付单 {}", d.docNo, remaining, adv.docNo);
                 }
                 log.info("付款单 {} 按供应商 {} FIFO 冲减 AP: {}", d.docNo, d.supplierId, d.apDocNo);
             }
@@ -650,5 +662,24 @@ public class FinanceService {
                 && arBalance.add(orderAmount != null ? orderAmount : BigDecimal.ZERO).compareTo(creditLimit) > 0;
         r.put("exceed", exceed);
         return r;
+    }
+
+    /**
+     * v9.2（P2-3 审计）：超收/超付差额自动生成预收/预付单（调用方须已持锁——均在 executeTx 内）。
+     * 编号与 AdvancePaymentService.create 同规：ADV-YYYYMMDD-NNNN 按天流水。
+     */
+    private com.pengyuan.pims.entity.AdvancePayment createAdvanceTx(String direction, Long partnerId,
+                                                                     String partnerName, BigDecimal amount, String remark) {
+        com.pengyuan.pims.entity.AdvancePayment adv = new com.pengyuan.pims.entity.AdvancePayment();
+        adv.direction = direction;
+        adv.partnerId = partnerId;
+        adv.partnerName = partnerName;
+        adv.amount = amount;
+        adv.usedAmount = BigDecimal.ZERO;
+        adv.payDate = LocalDate.now();
+        adv.remark = remark;
+        Integer maxSeq = advRepo.findMaxSeq("ADV-" + LocalDate.now().toString().replace("-", "") + "-%");
+        adv.docNo = String.format("ADV-%s-%04d", LocalDate.now().toString().replace("-", ""), (maxSeq == null ? 0 : maxSeq) + 1);
+        return advRepo.save(adv);
     }
 }

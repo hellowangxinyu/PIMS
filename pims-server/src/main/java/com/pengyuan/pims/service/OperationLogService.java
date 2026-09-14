@@ -175,7 +175,7 @@ public class OperationLogService {
     // ============ 归档（30 天热数据 → 归档表改名） ============
 
     /** 每日凌晨 3 点归档；启动时也执行一次 */
-    @Scheduled(cron = "0 0 3 * * ?")
+    @Scheduled(cron = "0 0 3 * * ?", zone = "Asia/Shanghai")
     public void archiveTask() {
         archiveExpiredTables();
     }

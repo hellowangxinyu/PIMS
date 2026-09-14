@@ -65,5 +65,5 @@ sa-token:
 # 日志
 logging:
   level:
-    com.pengyuan.pims: DEBUG
+    com.pengyuan.pims: INFO   # v9.2（P2-14 审计）：DEBUG 全量落盘含敏感业务参数；排障时临时改回 DEBUG
     org.hibernate.SQL: WARN

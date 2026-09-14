@@ -720,7 +720,6 @@ public class SummarySchemaInitializer implements CommandLineRunner {
         jdbc.update("""
             INSERT INTO stat_inventory_daily (stat_date, material_code, warehouse_id, in_qty, out_qty, in_amount)
             SELECT COALESCE(
-                       date(create_time),
                        date(CAST(create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours'),
                        date('now', '+8 hours')
                    ),
@@ -730,7 +729,6 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                    0
             FROM inventory_movement
             GROUP BY COALESCE(
-                       date(create_time),
                        date(CAST(create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours'),
                        date('now', '+8 hours')
                      ), material_code, warehouse_id

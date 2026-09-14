@@ -85,7 +85,7 @@ public class ExpiryQuarantineService {
         quarantineExpiredBatches();    // 隔离幂等（已处理直接跳过），补触发复检评估单
     }
 
-    @Scheduled(cron = "0 15 4 * * ?")
+    @Scheduled(cron = "0 15 4 * * ?", zone = "Asia/Shanghai")
     public void scheduledQuarantine() {
         quarantineExpiredBatches();
     }

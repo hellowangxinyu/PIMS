@@ -53,21 +53,24 @@ public class AccountSubjectService {
     }
 
     /** 科目编码/类别/方向不可改（编码是分录与报表的锚点）；只允许改名和停用 */
-    @Transactional
+    // v9.2（P2-1 审计）：写路径收口 executeTx（原裸 @Transactional 绕过全局写锁）
     public AccountSubject update(Long id, AccountSubject in) {
-        AccountSubject s = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("科目不存在"));
-        if (in.name == null || in.name.isBlank()) throw new IllegalArgumentException("科目名称不能为空");
-        s.name = in.name;
-        s.updateTime = LocalDateTime.now();
-        return repo.save(s);
+        return writeQueue.executeTx(() -> {
+            AccountSubject s = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("科目不存在"));
+            if (in.name == null || in.name.isBlank()) throw new IllegalArgumentException("科目名称不能为空");
+            s.name = in.name;
+            s.updateTime = LocalDateTime.now();
+            return repo.save(s);
+        });
     }
 
-    @Transactional
     public AccountSubject toggle(Long id) {
-        AccountSubject s = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("科目不存在"));
-        s.status = "ENABLED".equals(s.status) ? "DISABLED" : "ENABLED";
-        s.updateTime = LocalDateTime.now();
-        return repo.save(s);
+        return writeQueue.executeTx(() -> {
+            AccountSubject s = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("科目不存在"));
+            s.status = "ENABLED".equals(s.status) ? "DISABLED" : "ENABLED";
+            s.updateTime = LocalDateTime.now();
+            return repo.save(s);
+        });
     }
 
     /**

@@ -12,12 +12,17 @@ export default defineConfig({
   plugins: [
     vue(),
     {
-      name: 'pims-clean-static',
-      buildStart() {
-        // 构建前清空旧产物，避免 hash 文件无限堆积（Vite 对项目外 outDir 的 emptyOutDir 不可靠）。
-        // 注意：Node fs.rmSync 对中文路径（D:\开发\PIMS\...）静默删除失败（libuv 已知问题），
-        // 必须用系统命令 cmd del（Windows 构建环境实测可靠）。
-        execSync('cmd /c "del /q /s ..\\pims-server\\src\\main\\resources\\static\\*.* >nul 2>&1"', { stdio: 'ignore' })
+      // v9.2（P2-6 审计）：原子构建——原 buildStart 先清空 static，构建中途失败=产物被清空。
+      // 改为构建到本项目 dist，成功后 robocopy /MIR 镜像到后端 static（顺带清掉旧 hash 堆积；
+      // 中文路径必须用系统命令，libuv 已知坑）。robocopy 退出码 0-7 均为成功（1=有文件复制），>=8 才失败。
+      name: 'pims-atomic-deploy',
+      closeBundle() {
+        if (process.platform !== 'win32') return
+        try {
+          execSync('robocopy dist "..\\pims-server\\src\\main\\resources\\static" /MIR /NJH /NJS /NDL /NFL >nul', { stdio: 'ignore', shell: 'cmd.exe' })
+        } catch (e) {
+          if (e.status === undefined || e.status >= 8) throw e
+        }
       }
     }
   ],
@@ -31,7 +36,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: staticDir,
+    outDir: 'dist',
     emptyOutDir: true,
     // v7.1 分包：vendor（Element Plus/vue/router ~1MB）hash 跨版本稳定——发版只重下业务包（几十 KB）
     rollupOptions: {

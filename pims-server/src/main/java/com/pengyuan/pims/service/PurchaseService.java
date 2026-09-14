@@ -300,6 +300,18 @@ public class PurchaseService {
     public void uploadContract(Long id, MultipartFile file) {
         RawMaterialPurchase rp = rawRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("采购单不存在"));
+        // v9.2（P2-13 审计）：文件内容校验——魔数必须是 %PDF（原任意文件可落盘为 .pdf，存档区可被投毒）
+        if (file == null || file.isEmpty()) throw new IllegalArgumentException("请选择要上传的文件");
+        try (java.io.InputStream is = file.getInputStream()) {
+            byte[] head = new byte[4];
+            int read = is.readNBytes(head, 0, 4);
+            if (read < 4 || head[0] != '%' || head[1] != 'P' || head[2] != 'D' || head[3] != 'F') {
+                throw new IllegalArgumentException("只允许上传 PDF 文件（文件头校验未通过）");
+            }
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("文件读取失败", e);
+        }
+        if (file.getSize() > 20L * 1024 * 1024) throw new IllegalArgumentException("合同文件不能超过 20MB");
         try {
             String supplierCode = getSupplierShortCode(rp.supplierId);
             Path dir = Paths.get("data", "contracts", supplierCode);
