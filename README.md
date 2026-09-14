@@ -118,7 +118,8 @@ npm run build
 
 # 2. 后端
 cd ../pims-server
-mvn test                      # 14 个自动化测试（凭证平衡/库存守恒/并发取号/结账/请购闭环...）
+scripts
+un-tests.bat        # 17 个自动化测试（凭证平衡/库存守恒/并发取号/结账/请购/锁期/尾差守恒...）；勿直接 mvn test（DDL 导出路径在 target/，脚本负责刷新基线）
 mvn clean package -DskipTests # 出 jar
 ```
 

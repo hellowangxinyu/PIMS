@@ -1,5 +1,7 @@
 # v8.8 测试专属配置：静默日志 + 关闭定时任务
-# v8.9：同时把 Hibernate 建表 DDL 导出到基线（幂等：每次跑测试刷新 db/baseline-schema.sql，空库自举用）
+# v9.3（P2-10 审计）：DDL 导出改指 target/（未跟踪）——原直写 git 跟踪的 db/baseline-schema.sql，
+# 测试中途失败留半截脏基线、直接 mvn test（不先删）会追加重复。
+# 提交版基线由 scripts/run-tests.bat 在测试成功后从 target/ 拷贝刷新（空库自举 --init-db 用）
 spring:
   task:
     scheduling:
@@ -15,7 +17,7 @@ spring:
               action: drop-and-create   # 标准 JPA 属性接管后 ddl-auto 失效——库和脚本都要生成
             scripts:
               action: create
-              create-target: ../db/baseline-schema.sql
+              create-target: target/baseline-schema.sql
               create-source: metadata
 
 logging:

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ROUTE_PERMS } from '../utils/routePerms'
 
 const routes = [
   { path: '/login', name: 'Login', component: () => import('../views/Login.vue') },
@@ -116,9 +117,20 @@ router.beforeEach((to, from, next) => {
   const user = localStorage.getItem('user')
   if (to.path !== '/login' && !user) {
     next('/login')
-  } else {
-    next()
+    return
   }
+  // v9.3（P2-7 审计）：无权限页面直输 URL 拦截——与侧边栏菜单隐藏同口径（后端接口本就拦数据，此为纵深防御）
+  const need = ROUTE_PERMS[to.path]
+  if (need && user) {
+    let perms = []
+    try { perms = JSON.parse(user).permissions || [] } catch { /* 坏数据按无权限处理 */ }
+    if (!perms.includes(need)) {
+      import('element-plus').then(({ ElMessage }) => ElMessage.warning(`无权访问该页面（需要 ${need} 权限）`))
+      next(from.path && from.path !== to.path && from.path !== '/' ? from.path : '/dashboard')
+      return
+    }
+  }
+  next()
 })
 
 // 前端更新后，旧页面懒加载的 chunk 已不存在（404）：自动刷新拉取最新 index.html（服务端 no-cache），

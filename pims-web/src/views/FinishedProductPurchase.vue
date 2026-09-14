@@ -190,7 +190,7 @@
               <template #default="{ $index }"><button class="op-btn op-btn-del" type="button" @click="batchItems.splice($index,1)">✕</button></template>
             </el-table-column>
           </p-table>
-          <div class="batch-total">合计：<strong class="amount-cell">￥{{ fmtMoney(batchTotal) }}</strong>　不含税合计：<strong class="amount-cell">￥{{ (batchTotal / (1 + (form.taxRate ?? taxRate) / 100)).toFixed(2) }}</strong>　税额合计：<strong class="amount-cell">￥{{ (batchTotal - batchTotal / (1 + (form.taxRate ?? taxRate) / 100)).toFixed(2) }}</strong>　税率：<strong>{{ form.taxRate ?? taxRate }}%</strong></div>
+          <div class="batch-total">合计：<strong class="amount-cell">￥{{ fmtMoney(batchTotal) }}</strong>　不含税合计：<strong class="amount-cell">￥{{ fmtTax(netOfTax(batchTotal, form.taxRate ?? taxRate)) }}</strong>　税额合计：<strong class="amount-cell">￥{{ fmtTax(taxOf(batchTotal, form.taxRate ?? taxRate)) }}</strong>　税率：<strong>{{ form.taxRate ?? taxRate }}%</strong></div>
           <el-form-item label="备注" style="margin-top:12px"><el-input v-model="form.remark" type="textarea" /></el-form-item>
         </template>
 

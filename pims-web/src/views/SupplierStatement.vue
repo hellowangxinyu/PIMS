@@ -84,10 +84,11 @@ const payTotal = computed(() => (data.value?.lines || []).filter(l => l.type ===
 const returnTotal = computed(() => (data.value?.lines || []).filter(l => l.type === '退货冲减').reduce((s, l) => s + Number(l.credit || 0), 0))
 
 const rowsWithBalance = computed(() => {
-  let balance = Number(data.value?.opening || 0)
+  let balance = Math.round(Number(data.value?.opening || 0) * 100)   // v9.3：分单位
   return (data.value?.lines || []).map(l => {
-    balance += Number(l.debit || 0) - Number(l.credit || 0)
-    return { ...l, balance: Number(balance.toFixed(2)) }
+    // v9.3（P2-8 审计）：滚动余额以"分"为整数单位累计——浮点直加会有 0.1+0.2 类长尾，行数多时分位漂移可见
+    balance += Math.round(Number(l.debit || 0) * 100) - Math.round(Number(l.credit || 0) * 100)
+    return { ...l, balance: balance / 100 }
   })
 })
 
