@@ -42,7 +42,7 @@ import { monthLocal } from '../utils/date'
 import { ref, onMounted } from 'vue'
 import api from '../api'
 import { downloadFile } from '../utils/download'
-import { printTableHtml, fmtAmt } from '../utils/reportPrint'
+import { printTableHtml, fmtAmt, esc } from '../utils/reportPrint'
 
 const data = ref(null)
 const perms = ref([])
@@ -71,8 +71,8 @@ function doPrint() {
   if (!data.value) return
   const rows = data.value.rows.map(r => {
     const strong = r.code === 'SUB' || r.code === 'NET'
-    return `<tr${strong ? ' class="strong"' : ''}><td>${r.segment}</td>
-      <td${strong ? '' : ' class="indent"'}>${r.item}</td>
+    return `<tr${strong ? ' class="strong"' : ''}><td>${esc(r.segment)}</td>
+      <td${strong ? '' : ' class="indent"'}>${esc(r.item)}</td>
       <td class="amt">${fmtAmt(r.month)}</td><td class="amt">${fmtAmt(r.yearCum)}</td></tr>`
   }).join('')
   printTableHtml('现金流量表', `${period.value} · 单位：元`,

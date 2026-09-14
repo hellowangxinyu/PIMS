@@ -49,11 +49,11 @@ export function printLabels(records, opts = {}) {
       <div class="code-big">${esc(code)}</div>
       <div class="name">${esc(name)}</div>
       <div class="row"><span>批号：${esc(r.batchNo)}</span></div>
-      <div class="row"><span>数量：${qty} ${unit}</span></div>
+      <div class="row"><span>数量：${esc(String(qty))} ${esc(unit)}</span></div>
       ${r._bucketNo ? `<div class="bucket">第 ${r._bucketNo} / ${r._bucketTotal} 桶</div>` : ''}
       <div class="qc" style="color:${qcColor};font-weight:700">质检：${esc(qc)}</div>
       ${inspector ? `<div class="row"><span>质检员：${esc(inspector)}</span></div>` : ''}
-      <div class="date">${date}${r._bucketTotal ? ` · 批量合计 ${esc(String(r.qty))} ${unit}` : ''}</div>
+      <div class="date">${esc(date)}${r._bucketTotal ? ` · 批量合计 ${esc(String(r.qty))} ${unit}` : ''}</div>
     </div>`
   }).join('')
 

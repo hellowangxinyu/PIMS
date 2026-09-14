@@ -71,7 +71,7 @@ import { fmt } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import api from '../api'
 import { downloadFile } from '../utils/download'
-import { printTableHtml, fmtAmt } from '../utils/reportPrint'
+import { printTableHtml, fmtAmt, esc } from '../utils/reportPrint'
 
 const data = ref(null)
 const perms = ref([])
@@ -100,7 +100,7 @@ async function doExport() {
 function doPrint() {
   if (!data.value) return
   const d = data.value
-  const row = r => `<tr><td>${r.item}</td><td class="amt">${fmtAmt(r.yearBegin)}</td><td class="amt">${fmtAmt(r.periodEnd)}</td></tr>`
+  const row = r => `<tr><td>${esc(r.item)}</td><td class="amt">${fmtAmt(r.yearBegin)}</td><td class="amt">${fmtAmt(r.periodEnd)}</td></tr>`
   const maxLen = Math.max(d.assets.length, d.liabilities.length + d.equity.length + 4)
   const left = [...d.assets.map(row), `<tr class="strong"><td>资产总计</td><td class="amt">${fmtAmt(d.assetBeginTotal)}</td><td class="amt">${fmtAmt(d.assetTotal)}</td></tr>`]
   const right = [...d.liabilities.map(row),

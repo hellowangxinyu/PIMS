@@ -43,8 +43,8 @@ export function printVoucher(v) {
 </style></head><body>
   <div class="head"><h1>记 账 凭 证</h1></div>
   <div class="meta">
-    <span>凭证号：${v.docNo}</span>
-    <span>日期：${v.voucherDate || ''}</span>
+    <span>凭证号：${esc(v.docNo)}</span>
+    <span>日期：${esc(v.voucherDate)}</span>
     <span>附单据 ${v.attachmentCount || 0} 张</span>
   </div>
   <table>

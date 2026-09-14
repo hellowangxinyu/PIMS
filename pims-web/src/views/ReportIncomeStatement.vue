@@ -35,7 +35,7 @@ import { monthLocal } from '../utils/date'
 import { ref, onMounted } from 'vue'
 import api from '../api'
 import { downloadFile } from '../utils/download'
-import { printTableHtml, fmtAmt } from '../utils/reportPrint'
+import { printTableHtml, fmtAmt, esc } from '../utils/reportPrint'
 
 const data = ref(null)
 const perms = ref([])
@@ -63,7 +63,7 @@ async function doExport() {
 function doPrint() {
   if (!data.value) return
   const rows = data.value.rows.map(r => `<tr${/^[一二三四]/.test(r.item) ? ' class="strong"' : ''}>
-    <td${/^[一二三四]/.test(r.item) ? '' : ' class="indent"'}>${r.item}</td>
+    <td${/^[一二三四]/.test(r.item) ? '' : ' class="indent"'}>${esc(r.item)}</td>
     <td class="amt">${fmtAmt(r.month)}</td><td class="amt">${fmtAmt(r.yearCum)}</td></tr>`).join('')
   printTableHtml('利润表', `${period.value} · 单位：元`,
     `<table><thead><tr><th>项目</th><th class="amt" style="width:140px">本月金额</th><th class="amt" style="width:140px">本年累计</th></tr></thead><tbody>${rows}</tbody></table>`)

@@ -55,7 +55,7 @@ import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import api from '../api'
 import { downloadFile } from '../utils/download'
-import { printTableHtml, fmtAmt } from '../utils/reportPrint'
+import { printTableHtml, fmtAmt, esc } from '../utils/reportPrint'
 
 const rows = ref([])
 const perms = ref([])
@@ -93,7 +93,7 @@ async function doExport() {
 
 function doPrint() {
   const body = rows.value.map(r => `<tr${r.top ? ' class="strong"' : ''}>
-    <td>${r.code}</td><td${r.top ? '' : ' class="indent"'}>${r.name}</td>
+    <td>${esc(r.code)}</td><td${r.top ? '' : ' class="indent"'}>${esc(r.name)}</td>
     <td class="amt">${nz(r.beginDr)}</td><td class="amt">${nz(r.beginCr)}</td>
     <td class="amt">${nz(r.debit)}</td><td class="amt">${nz(r.credit)}</td>
     <td class="amt">${nz(r.endDr)}</td><td class="amt">${nz(r.endCr)}</td></tr>`).join('')

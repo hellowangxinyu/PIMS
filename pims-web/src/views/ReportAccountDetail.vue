@@ -64,7 +64,7 @@ import { fmt } from '../utils/fmt'
 import { ref, onMounted } from 'vue'
 import api from '../api'
 import { downloadFile } from '../utils/download'
-import { printTableHtml, fmtAmt } from '../utils/reportPrint'
+import { printTableHtml, fmtAmt, esc } from '../utils/reportPrint'
 
 const subjects = ref([])
 const data = ref(null)
@@ -101,7 +101,7 @@ async function doExport() {
 function doPrint() {
   if (!data.value) return
   const d = data.value
-  const rows = d.lines.map(l => `<tr><td>${l.voucherDate || ''}</td><td>${l.docNo}</td><td>${l.digest || ''}</td>
+  const rows = d.lines.map(l => `<tr><td>${esc(l.voucherDate)}</td><td>${esc(l.docNo)}</td><td>${esc(l.digest)}</td>
     <td class="amt">${Number(l.debit) ? fmtAmt(l.debit) : ''}</td><td class="amt">${Number(l.credit) ? fmtAmt(l.credit) : ''}</td>
     <td class="amt">${Number(l.balanceDr) > 0 ? '借 ' + fmtAmt(l.balanceDr) : '贷 ' + fmtAmt(l.balanceCr)}</td></tr>`).join('')
   printTableHtml('明细账', `${d.subject.code} ${d.subject.name} · ${d.from} ~ ${d.to}`, `

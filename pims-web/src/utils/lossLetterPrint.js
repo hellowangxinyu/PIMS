@@ -82,7 +82,7 @@ export function buildLossLetterHtml(trace, template) {
   <div class="head">
     <div>
       <h1>损失沟通函</h1>
-      <div class="meta">单号：${escHtml(t.traceNo)}　　发现日期：${data.issueDate}</div>
+      <div class="meta">单号：${escHtml(t.traceNo)}　　发现日期：${escHtml(data.issueDate)}</div>
     </div>
     <div class="co">广东芃远新材料有限公司</div>
   </div>
@@ -91,8 +91,8 @@ export function buildLossLetterHtml(trace, template) {
   <table>
     <tr><th>物料编码</th><td>${escHtml(t.materialCode)}</td><th>物料名称</th><td>${escHtml(t.materialName)}</td></tr>
     <tr><th>批　号</th><td><b>${escHtml(t.batchNo)}</b></td><th>${lblOrder}</th><td>${escHtml(data.purchaseOrderNo)}</td></tr>
-    <tr><th>${lblDate}</th><td>${data.arrivalDate}</td><th>入库数量</th><td>${escHtml(data.purchaseQty)}</td></tr>
-    <tr><th>${lblPrice}</th><td>¥ ${data.purchaseUnitPrice}</td><th>${lblAmount}</th><td>¥ ${data.purchaseAmount}</td></tr>
+    <tr><th>${lblDate}</th><td>${escHtml(data.arrivalDate)}</td><th>入库数量</th><td>${escHtml(data.purchaseQty)}</td></tr>
+    <tr><th>${lblPrice}</th><td>¥ ${escHtml(String(data.purchaseUnitPrice))}</td><th>${lblAmount}</th><td>¥ ${escHtml(String(data.purchaseAmount))}</td></tr>
     <tr><th>质检单号</th><td>${escHtml(data.qcInspectionNo)}</td><th>问题类型</th><td>${escHtml(data.category)}</td></tr>
     <tr class="loss-row"><th>损失金额</th><td colspan="3">本次批次质量问题造成损失合计 <span class="loss-amount">¥ ${data.lossAmount}</span></td></tr>
   </table>

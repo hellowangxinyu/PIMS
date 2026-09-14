@@ -60,11 +60,11 @@ export function printSampleFormula(f) {
     <td class="k">成品编码</td><td>${esc(f.materialCode || '（待保存生成）')}</td>
   </tr>
   <tr>
-    <td class="k">分类</td><td>${SUB_NAME[sub] || sub || ''} ｜ ${cat3}</td>
+    <td class="k">分类</td><td>${esc(SUB_NAME[sub] || sub || '')} ｜ ${esc(cat3)}</td>
     <td class="k">打样总量</td><td>${Number(f.totalQty ?? total).toFixed(1)} g</td>
   </tr>
   <tr>
-    <td class="k">寄样样板</td><td>${f.sampleQty ?? '-'} ${f.sampleUnit || '张'}（${f.sampleSize === 'A4' ? 'A4 大小' : '常规尺寸'}）</td>
+    <td class="k">寄样样板</td><td>${esc(f.sampleQty ?? '-')} ${esc(f.sampleUnit || '张')}（${f.sampleSize === 'A4' ? 'A4 大小' : '常规尺寸'}）</td>
   </tr>
   <tr>
     <td class="k">估算成本</td><td>${f.estCost != null ? Number(f.estCost).toFixed(2) + ' 元/kg' : '—'}</td>

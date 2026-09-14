@@ -213,12 +213,12 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             SELECT id, doc_type, doc_no, material_code, batch_no,
                 warehouse_id, location_id, direction, qty, qty_before, qty_after, ownership_type, operator, remark, create_time
             FROM inventory_movement
-            WHERE date(CAST(create_time AS INTEGER) / 1000, 'unixepoch') < ?
+            WHERE date(CAST(create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours') < ?
             """, cutoff);
         if (moved > 0) {
             jdbc.update("""
                 DELETE FROM inventory_movement
-                WHERE date(CAST(create_time AS INTEGER) / 1000, 'unixepoch') < ?
+                WHERE date(CAST(create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours') < ?
                 """, cutoff);
             log.info("历史库存异动归档: {} 行移至 inventory_movement_archive（早于 {}）", moved, cutoff);
         }
@@ -317,7 +317,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_order_monthly SET
                     order_count = order_count - 1,
                     total_amount = total_amount - COALESCE(OLD.total_amount, 0)
-                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'PURCHASE'
+                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PURCHASE'
                 AND OLD.status != 'DRAFT' AND NEW.status = 'DRAFT';
 
                 -- 金额变化（状态未变且非DRAFT）
@@ -356,7 +356,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_order_monthly SET
                     order_count = order_count - 1,
                     total_amount = total_amount - COALESCE(OLD.total_amount, 0)
-                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'SALES'
+                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'SALES'
                 AND OLD.status != 'DRAFT' AND NEW.status = 'DRAFT';
 
                 UPDATE stat_order_monthly SET
@@ -394,7 +394,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_order_monthly SET
                     order_count = order_count - 1,
                     total_amount = total_amount - COALESCE(OLD.processing_fee, 0)
-                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'OUTSOURCE'
+                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'OUTSOURCE'
                 AND OLD.status != 'DRAFT' AND NEW.status = 'DRAFT';
 
                 UPDATE stat_order_monthly SET
@@ -482,7 +482,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 UPDATE stat_order_monthly SET
                     order_count = order_count - 1,
                     total_amount = total_amount - COALESCE(OLD.batch_qty, 0)
-                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch') AND order_type = 'PRODUCTION'
+                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PRODUCTION'
                 AND OLD.status != 'DRAFT' AND NEW.status = 'DRAFT';
 
                 UPDATE stat_order_monthly SET
@@ -501,7 +501,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             BEGIN
                 INSERT INTO stat_inventory_daily (stat_date, material_code, warehouse_id, in_qty, out_qty, in_amount)
                 VALUES (
-                    COALESCE(date(CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch'), date('now', '+8 hours')),
+                    COALESCE(date(CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours'), date('now', '+8 hours')),
                     NEW.material_code,
                     NEW.warehouse_id,
                     CASE WHEN NEW.direction = 'IN' THEN NEW.qty ELSE 0 END,
@@ -527,7 +527,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 INSERT INTO stat_material_usage (material_code, period, warehouse_id, out_qty, usage_days)
                 VALUES (
                     NEW.material_code,
-                    COALESCE(strftime('%Y-%m', CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch'), strftime('%Y-%m', 'now', '+8 hours')),
+                    COALESCE(strftime('%Y-%m', CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours'), strftime('%Y-%m', 'now', '+8 hours')),
                     COALESCE(NEW.warehouse_id, ''),
                     ABS(NEW.qty),
                     1
@@ -540,8 +540,8 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                           AND COALESCE(m2.warehouse_id, '') = COALESCE(NEW.warehouse_id, '')
                           AND m2.direction = 'OUT'
                           AND m2.doc_type IN ('PRODUCTION_OUT','OUTSOURCE_OUT','OTHER_OUT','SALES_OUT')
-                          AND date(CAST(m2.create_time AS INTEGER) / 1000, 'unixepoch')
-                              = date(CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch')
+                          AND date(CAST(m2.create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours')
+                              = date(CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours')
                           AND m2.rowid != NEW.rowid
                     ) THEN 0 ELSE 1 END;
             END
@@ -660,13 +660,13 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             INSERT INTO stat_material_usage (material_code, period, warehouse_id, out_qty, usage_days)
             SELECT material_code,
                    COALESCE(
-                       strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch'),
-                       strftime('%Y-%m', CAST(create_time AS INTEGER) / 1000, 'unixepoch'),
+                       strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'),
+                       strftime('%Y-%m', CAST(create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours'),
                        strftime('%Y-%m', 'now', '+8 hours')
                    ),
                    COALESCE(warehouse_id, ''),
                    COALESCE(SUM(ABS(qty)), 0),
-                   COUNT(DISTINCT date(CAST(create_time AS INTEGER) / 1000, 'unixepoch'))
+                   COUNT(DISTINCT date(CAST(create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours'))
             FROM (
                 SELECT * FROM inventory_movement
                 UNION ALL
@@ -675,8 +675,8 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             WHERE direction = 'OUT' AND doc_type IN ('PRODUCTION_OUT','OUTSOURCE_OUT','OTHER_OUT','SALES_OUT')
             GROUP BY material_code, COALESCE(warehouse_id, ''),
                      COALESCE(
-                         strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch'),
-                         strftime('%Y-%m', CAST(create_time AS INTEGER) / 1000, 'unixepoch'),
+                         strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'),
+                         strftime('%Y-%m', CAST(create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours'),
                          strftime('%Y-%m', 'now', '+8 hours')
                      )
         """);
@@ -693,27 +693,27 @@ public class SummarySchemaInitializer implements CommandLineRunner {
         // 回填订单月度统计
         jdbc.update("""
             INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-            SELECT strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch'), 'PURCHASE', COUNT(*), COALESCE(SUM(total_amount), 0)
-            FROM purchase_order WHERE status != 'DRAFT' AND strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch') IS NOT NULL
-            GROUP BY strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch')
+            SELECT strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'PURCHASE', COUNT(*), COALESCE(SUM(total_amount), 0)
+            FROM purchase_order WHERE status != 'DRAFT' AND strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') IS NOT NULL
+            GROUP BY strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours')
         """);
         jdbc.update("""
             INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-            SELECT strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch'), 'SALES', COUNT(*), COALESCE(SUM(total_amount), 0)
-            FROM sales_order WHERE status != 'DRAFT' AND strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch') IS NOT NULL
-            GROUP BY strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch')
+            SELECT strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'SALES', COUNT(*), COALESCE(SUM(total_amount), 0)
+            FROM sales_order WHERE status != 'DRAFT' AND strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') IS NOT NULL
+            GROUP BY strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours')
         """);
         jdbc.update("""
             INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-            SELECT strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch'), 'OUTSOURCE', COUNT(*), COALESCE(SUM(processing_fee), 0)
-            FROM outsource_order WHERE status != 'DRAFT' AND strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch') IS NOT NULL
-            GROUP BY strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch')
+            SELECT strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'OUTSOURCE', COUNT(*), COALESCE(SUM(processing_fee), 0)
+            FROM outsource_order WHERE status != 'DRAFT' AND strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') IS NOT NULL
+            GROUP BY strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours')
         """);
         jdbc.update("""
             INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-            SELECT strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch'), 'PRODUCTION', COUNT(*), COALESCE(SUM(batch_qty), 0)
-            FROM production_order WHERE status != 'DRAFT' AND strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch') IS NOT NULL
-            GROUP BY strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch')
+            SELECT strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'PRODUCTION', COUNT(*), COALESCE(SUM(batch_qty), 0)
+            FROM production_order WHERE status != 'DRAFT' AND strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') IS NOT NULL
+            GROUP BY strftime('%Y-%m', CAST(create_time AS INTEGER)/1000, 'unixepoch', '+8 hours')
         """);
 
         // 回填库存日汇总
@@ -721,7 +721,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             INSERT INTO stat_inventory_daily (stat_date, material_code, warehouse_id, in_qty, out_qty, in_amount)
             SELECT COALESCE(
                        date(create_time),
-                       date(CAST(create_time AS INTEGER) / 1000, 'unixepoch'),
+                       date(CAST(create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours'),
                        date('now', '+8 hours')
                    ),
                    material_code, warehouse_id,
@@ -731,7 +731,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             FROM inventory_movement
             GROUP BY COALESCE(
                        date(create_time),
-                       date(CAST(create_time AS INTEGER) / 1000, 'unixepoch'),
+                       date(CAST(create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours'),
                        date('now', '+8 hours')
                      ), material_code, warehouse_id
         """);

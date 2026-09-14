@@ -112,7 +112,8 @@ public class DashboardController {
         java.math.BigDecimal dueAmount = arRepo.sumDueNotSettled(today);
         int dueCount = (int) arRepo.countByStatusNotAndDueDateLessThanEqual("PAID", today);
         todos.put("dueArCount", dueCount);
-        todos.put("dueArAmount", dueAmount);
+        // v9.0（P2-2 审计）：到期应收金额与下方财务汇总块同口径——无 finance:amount 权限不输出
+        todos.put("dueArAmount", com.pengyuan.pims.common.FieldFilter.hasAmountPerm("finance") ? dueAmount : null);
         todos.put("overdueTopics", topicRepo.countByClosedDateIsNullAndPlanDateBefore(today));
         todos.put("dueFollowUp", crmService.dueFollowUpCount());  // v5.50 今日该跟进
         // v7.7 打样任务：派发给我且待接收的数量（打样员工作台提醒，接收后消失）
@@ -138,13 +139,23 @@ public class DashboardController {
         data.put("customerCount", customerRepo.countByEnabledTrue());  // v5.43.2
 
         // 最近5条采购订单（走索引 create_time DESC，不全表加载）
-        data.put("recentPurchases", purchaseService.listRecent(5));
+        // v9.0（P2-2 审计）：最近单据金额按模块金额权限过滤，与财务汇总块同口径，无权限角色不见金额
+        java.util.List<?> recentPurchases = purchaseService.listRecent(5);
+        if (!com.pengyuan.pims.common.FieldFilter.hasAmountPerm("purchase"))
+            recentPurchases = com.pengyuan.pims.common.FieldFilter.filterListFields(recentPurchases, "totalAmount", "amount");
+        data.put("recentPurchases", recentPurchases);
 
         // 最近5条销售订单
-        data.put("recentSales", salesService.listRecent(5));
+        java.util.List<?> recentSales = salesService.listRecent(5);
+        if (!com.pengyuan.pims.common.FieldFilter.hasAmountPerm("sales"))
+            recentSales = com.pengyuan.pims.common.FieldFilter.filterListFields(recentSales, "totalAmount", "amount");
+        data.put("recentSales", recentSales);
 
         // 最近5条委外工单
-        data.put("recentOutsource", outsourceService.listRecent(5));
+        java.util.List<?> recentOutsource = outsourceService.listRecent(5);
+        if (!com.pengyuan.pims.common.FieldFilter.hasAmountPerm("outsource"))
+            recentOutsource = com.pengyuan.pims.common.FieldFilter.filterListFields(recentOutsource, "processingFee", "totalAmount", "amount");
+        data.put("recentOutsource", recentOutsource);
 
         // 低库存预警（v5.12 与报表口径统一：可用天数<15天 + 库存0无用量物料）
         data.put("lowStock", lowStockSummary());

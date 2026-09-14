@@ -3,6 +3,7 @@ package com.pengyuan.pims.service;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.pengyuan.pims.common.FieldFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -558,7 +559,7 @@ public class AiService {
         jdbc.setQueryTimeout(10);
         try {
             List<Map<String, Object>> rows = jdbc.queryForList(finalSql);
-            return mapper.writeValueAsString(rows);
+            return mapper.writeValueAsString(sanitizeRows(trimmed, rows));
         } finally {
             jdbc.setQueryTimeout(0);
         }
@@ -618,11 +619,42 @@ public class AiService {
         }
     }
 
+    /**
+     * v9.0（P1-2 审计）：AI 查询结果按当前用户字段权限脱敏——此前 queryData 直通回传，
+     * purchase:price / 各模块 :amount 字段级权限在 AI 通道整体失效（拖库通道）。
+     * 表组口径与 FieldFilter 一致：SQL 触到组内表且无权限 → 剔除该组敏感列（DB snake_case 列名）。
+     * 表名匹配用包含式（宁可多脱敏不可漏）：material/inventory 等含 unit_price 的表全组覆盖。
+     */
+    private static final String[][] AI_FIELD_GUARDS = {
+            {"purchase:price", "unit_price,last_unit_price,increase_rate,increase_amount,cost_price",
+                    "purchase_order,purchase_arrival,requisition,material,outsource_order,inventory_ledger,stock_check"},
+            {"sales:amount", "total_amount,amount,received_amount",
+                    "sales_order,sales_outbound,return_order,shipping_log,quotation,sample_request"},
+            {"finance:amount", "amount,total_amount,paid_amount,received_amount",
+                    "ar_ledger,ap_ledger,invoice,expense,advance_payment,voucher,voucher_entry"},
+    };
+
+    private List<Map<String, Object>> sanitizeRows(String sql, List<Map<String, Object>> rows) {
+        if (rows == null || rows.isEmpty()) return rows;
+        String lower = sql.toLowerCase();
+        java.util.Set<String> toRemove = new java.util.LinkedHashSet<>();
+        for (String[] g : AI_FIELD_GUARDS) {
+            boolean touches = java.util.Arrays.stream(g[2].split(",")).anyMatch(lower::contains);
+            if (touches && !FieldFilter.hasPerm(g[0])) toRemove.addAll(java.util.Arrays.asList(g[1].split(",")));
+        }
+        if (toRemove.isEmpty()) return rows;
+        for (Map<String, Object> r : rows) for (String c : toRemove) r.remove(c);
+        return rows;
+    }
+
     /** v6.1 AI 敏感表黑名单（listTables 枚举同样过滤） */
     private static final String[] SENSITIVE_TABLES = {
             "sys_user", "ai_config", "salary_sheet", "salary_item", "employee",
             "voucher", "voucher_entry", "account_subject", "account_period", "account_mapping",
-            "asset", "asset_depreciation", "backup_meta"
+            "asset", "asset_depreciation", "backup_meta",
+            // v9.0（P1-2 审计）：拖库通道补口——银行账户/流水、收付款原生、财务汇总此前全不在名单
+            "stat_finance_summary", "bank_account", "bank_statement",
+            "payment_receipt", "payment_disbursement"
     };
 
 

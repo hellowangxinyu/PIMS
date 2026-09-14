@@ -1,4 +1,4 @@
-function esc(s) { return String(s == null ? '': s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') }
+export function esc(s) { return String(s == null ? '': s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') }
 /**
  * 安全约定（v8.6 C3）：title/subtitle 已由本模块转义；bodyHtml 由调用方拼装，**调用方必须对用户录入字段（单号/摘要/科目名等）自行 esc**。
  * 通用报表打印（v5.61）—— 准则格式报表（资产负债表/利润表/现金流量表/余额表/明细账）共用
