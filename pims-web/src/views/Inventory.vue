@@ -59,6 +59,25 @@
             <span :class="availableClass(row)">{{ row.availableQty }}</span>
           </template>
         </el-table-column>
+        <!-- v9.5 ATP 轻量版：已订未发=已确认销售订单未出库需求；可承诺=可用−已订未发，负数标红（超卖风险） -->
+        <el-table-column label="已订未发" :width="cw('已订未发') || 100" align="right">
+          <template #header>
+            <el-tooltip content="已确认销售订单尚未出库的数量（物料级）" placement="top">
+              <span>已订未发</span>
+            </el-tooltip>
+          </template>
+          <template #default="{ row }">{{ Number(row.orderedQty) > 0 ? row.orderedQty : '—' }}</template>
+        </el-table-column>
+        <el-table-column label="可承诺" :width="cw('可承诺') || 100" align="right">
+          <template #header>
+            <el-tooltip content="可用总量 − 已订未发；负数表示确认订单的量已超过库存（超卖风险）" placement="top">
+              <span>可承诺</span>
+            </el-tooltip>
+          </template>
+          <template #default="{ row }">
+            <span :style="Number(row.atp) < 0 ? 'color:#f56c6c;font-weight:700' : ''">{{ row.atp }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="unitPrice" label="均价" :width="cw('均价') || 100" align="right">
           <template #header>
             <el-tooltip content="点击价格查看价格走势" placement="top">

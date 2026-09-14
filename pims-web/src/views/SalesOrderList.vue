@@ -470,6 +470,24 @@ async function submitCreate() {
         '信用额度预警', { type: 'warning', confirmButtonText: '继续下单', cancelButtonText: '取消' })
     }
   }
+  // v9.5（ATP 轻量版）可承诺量预警：任一明细的量 > 可用库存−已订未发 时二次确认（不拦截，防误挡换货/预售）
+  if (!editingOrder.value) {
+    const warns = []
+    for (const it of items) {
+      try {
+        const res = await api.get('/inventory/summary', { params: { view: 'code', keyword: it.materialCode, page: 1, pageSize: 5 } })
+        const row = (res.rows || []).find(r => r.materialCode === it.materialCode)
+        if (row && Number(row.atp) < (Number(it.qty) || 0)) {
+          warns.push(`${it.materialCode}（可承诺 ${row.atp} ${row.unit || ''}，本单需 ${(Number(it.qty) || 0)}）`)
+        }
+      } catch { /* 库存接口失败不阻断下单 */ }
+    }
+    if (warns.length) {
+      await ElMessageBox.confirm(
+        `以下物料库存不足以覆盖已有订单+本单：\n${warns.join('\n')}\n\n确认后可能无法全额发货（超卖风险），是否继续？`,
+        '可承诺量预警', { type: 'warning', confirmButtonText: '继续下单', cancelButtonText: '取消' })
+    }
+  }
   loading.value = true
   try {
     if (editingOrder.value) {

@@ -36,10 +36,11 @@ public class InventoryController {
     private final OpeningStockService openingStockService;
     private final UserService userService;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;   // v7.4 周转天数
+    private final com.pengyuan.pims.repository.SalesOrderRepository salesOrderRepo;   // v9.5 ATP 已订未发
     public InventoryController(InventoryService service, RawMaterialPurchaseRepository purchaseRepo,
                                QualityInspectionRepository qcRepo, InventoryLedgerRepository ledgerRepo,
                                OpeningStockService openingStockService, UserService userService,
-                               org.springframework.jdbc.core.JdbcTemplate jdbc) {
+                               org.springframework.jdbc.core.JdbcTemplate jdbc, com.pengyuan.pims.repository.SalesOrderRepository salesOrderRepo) {
         this.service = service;
         this.purchaseRepo = purchaseRepo;
         this.qcRepo = qcRepo;
@@ -47,6 +48,7 @@ public class InventoryController {
         this.openingStockService = openingStockService;
         this.userService = userService;
         this.jdbc = jdbc;
+        this.salesOrderRepo = salesOrderRepo;
     }
 
     /** 下载期初导入模板 */
@@ -174,6 +176,27 @@ public class InventoryController {
             m.put("category", r.length > 9 ? nz(r[9]) : null);         // v7.5 大类
             m.put("subCategory", r.length > 10 ? nz(r[10]) : null);    // v7.5 小类
             list.add(m);
+        }
+        // v9.5（ATP 轻量版）：已订未发与可承诺量——已确认销售订单未出库需求按物料聚合（一条 SQL），
+        // 可承诺=可用总量−已订未发；负值=超卖风险（此前销售确认不占库存，全靠人脑记）
+        java.util.Map<String, Object> demand = new java.util.HashMap<>();
+        for (Object[] d : salesOrderRepo.openDemandByMaterial()) {
+            demand.put(String.valueOf(d[0]), d[1]);
+        }
+        for (Map<String, Object> m : list) {
+            Object od = demand.get(m.get("materialCode"));
+            java.math.BigDecimal ordered = java.math.BigDecimal.ZERO;   // 无已订未发=0（od 为 null 时不能走 Number 强转）
+            if (od != null) {
+                ordered = od instanceof java.math.BigDecimal bd ? bd
+                        : java.math.BigDecimal.valueOf(((Number) od).doubleValue());
+            }
+            m.put("orderedQty", ordered);
+            // SQLite 聚合坑：SUM 整数值返回 Integer 非 BigDecimal（历史记忆坑），统一走 Number 转换
+            Object availRaw = m.get("availableQty");
+            java.math.BigDecimal avail = availRaw == null ? java.math.BigDecimal.ZERO
+                    : (availRaw instanceof java.math.BigDecimal bd ? bd
+                        : java.math.BigDecimal.valueOf(((Number) availRaw).doubleValue()));
+            m.put("atp", avail.subtract(ordered));
         }
         return Result.ok(java.util.Map.of("rows", list, "total", rows.getTotalElements()));
     }
