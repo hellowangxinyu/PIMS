@@ -25,6 +25,7 @@
 
       <!-- ===== Tab1：退货单处理 ===== -->
       <template v-if="activeTab === 'HANDLE'">
+        <template v-if="!isMobile">
         <p-table :data="pagedRows" stripe border style="width:100%">
           <el-table-column prop="docNo" label="退货单号" width="150" show-overflow-tooltip />
           <el-table-column label="类型" width="90" align="center">
@@ -67,6 +68,28 @@
             </template>
           </el-table-column>
         </p-table>
+        </template>
+        <!-- v10.2 手机卡片视图：待处理 -->
+        <div v-if="isMobile" class="m-cards">
+          <div v-for="row in pagedRows" :key="row.id" class="m-card">
+            <div class="m-card-head">
+              <div>
+                <div class="m-card-title">{{ row.materialName }}</div>
+                <div class="m-card-sub">{{ row.docNo }} · {{ row.purchaseOrderNo || '' }}</div>
+              </div>
+              <span class="m-status">{{ row.status === 'DRAFT' ? '待审核' : '待出库' }}</span>
+            </div>
+            <div class="m-card-row"><span>退货数量</span><span class="m-val num">{{ row.qty }} {{ row.unit || '' }}</span></div>
+            <div class="m-card-row" v-if="row.batchNo"><span>批号</span><span class="m-val">{{ row.batchNo }}</span></div>
+            <div class="m-card-row" v-if="row.qcInspectionNo"><span>质检单</span><span class="m-val">{{ row.qcInspectionNo }}</span></div>
+            <div class="m-card-actions">
+              <el-button v-if="row.status === 'DRAFT'" size="small" type="primary" @click="approve(row)">审核通过</el-button>
+              <el-button v-if="row.status === 'DRAFT'" size="small" @click="reject(row)">驳回</el-button>
+              <el-button v-else size="small" type="primary" @click="openOutbound(row)">退货出库</el-button>
+            </div>
+          </div>
+          <div v-if="!pagedRows.length" class="m-empty">暂无待处理退货</div>
+        </div>
         <!-- 分页（v5.2） -->
         <div class="pagination-bar">
           <el-pagination
@@ -81,6 +104,7 @@
 
       <!-- ===== Tab2：已退货明细（v5.4，status=DONE 的退货记录） ===== -->
       <template v-else>
+        <template v-if="!isMobile">
         <p-table :data="donePagedRows" stripe border style="width:100%">
           <el-table-column prop="docNo" label="退货单号" width="150" show-overflow-tooltip />
           <el-table-column prop="purchaseOrderNo" label="原采购单号" width="150" show-overflow-tooltip />
@@ -105,6 +129,22 @@
             <template #default="{ row }">{{ fmtTime(row.updateTime) }}</template>
           </el-table-column>
         </p-table>
+        </template>
+        <!-- v10.2 手机卡片视图：已完成 -->
+        <div v-if="isMobile" class="m-cards">
+          <div v-for="row in donePagedRows" :key="row.id" class="m-card">
+            <div class="m-card-head">
+              <div>
+                <div class="m-card-title">{{ row.materialName }}</div>
+                <div class="m-card-sub">{{ row.docNo }}</div>
+              </div>
+              <span class="m-status">已完成</span>
+            </div>
+            <div class="m-card-row"><span>退货数量</span><span class="m-val num">{{ row.qty }} {{ row.unit || '' }}</span></div>
+            <div class="m-card-row" v-if="row.batchNo"><span>批号</span><span class="m-val">{{ row.batchNo }}</span></div>
+          </div>
+          <div v-if="!donePagedRows.length" class="m-empty">暂无已完成退货</div>
+        </div>
         <!-- 明细分页（独立分页实例） -->
         <div class="pagination-bar">
           <el-pagination
@@ -174,6 +214,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { usePaging } from '../composables/usePaging'
+import { isMobile } from '../composables/useIsMobile'
 
 const activeTab = ref('HANDLE')   // HANDLE 退货单处理 / DONE 已退货明细
 const list = ref([])

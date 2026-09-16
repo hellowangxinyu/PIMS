@@ -17,11 +17,11 @@ export default defineConfig({
       // 均为 Windows 原生命令绕开 node fs 中文路径坑；构建失败时 static 为空属预期（jar 打包是显式后续步骤）。
       name: 'pims-atomic-deploy',
       buildStart() {
-        if (process.platform !== 'win32') return
+        if (process.platform !== 'win32' || process.env.PIMS_SKIP_DEPLOY) return
         execSync('cmd /c "if exist dist rd /s /q dist >nul 2>&1 & del /q /s ..\\pims-server\\src\\main\\resources\\static\\*.* >nul 2>&1"')
       },
       closeBundle() {
-        if (process.platform !== 'win32') return
+        if (process.platform !== 'win32' || process.env.PIMS_SKIP_DEPLOY) return
         execSync('cmd /c "del /q /s ..\\pims-server\\src\\main\\resources\\static\\*.* >nul 2>&1"')
         execSync('xcopy /E /Y /I /Q dist ..\\pims-server\\src\\main\\resources\\static', { stdio: 'ignore' })
       }

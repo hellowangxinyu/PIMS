@@ -128,7 +128,8 @@
     </div>
 
       <!-- v5.22 视图二：按编码+批次聚合（同批次跨库位合计余量） -->
-      <p-table v-else :data="rows" stripe border style="width:100%" @header-dragend="onHeaderDragend" :row-class-name="rowClassName">
+      <template v-if="!isMobile">
+      <p-table v-if="view === 'batch'" :data="rows" stripe border style="width:100%" @header-dragend="onHeaderDragend" :row-class-name="rowClassName">
         <el-table-column prop="materialCode" label="编码" :width="cw('编码') || 140" />
         <el-table-column prop="materialName" label="品名" :width="cw('品名') || 160" show-overflow-tooltip />
         <!-- v7.5：大类/小类（同 code 视图） -->
@@ -207,6 +208,23 @@
           <template #default="{ row }">{{ row.qcDate || '-' }}</template>
         </el-table-column>
       </p-table>
+    </template>
+    <!-- v10.2 手机卡片视图：按批次 -->
+    <div v-if="isMobile && view === 'batch'" class="m-cards">
+      <div v-for="row in rows" :key="row.materialCode + '-' + row.batchNo" class="m-card">
+        <div class="m-card-head">
+          <div>
+            <div class="m-card-title">{{ row.materialName }}</div>
+            <div class="m-card-sub">{{ row.materialCode }} · 批次 {{ row.batchNo }}</div>
+          </div>
+          <span class="m-status">{{ row.qcStatus === 'REJECT' ? '不合格' : (row.qcStatus === 'TAILING' ? '油尾' : (row.qcStatus === 'PASS' ? '合格' : '—')) }}</span>
+        </div>
+        <div class="m-card-row"><span>数量 / 可用</span><span class="m-val num">{{ row.qty }} / {{ row.availableQty }}</span></div>
+        <div class="m-card-row" v-if="row.locationNames"><span>库位</span><span class="m-val">{{ row.locationNames }}</span></div>
+        <div class="m-card-row" v-if="row.expiryDate"><span>效期至</span><span class="m-val">{{ row.expiryDate }}</span></div>
+      </div>
+      <div v-if="!rows.length" class="m-empty">暂无批次</div>
+    </div>
       <!-- v5.1：分页渲染，避免一次性渲染全量行（200+ 行 × 18 列无虚拟滚动会卡顿） -->
       <div class="pagination-bar">
         <el-pagination

@@ -668,6 +668,12 @@
             </span>
           </div>
 
+          <!-- v10.2 记住账号密码（仅手机显示；桌面登录页不变） -->
+          <label v-if="isMobile" class="remember-row" style="display:flex;align-items:center;gap:8px;margin:2px 0 10px;font-size:13px;color:#5b6b7a;cursor:pointer;user-select:none">
+            <input type="checkbox" v-model="remember" style="width:16px;height:16px;accent-color:#4a7c74" />
+            记住账号和密码（仅保存在本机）
+          </label>
+
           <button class="login-btn" :class="{ loading: loading }" @click="login" @mousedown="ripple" :disabled="loading"
                   :style="!loading && raal.code ? { background: `linear-gradient(135deg, ${raal.light}, ${raal.dark})` } : {}">
             <span v-if="!loading">登 录</span>
@@ -700,9 +706,11 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../api'
 import { RIDDLES } from '../data/riddles'
+import { isMobile } from '../composables/useIsMobile'
 
 const router = useRouter()
 const form = ref({ username: '', password: '' })
+const remember = ref(false)
 const loading = ref(false)
 const showPwd = ref(false)
 const errorMsg = ref('')
@@ -1044,6 +1052,12 @@ function onLeave() {
   if (swatchRef.value) swatchRef.value.style.transform = ''
 }
 
+// v10.2 回填记住的凭据（仅手机）
+try {
+  const saved = JSON.parse(localStorage.getItem('pims-remember') || 'null')
+  if (saved && saved.u) { form.value.username = saved.u; form.value.password = saved.p; remember.value = true }
+} catch { /* 忽略坏数据 */ }
+
 async function login() {
   errorMsg.value = ''
   if (!form.value.username) { errorMsg.value = '请输入用户名'; userInput.value?.focus(); return }
@@ -1054,6 +1068,11 @@ async function login() {
     const data = await api.post('/auth/login', form.value)
     // v6.2 安全：token 走 HttpOnly Cookie（服务端自动 Set-Cookie，JS 不可读、XSS 无法窃取），不再落 localStorage
     localStorage.setItem('user', JSON.stringify(data))
+    // v10.2 手机记住账号密码：仅勾选时保存到本机 localStorage；未勾选则清除旧凭据
+    if (isMobile.value) {
+      if (remember.value) localStorage.setItem('pims-remember', JSON.stringify({ u: form.value.username, p: form.value.password }))
+      else localStorage.removeItem('pims-remember')
+    }
     ElMessage.success('登录成功')
     router.replace('/')
   } catch (e) {

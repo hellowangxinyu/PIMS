@@ -1,0 +1,1 @@
+import{aJ as u,e as t}from"./vendor-BlK-UoAz.js";function l(o){const e=t(1),a=t(25),r=u(()=>{const n=o.value||[],s=(e.value-1)*a.value;return n.slice(s,s+a.value)});return{page:e,pageSize:a,pagedRows:r,resetPage:()=>{e.value=1}}}export{l as u};

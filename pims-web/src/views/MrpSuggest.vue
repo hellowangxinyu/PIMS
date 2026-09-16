@@ -21,6 +21,7 @@
         <div class="kpi-card"><div class="kpi-label">缺口物料</div><div class="kpi-value red">{{ (result.lines || []).length }} 种</div></div>
       </div>
 
+      <template v-if="!isMobile">
       <p-table :data="result.lines || []" stripe border style="width:100%" @selection-change="onCheck" row-key="materialCode">
         <el-table-column type="selection" width="46" />
         <el-table-column prop="materialCode" label="物料编码" width="130" show-overflow-tooltip />
@@ -38,6 +39,27 @@
         <el-table-column prop="orders" label="需求来源订单" min-width="170" show-overflow-tooltip />
       </p-table>
     </template>
+    <!-- v10.2 手机卡片视图：点卡片勾选/取消，与表格同源 checked -->
+    <div v-if="isMobile" class="m-cards">
+      <div v-for="row in result.lines || []" :key="row.materialCode" class="m-card"
+           style="cursor:pointer" @click="toggleMCheck(row)">
+        <div class="m-card-head">
+          <div>
+            <div class="m-card-title">{{ row.materialName }}</div>
+            <div class="m-card-sub">{{ row.materialCode }} · {{ row.materialCategory }}</div>
+          </div>
+          <span class="m-status" :style="checked.some(r => r.materialCode === row.materialCode) ? 'background:var(--pims-primary);color:#fff' : ''">
+            {{ checked.some(r => r.materialCode === row.materialCode) ? '已选' : '点选' }}
+          </span>
+        </div>
+        <div class="m-card-row"><span>需求量</span><span class="m-val num">{{ row.need }}</span></div>
+        <div class="m-card-row"><span>现库存 / 在途</span><span class="m-val num">{{ row.stock }} / {{ row.transit }}</span></div>
+        <div class="m-card-row"><span>缺口</span><span class="m-val num danger">{{ row.gap }}</span></div>
+        <div class="m-card-row"><span>建议采购</span><span class="m-val num">{{ row.suggested }}</span></div>
+      </div>
+      <div v-if="!(result.lines || []).length" class="m-empty">暂无建议</div>
+    </div>
+    </template>
 
     <div class="empty-tip" v-if="!result && !loading">选择订单（或不选=全部）后点「分析缺口」</div>
   </div>
@@ -48,6 +70,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
+import { isMobile } from '../composables/useIsMobile'
 
 const orders = ref([])
 const selectedOrders = ref([])
@@ -67,6 +90,14 @@ async function analyze() {
 }
 
 function onCheck(rows) { checked.value = rows }
+
+// v10.2 手机卡片勾选（与表格 selection-change 同源 checked 数组）
+function toggleMCheck(row) {
+  const i = checked.value.findIndex(r => r.materialCode === row.materialCode)
+  if (i >= 0) checked.value.splice(i, 1)
+  else checked.value.push(row)
+}
+
 
 async function createOrder() {
   try {
