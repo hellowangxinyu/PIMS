@@ -1294,10 +1294,10 @@ function printProcessSheet() {
     '.num{text-align:right;}.center{text-align:center;}',
     '.p-stage{border:1px solid #aaa;border-radius:4px;padding:10px 12px;margin-bottom:12px;}',
     '.p-stage-h{font-size:14px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px dashed #ccc;}',
-    '.p-stage-h .p-no{display:inline-block;background:#1d4ed8;color:#fff;border-radius:3px;padding:1px 8px;margin-right:8px;font-size:12px;}',
+    '.p-stage-h .p-no{display:inline-block;background:#4a6785;color:#fff;border-radius:3px;padding:1px 8px;margin-right:8px;font-size:12px;}',
     '.p-role{color:#64748b;font-weight:400;font-size:12px;}',
     '.p-step{font-size:13px;line-height:1.7;}',
-    '.p-param{color:#1d4ed8;font-size:12px;}',
+    '.p-param{color:#4a6785;font-size:12px;}',
     '.qc-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;}',
     '.qc-table th,.qc-table td{border:1px solid #999;padding:3px 6px;}',
     '.qc-table th{background:#f5f5f5;}',
@@ -1447,11 +1447,11 @@ onMounted(async () => {
 .type-tabs { display: flex; gap: 0; margin-bottom: 12px; background: #f1f5f9; border-radius: 8px; padding: 3px; }
 .type-tab { flex: 1; padding: 8px 0; font-size: 13px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; background: transparent; color: #64748b; transition: all 0.2s; }
 .type-tab:hover { color: #334155; }
-.type-tab.active { background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.type-tab.active { background: #fff; color: #4a6785; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .status-tabs { display: flex; gap: 0; margin-bottom: 12px; background: #f1f5f9; border-radius: 8px; padding: 3px; }
 .status-tab { flex: 1; padding: 6px 0; font-size: 12px; border: none; border-radius: 6px; cursor: pointer; background: transparent; color: #64748b; transition: all 0.2s; }
 .status-tab:hover { color: #334155; }
-.status-tab.active { background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.status-tab.active { background: #fff; color: #4a6785; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .detail-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
 .detail-header { display: flex; align-items: center; justify-content: space-between; }
 .detail-header h3 { margin: 0; font-size: 16px; }
@@ -1461,7 +1461,7 @@ onMounted(async () => {
 .version-section { margin-bottom: 16px; }
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .section-header h4 { margin: 0; font-size: 15px; }
-.ver-label { font-size: 12px; color: #6366f1; background: #eef2ff; padding: 2px 8px; border-radius: 4px; margin-left: 8px; }
+.ver-label { font-size: 12px; color: #7288a5; background: #eef0f6; padding: 2px 8px; border-radius: 4px; margin-left: 8px; }
 .tree-section { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
 .tree-actions { display: flex; gap: 8px; }
 .tree-meta { display: flex; align-items: center; margin-bottom: 12px; font-size: 13px; color: #475569; }
@@ -1473,47 +1473,47 @@ onMounted(async () => {
 .row-name { font-weight: 400; vertical-align: middle; }
 .row-name-sub { font-weight: 600; vertical-align: middle; }
 .row-price { color: #64748b; }
-.row-cost { color: #ea580c; font-weight: 600; }
+.row-cost { color: #a8744f; font-weight: 600; }
 .row-dash { color: #cbd5e1; }
-.row-seq { display: inline-block; min-width: 22px; height: 22px; line-height: 22px; text-align: center; background: #1d4ed8; color: #fff; border-radius: 50%; font-size: 12px; font-weight: 600; }
+.row-seq { display: inline-block; min-width: 22px; height: 22px; line-height: 22px; text-align: center; background: #4a6785; color: #fff; border-radius: 50%; font-size: 12px; font-weight: 600; }
 /* 制浆配方：表格底部行内新增条 */
-.tree-add-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px 10px; background: #f8fafc; border: 1px dashed #93c5fd; border-radius: 6px; }
+.tree-add-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px 10px; background: #f8fafc; border: 1px dashed #b3c5d9; border-radius: 6px; }
 .tree-add-row .add-mat { flex: 1; min-width: 180px; }
 .tree-add-row .add-qty { width: 130px; flex-shrink: 0; }
 .tree-add-row .add-price, .tree-add-row .add-cost { width: 90px; flex-shrink: 0; text-align: right; font-size: 13px; }
 .tree-add-row .add-btn { flex-shrink: 0; }
 /* 用量合计（实时） */
-.tree-total { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding: 8px 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; font-size: 13px; color: #0c4a6e; }
+.tree-total { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding: 8px 12px; background: #eff4f7; border: 1px solid #c2d5de; border-radius: 6px; font-size: 13px; color: #0c4a6e; }
 .tree-total strong { color: #0369a1; font-size: 15px; }
 .tree-total-sep { color: #94a3b8; }
-.tree-total-warn { color: #dc2626; font-weight: 600; }
+.tree-total-warn { color: #a85d50; font-weight: 600; }
 /* 标准工艺流程展示 */
 .process-section { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-top: 16px; }
 .process-stages { display: flex; flex-direction: column; gap: 12px; }
 .proc-stage { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
 .proc-stage-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.proc-no { background: #1d4ed8; color: #fff; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+.proc-no { background: #4a6785; color: #fff; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
 .proc-name { font-weight: 600; font-size: 14px; }
 .proc-role { color: #64748b; font-size: 12px; margin-left: auto; }
 .proc-step { font-size: 13px; line-height: 1.7; padding: 2px 0; display: flex; gap: 8px; align-items: flex-start; }
-.proc-step-code { color: #6366f1; font-weight: 600; flex-shrink: 0; }
+.proc-step-code { color: #7288a5; font-weight: 600; flex-shrink: 0; }
 .proc-step-desc { flex: 1; }
-.proc-step-params { color: #1d4ed8; font-size: 12px; background: #eff6ff; padding: 0 6px; border-radius: 3px; flex-shrink: 0; align-self: center; }
+.proc-step-params { color: #4a6785; font-size: 12px; background: #eff2f6; padding: 0 6px; border-radius: 3px; flex-shrink: 0; align-self: center; }
 .proc-qc { margin-top: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .proc-qc-title { font-size: 12px; color: #92400e; font-weight: 600; }
 .proc-qc-tag { margin: 0; }
-.cost-cell { color: #ea580c; font-weight: 600; cursor: default; }
-.usage-count { color: #2563eb; font-weight: 600; }
+.cost-cell { color: #a8744f; font-weight: 600; cursor: default; }
+.usage-count { color: #5b7a9c; font-weight: 600; }
 .cost-empty { color: #cbd5e1; }
-.sf-product-lock { padding: 4px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 13px; color: #14532d; }
+.sf-product-lock { padding: 4px 10px; background: #f0f5f0; border: 1px solid #c4d6c8; border-radius: 6px; font-size: 13px; color: #14532d; }
 .sf-product-from { color: #16a34a; font-size: 12px; }
 .form-tip { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 2px; }
-.cost-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; }
+.cost-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; background: #f5f1ea; border: 1px solid #fed7aa; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; }
 .cost-bar-label { color: #9a3412; font-weight: 600; }
-.cost-bar-total { color: #ea580c; font-weight: 700; font-size: 15px; }
+.cost-bar-total { color: #a8744f; font-weight: 700; font-size: 15px; }
 .cost-bar-unit { color: #9a3412; }
 .cost-bar-hint { color: #94a3b8; font-size: 12px; }
-.alt-tip { font-size: 13px; color: #475569; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 8px 12px; margin: 0 0 12px; }
+.alt-tip { font-size: 13px; color: #475569; background: #eff4f7; border: 1px solid #c2d5de; border-radius: 6px; padding: 8px 12px; margin: 0 0 12px; }
 @media (max-width: 900px) {
   .recipe-layout { flex-direction: column; }
   .recipe-left { flex: none; width: 100%; }

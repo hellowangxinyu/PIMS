@@ -122,7 +122,7 @@ onMounted(async () => {
 .summary-card { background: var(--pims-card-bg, #fff); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); border: 1px solid var(--pims-card-border, #e2e8f0); }
 .sc-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
 .sc-value { font-size: 18px; font-weight: 700; }
-.sc-value.red { color: #ef4444; }
+.sc-value.red { color: #b56a5c; }
 .sc-value.green { color: #16a34a; }
 .type-tabs { display: flex; align-items: center; margin-bottom: 16px; padding: 12px 16px; background: #fafafa; border-radius: 8px; }
 .type-count { font-size: 13px; color: #64748b; }

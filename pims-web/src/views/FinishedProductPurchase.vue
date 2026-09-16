@@ -604,7 +604,7 @@ onMounted(async () => {
 .batch-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .batch-title { font-size: 13px; font-weight: 600; color: #374151; }
 .batch-total { text-align: right; padding: 8px 4px; font-size: 13px; color: #374151; }
-.amount-cell { color: #ea580c; font-weight: 600; }
+.amount-cell { color: #a8744f; font-weight: 600; }
 
 .po-head-table { margin-bottom: 12px; }
 .po-head-table :deep(.el-descriptions__label) { width: 110px; background: #f5f7fa; color: #606266; }

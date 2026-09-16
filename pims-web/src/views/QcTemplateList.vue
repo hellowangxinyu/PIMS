@@ -115,8 +115,8 @@
         <div class="sub-title">检测项</div>
         <div class="item-row head-row">
           <span class="col-idx">#</span>
-          <span class="col-name">检测项目 <b style="color:#f56c66">*</b></span>
-          <span class="col-standard">标准要求 <b style="color:#f56c66">*</b></span>
+          <span class="col-name">检测项目 <b style="color:#b56a5c">*</b></span>
+          <span class="col-standard">标准要求 <b style="color:#b56a5c">*</b></span>
           <span class="col-unit">单位</span>
           <span class="col-method">检验方法/依据</span>
           <span class="col-op"></span>
@@ -307,22 +307,22 @@ onMounted(() => {
 .page-header h2 { margin: 0; font-size: 20px; }
 .edit-title { display: flex; align-items: center; gap: 8px; }
 .qc-tip {
-  background: #eef2ff; color: #4338ca; border-radius: 6px;
+  background: #eef0f6; color: #5d5f85; border-radius: 6px;
   padding: 8px 14px; font-size: 13px; margin-bottom: 12px;
-  border: 1px solid #c7d2fe;
+  border: 1px solid #ccd3e2;
 }
 .type-tabs { display: flex; gap: 0; margin-bottom: 14px; background: #f1f5f9; border-radius: 8px; padding: 3px; width: fit-content; }
 .type-tab { padding: 8px 20px; font-size: 13px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; background: transparent; color: #64748b; transition: all 0.2s; }
 .type-tab:hover { color: #334155; }
-.type-tab.active { background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.type-tab.active { background: #fff; color: #4a6785; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .tpl-name { font-weight: 600; }
-.default-star { color: #f59e0b; margin-left: 4px; }
+.default-star { color: #c2a069; margin-left: 4px; }
 .meta-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .meta-label { font-size: 13px; font-weight: 600; color: #475569; white-space: nowrap; margin-left: 8px; }
 .pack-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
 .pack-label { font-size: 13px; font-weight: 600; color: #475569; padding-top: 6px; white-space: nowrap; }
 .pack-row .el-input { flex: 1; }
-.tip { font-size: 13px; color: #475569; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
+.tip { font-size: 13px; color: #475569; background: #eff4f7; border: 1px solid #c2d5de; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
 .items-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; }
 .sub-title { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 10px; }
 .item-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }

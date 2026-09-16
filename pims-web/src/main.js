@@ -10,8 +10,9 @@ import PTable from './components/PTable.js'
 
 // 主题早期注入：在 Vue 挂载前应用，避免首屏闪默认色
 try {
-  const t = localStorage.getItem('pims-theme')
-  if (t && t !== 'indigo') document.documentElement.setAttribute('data-theme', t)
+  // v9.7 主题收敛：只保留黛青素雅，清掉历史选择残留
+  localStorage.removeItem('pims-theme')
+  document.documentElement.removeAttribute('data-theme')
 } catch { /* 隐私模式等场景忽略 */ }
 
 const app = createApp(App)

@@ -504,13 +504,13 @@ onMounted(async () => {
 }
 
 .filter-btn:hover {
-  border-color: #22c55e;
+  border-color: #7fa07f;
   color: #15803d;
 }
 
 .filter-btn.active {
-  background: #f0fdf4;
-  border-color: #22c55e;
+  background: #f0f5f0;
+  border-color: #7fa07f;
   color: #15803d;  font-weight: 600;
 }
 

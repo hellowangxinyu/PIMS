@@ -353,10 +353,10 @@ onMounted(async () => {
 .type-tabs { display: flex; align-items: center; margin-bottom: 16px; padding: 12px 16px; background: #fafafa; border-radius: 8px; }
 .type-count { font-size: 13px; color: #64748b; }
 .text-muted { color: #94a3b8; font-size: 12px; }
-.cost-cell { color: #ea580c; font-weight: 600; }
+.cost-cell { color: #a8744f; font-weight: 600; }
 .yield-good { color: #16a34a; font-weight: 600; }
 .yield-warn { color: #d97706; font-weight: 600; }
-.yield-bad { color: #dc2626; font-weight: 600; }
+.yield-bad { color: #a85d50; font-weight: 600; }
 .trace-content { max-height: 60vh; overflow-y: auto; }
 .trace-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px; }
 .trace-product { font-size: 16px; font-weight: 600; }
@@ -365,5 +365,5 @@ onMounted(async () => {
 .trace-node { display: flex; align-items: center; gap: 8px; width: 100%; padding: 2px 0; }
 .tn-name { font-weight: 500; }
 .tn-code { font-size: 12px; color: #94a3b8; }
-.tn-qty { font-size: 12px; color: #6366f1; font-weight: 600; }
+.tn-qty { font-size: 12px; color: #7288a5; font-weight: 600; }
 </style>

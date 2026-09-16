@@ -17,11 +17,11 @@
       <div class="chart-grid">
         <div class="chart-card full">
           <div class="chart-card-title">月度采购金额趋势</div>
-          <SvgLineChart :labels="data.monthlyTrend?.labels || []" :series="[{ name: '采购金额', values: data.monthlyTrend?.values || [], color: '#6366f1' }]" :height="260" />
+          <SvgLineChart :labels="data.monthlyTrend?.labels || []" :series="[{ name: '采购金额', values: data.monthlyTrend?.values || [], color: '#7288a5' }]" :height="260" />
         </div>
         <div class="chart-card">
           <div class="chart-card-title">供应商采购 TOP10</div>
-          <SvgBarChart :data="data.supplierRank || []" :horizontal="true" color="#8b5cf6" />
+          <SvgBarChart :data="data.supplierRank || []" :horizontal="true" color="#9a8bb8" />
         </div>
         <div class="chart-card">
           <div class="chart-card-title">物料分类采购占比</div>

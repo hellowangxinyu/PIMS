@@ -75,7 +75,7 @@
             </el-tooltip>
           </template>
           <template #default="{ row }">
-            <span :style="Number(row.atp) < 0 ? 'color:#f56c6c;font-weight:700' : ''">{{ row.atp }}</span>
+            <span :style="Number(row.atp) < 0 ? 'color:#b56a5c;font-weight:700' : ''">{{ row.atp }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="unitPrice" label="均价" :width="cw('均价') || 100" align="right">
@@ -392,7 +392,7 @@ function rowClassName({ row }) {
 // v7.4 周转天数配色：≤45 天绿（快）、≥180 天红（呆滞预警）、中间灰
 function stockDaysStyle(d) {
   if (d <= 45) return 'color:#16a34a;font-weight:600'
-  if (d >= 180) return 'color:#ef4444;font-weight:600'
+  if (d >= 180) return 'color:#b56a5c;font-weight:600'
   return 'color:#475569'
 }
 
@@ -539,12 +539,12 @@ async function showPriceTrend(row) {
   outline: none;
 }
 .filter-btn:hover {
-  border-color: #22c55e;
+  border-color: #7fa07f;
   color: #15803d;
 }
 .filter-btn.active {
-  background: #f0fdf4;
-  border-color: #22c55e;
+  background: #f0f5f0;
+  border-color: #7fa07f;
   color: #15803d;
   font-weight: 600;
 }
@@ -577,12 +577,12 @@ async function showPriceTrend(row) {
   outline: none;
 }
 .zone-btn:hover {
-  border-color: #22c55e;
+  border-color: #7fa07f;
   color: #15803d;
 }
 .zone-btn.active {
-  background: #f0fdf4;
-  border-color: #22c55e;
+  background: #f0f5f0;
+  border-color: #7fa07f;
   color: #15803d;
   font-weight: 600;
 }
@@ -606,12 +606,12 @@ async function showPriceTrend(row) {
   }
 }
 .price-link {
-  color: #6366f1;
+  color: #7288a5;
   cursor: pointer;
-  border-bottom: 1px dashed #6366f1;
+  border-bottom: 1px dashed #7288a5;
 }
 .price-link:hover {
-  color: #4338ca;
+  color: #5d5f85;
   border-bottom-style: solid;
 }
 .price-header { cursor: default; }
@@ -619,17 +619,17 @@ async function showPriceTrend(row) {
 .text-muted { color: #9ca3af; font-size: 12px; }
 
 /* v5.32：检测结果列点击链接 + 质检报告弹窗 */
-.qc-result-link { color: #2563eb; cursor: pointer; border-bottom: 1px dashed #93c5fd; }
-.qc-result-link:hover { color: #1d4ed8; border-bottom-style: solid; }
+.qc-result-link { color: #5b7a9c; cursor: pointer; border-bottom: 1px dashed #b3c5d9; }
+.qc-result-link:hover { color: #4a6785; border-bottom-style: solid; }
 .qc-report-frame { width: 100%; height: 68vh; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; }
 .days-normal { color: #16a34a; font-weight: 500; }
-.days-warning { color: #ea580c; font-weight: 700; }
-.days-expired { color: #dc2626; font-weight: 700; }
+.days-warning { color: #a8744f; font-weight: 700; }
+.days-expired { color: #a85d50; font-weight: 700; }
 :deep(.row-expiry-warning) {
-  background-color: #fff7ed !important;
+  background-color: #f5f1ea !important;
 }
 :deep(.row-expiry-warning:hover > td) {
-  background-color: #ffedd5 !important;
+  background-color: #efe5d8 !important;
 }
 .pagination-bar { display: flex; justify-content: flex-end; padding: 12px 0 4px; }
 </style>

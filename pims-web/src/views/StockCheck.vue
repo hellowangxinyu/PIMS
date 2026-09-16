@@ -41,7 +41,7 @@
             </template>
             <template v-else>
               系统 {{ row.systemQty }} / 实盘 {{ row.actualQty }} / 差异
-              <span :style="{ color: row.docType === 'STOCK_GAIN' ? '#16a34a' : '#dc2626', fontWeight: 600 }">
+              <span :style="{ color: row.docType === 'STOCK_GAIN' ? '#16a34a' : '#a85d50', fontWeight: 600 }">
                 {{ row.docType === 'STOCK_GAIN' ? '+' : '' }}{{ row.diffQty }}
               </span>
             </template>
@@ -382,8 +382,8 @@ onMounted(async () => {
   transition: all 0.2s;
   outline: none;
 }
-.filter-btn:hover { border-color: #6366f1; color: #4338ca; }
-.filter-btn.active { background: #eef2ff; border-color: #6366f1; color: #4338ca; font-weight: 600; }
+.filter-btn:hover { border-color: #7288a5; color: #5d5f85; }
+.filter-btn.active { background: #eef0f6; border-color: #7288a5; color: #5d5f85; font-weight: 600; }
 .type-count { font-size: 13px; color: #64748b; margin-left: auto; white-space: nowrap; }
 
 .table-card {

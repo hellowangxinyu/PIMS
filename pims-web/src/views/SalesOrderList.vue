@@ -857,10 +857,10 @@ onMounted(async () => {
 .type-tabs { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 12px 16px; background: #fafafa; border-radius: 8px; }
 .type-tab { padding: 6px 16px; font-size: 13px; font-weight: 600; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; background: #fff; color: #64748b; transition: all 0.2s; }
 .type-tab:hover { color: #334155; border-color: #cbd5e1; }
-.type-tab.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+.type-tab.active { background: #4a6785; color: #fff; border-color: #4a6785; }
 .tab-badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; font-size: 11px; line-height: 16px; border-radius: 9px; background: rgba(0,0,0,0.08); color: inherit; }
 .type-tab.active .tab-badge { background: rgba(255,255,255,0.25); }
 .type-count { font-size: 13px; color: #64748b; }
-.total-bar { margin-top: 8px; text-align: right; font-size: 13px; font-weight: 600; color: #ea580c; }
+.total-bar { margin-top: 8px; text-align: right; font-size: 13px; font-weight: 600; color: #a8744f; }
 .qty-hint { font-size: 12px; color: #94a3b8; margin-top: 6px; }
 </style>

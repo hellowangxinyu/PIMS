@@ -214,7 +214,7 @@ onMounted(fetchList)
 .page-container { width: 100%; }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .page-header h2 { margin: 0; font-size: 20px; }
-.tip-bar { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #9a3412; margin-bottom: 14px; line-height: 1.6; }
+.tip-bar { background: #f5f1ea; border: 1px solid #fed7aa; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #9a3412; margin-bottom: 14px; line-height: 1.6; }
 .table-card { background: #fff; border-radius: 8px; padding: 12px; }
 .hint-text { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 2px; }
 .amt-neg { color: #16a34a; font-weight: 600; }

@@ -124,7 +124,7 @@
           <el-input v-model="form.remark" type="textarea" :rows="2" />
         </el-form-item>
 
-        <el-divider content-position="left">配方明细（原料清单）<span v-if="recalculating" style="margin-left:8px;color:#6366f1;font-size:12px">正在按比例重算...</span></el-divider>
+        <el-divider content-position="left">配方明细（原料清单）<span v-if="recalculating" style="margin-left:8px;color:#7288a5;font-size:12px">正在按比例重算...</span></el-divider>
         <div class="formula-toolbar">
           <el-button size="small" type="primary" @click="addItem">+ 添加原料</el-button>
           <!-- v5.72：油尾只能在生产订单添加，且仅限生产成品漆（C 类产品）的订单 -->
@@ -858,14 +858,14 @@ function buildProductionPrintHtml(order, items, outbounds, processTpl) {
     '.outbound-title{font-size:14px;font-weight:bold;margin:22px 0 8px;}',
     '.p-stage{border:1px solid #aaa;border-radius:4px;padding:10px 12px;margin-bottom:10px;page-break-inside:avoid;}',
     '.p-stage-h{font-size:14px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px dashed #ccc;}',
-    '.p-stage-h .p-no{display:inline-block;background:#1d4ed8;color:#fff;border-radius:3px;padding:1px 8px;margin-right:8px;font-size:12px;}',
+    '.p-stage-h .p-no{display:inline-block;background:#4a6785;color:#fff;border-radius:3px;padding:1px 8px;margin-right:8px;font-size:12px;}',
     '.p-role{color:#64748b;font-weight:400;font-size:12px;}',
     '.p-step{font-size:13px;line-height:1.7;}',
-    '.p-param{color:#1d4ed8;font-size:12px;}',
+    '.p-param{color:#4a6785;font-size:12px;}',
     '.qc-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;}',
     '.qc-table th,.qc-table td{border:1px solid #999;padding:3px 6px;}',
     '.qc-table th{background:#f5f5f5;}',
-    '.p-pack{font-size:13px;line-height:1.8;border:1px dashed #1d4ed8;border-radius:4px;padding:8px 12px;margin-bottom:10px;background:#f8faff;}',
+    '.p-pack{font-size:13px;line-height:1.8;border:1px dashed #4a6785;border-radius:4px;padding:8px 12px;margin-bottom:10px;background:#f4f6f9;}',
     '@media print{ body{margin:10px 14px;} }',
     '</style></head><body>',
     '<div class="company">广东芃远新材料有限公司</div>',
@@ -963,22 +963,22 @@ onMounted(async () => {
 .type-tabs { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 12px 16px; background: #fafafa; border-radius: 8px; }
 .type-tab { padding: 6px 16px; font-size: 13px; font-weight: 600; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; background: #fff; color: #64748b; transition: all 0.2s; }
 .type-tab:hover { color: #334155; border-color: #cbd5e1; }
-.type-tab.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+.type-tab.active { background: #4a6785; color: #fff; border-color: #4a6785; }
 .tab-badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; font-size: 11px; line-height: 16px; border-radius: 9px; background: rgba(0,0,0,0.08); color: inherit; }
 .type-tab.active .tab-badge { background: rgba(255,255,255,0.25); }
 .type-count { font-size: 13px; color: #64748b; }
 .formula-toolbar { margin-bottom: 10px; }
-.batch-hint { font-size: 12px; color: #6366f1; margin-top: 4px; line-height: 1.4; }
+.batch-hint { font-size: 12px; color: #7288a5; margin-top: 4px; line-height: 1.4; }
 .sub-tag { margin-right: 4px; }
 .sub-code { font-weight: 600; color: #b45309; }
 .sub-name { font-weight: 600; color: #92400e; }
-.sub-tip { margin-top: 8px; font-size: 12px; color: #64748b; background: #fffbeb; border-radius: 6px; padding: 6px 10px; }
+.sub-tip { margin-top: 8px; font-size: 12px; color: #64748b; background: #f5f2e8; border-radius: 6px; padding: 6px 10px; }
 .text-muted { color: #9ca3af; font-size: 12px; }
 .trace-tip { font-size: 12px; color: #64748b; margin: 10px 0 0; }
-.stock-short { color: #dc2626; font-weight: 600; }
-.stock-warn { margin: 12px 0 0; font-size: 13px; color: #dc2626; font-weight: 600; }
+.stock-short { color: #a85d50; font-weight: 600; }
+.stock-warn { margin: 12px 0 0; font-size: 13px; color: #a85d50; font-weight: 600; }
 .stock-ok { margin: 12px 0 0; font-size: 13px; color: #16a34a; }
 /* 异常订单整行红色高亮（已完工 Tab，投出比<95%） */
-:deep(.el-table .row-abnormal > td) { background: #fef2f2 !important; }
-:deep(.el-table .row-abnormal:hover > td) { background: #fee2e2 !important; }
+:deep(.el-table .row-abnormal > td) { background: #f6eded !important; }
+:deep(.el-table .row-abnormal:hover > td) { background: #f7ecec !important; }
 </style>

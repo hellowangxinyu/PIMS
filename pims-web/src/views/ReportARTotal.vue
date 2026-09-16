@@ -17,7 +17,7 @@
       </div>
       <div class="summary-card">
         <div class="sc-label">剩余未收</div>
-        <div class="sc-value" style="color:#ef4444">¥{{ fmt(totalRemaining) }}</div>
+        <div class="sc-value" style="color:#b56a5c">¥{{ fmt(totalRemaining) }}</div>
       </div>
       <div class="summary-card">
         <div class="sc-label">整体回款率</div>
@@ -60,7 +60,7 @@
         </el-table-column>
         <el-table-column prop="remainingAmount" label="剩余未收" width="130" align="right" v-if="hasAmountPerm('finance-ar')">
           <template #default="{ row }">
-            <span :style="{ color: row.remainingAmount > 0 ? '#ef4444' : '#16a34a' }">¥{{ fmt(row.remainingAmount) }}</span>
+            <span :style="{ color: row.remainingAmount > 0 ? '#b56a5c' : '#16a34a' }">¥{{ fmt(row.remainingAmount) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="回款率" width="180" align="center" v-if="hasAmountPerm('finance-ar')">
@@ -111,8 +111,8 @@ function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.
 function progressColor(rate) {
   const r = Number(rate || 0)
   if (r >= 100) return '#16a34a'
-  if (r >= 50) return '#f59e0b'
-  return '#ef4444'
+  if (r >= 50) return '#c2a069'
+  return '#b56a5c'
 }
 
 // 汇总计算
@@ -147,7 +147,7 @@ function turnoverStyle(turnover) {
   if (turnover == null) return ''
   const days = 365 / Number(turnover)
   if (days <= 45) return 'color:#16a34a'
-  if (days >= 120) return 'color:#ef4444'
+  if (days >= 120) return 'color:#b56a5c'
   return ''
 }
 
@@ -206,8 +206,8 @@ onMounted(async () => {
 .tab-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
 .tab-count { font-size: 13px; color: #64748b; }
 .status-chip { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-right: 4px; }
-.status-chip.unpaid { background: #fee2e2; color: #b91c1c; }
-.status-chip.partial { background: #fef3c7; color: #b45309; }
-.status-chip.paid { background: #dcfce7; color: #15803d; }
+.status-chip.unpaid { background: #f7ecec; color: #b91c1c; }
+.status-chip.partial { background: #f4efe0; color: #b45309; }
+.status-chip.paid { background: #e6efe7; color: #15803d; }
 .td-null { color: #9ca3af; }
 </style>

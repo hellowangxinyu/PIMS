@@ -39,7 +39,7 @@ const props = defineProps({
   labels: { type: Array, default: () => [] },
   series: { type: Array, default: () => [] },
   height: { type: Number, default: 240 },
-  colors: { type: Array, default: () => ['#6366f1', '#10b981', '#f59e0b', '#ef4444'] }
+  colors: { type: Array, default: () => ['#7288a5', '#6f9a86', '#c2a069', '#b56a5c'] }
 })
 
 const uid = Math.random().toString(36).slice(2, 8)

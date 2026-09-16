@@ -309,17 +309,17 @@ onMounted(async () => {
 .stat-num { font-size: 28px; font-weight: 800; line-height: 1.2; }
 .stat-label { font-size: 12px; color: #64748b; margin-top: 4px; }
 .stat-card.warn .stat-num { color: #d97706; }
-.stat-card.red .stat-num { color: #dc2626; }
-.stat-card.total .stat-num { color: #6366f1; }
+.stat-card.red .stat-num { color: #a85d50; }
+.stat-card.total .stat-num { color: #7288a5; }
 .chart-card { background: var(--pims-card-bg); border-radius: 16px; padding: 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .chart-card-title { font-size: 14px; font-weight: 700; color: var(--pims-text); margin-bottom: 16px; }
-.days-red { color: #dc2626; font-weight: 700; }
+.days-red { color: #a85d50; font-weight: 700; }
 .days-warn { color: #d97706; font-weight: 700; }
-.safe-stock { color: #2563eb; }
+.safe-stock { color: #5b7a9c; }
 .gap-pos { color: #16a34a; font-weight: 600; }
 .text-muted { color: #94a3b8; }
 .wh-stock { color: #0c4a6e; font-size: 12px; }
-.amount-cell { color: #ea580c; font-weight: 600; }
+.amount-cell { color: #a8744f; font-weight: 600; }
 .last-price-tip { font-size: 11px; color: #94a3b8; line-height: 1; margin-top: 2px; }
 .purchase-tip { font-size: 12px; color: #64748b; margin-top: 6px; }
 @media (max-width: 768px) {

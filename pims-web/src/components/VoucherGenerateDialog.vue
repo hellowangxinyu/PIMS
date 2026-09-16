@@ -139,5 +139,5 @@ defineExpose({ open, hasGenerated })
 .fh-label { font-size: 13px; color: #606266; white-space: nowrap; }
 .entry-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
 .total-bar { display: flex; align-items: center; gap: 18px; font-size: 13px; color: #303133; }
-.total-bar .red { color: #ef4444; }
+.total-bar .red { color: #b56a5c; }
 </style>

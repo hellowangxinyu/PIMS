@@ -83,8 +83,8 @@ const exporting = ref(false)
 const month = ref(monthLocal())
 const trendLabels = computed(() => (data.value?.trend || []).map(t => t.month))
 const trendSeries = computed(() => [
-  { name: '收入', values: (data.value?.trend || []).map(t => Number(t.revenue || 0)), color: '#2563eb' },
-  { name: '成本', values: (data.value?.trend || []).map(t => Number(t.cogs || 0)), color: '#f59e0b' },
+  { name: '收入', values: (data.value?.trend || []).map(t => Number(t.revenue || 0)), color: '#5b7a9c' },
+  { name: '成本', values: (data.value?.trend || []).map(t => Number(t.cogs || 0)), color: '#c2a069' },
   { name: '净利', values: (data.value?.trend || []).map(t => Number(t.net || 0)), color: '#16a34a' }
 ])
 
@@ -147,7 +147,7 @@ onMounted(async () => {
 .kpi-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
 .kpi-value { font-size: 18px; font-weight: 700; }
 .kpi-value small { font-size: 12px; font-weight: 400; color: #64748b; margin-left: 4px; }
-.kpi-red { color: #ef4444; }
+.kpi-red { color: #b56a5c; }
 .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 1000px) { .grid-2col { grid-template-columns: 1fr; } }
 .table-card { background: var(--pims-card-bg, #fff); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); border: 1px solid var(--pims-card-border, #e2e8f0); margin-bottom: 16px; }
@@ -159,7 +159,7 @@ onMounted(async () => {
 .pl-val { text-align: right; font-variant-numeric: tabular-nums; color: #0f172a; }
 .pl-strong td { border-top: 1px solid #cbd5e1; font-weight: 700; background: #f8fafc; }
 .pl-rate { font-size: 12px; color: #64748b; font-weight: 400; margin-left: 8px; }
-.pl-val.neg { color: #ef4444; }
+.pl-val.neg { color: #b56a5c; }
 .no-perm { font-size: 13px; color: #94a3b8; padding: 12px 0; }
 .pl-note { font-size: 12px; color: #94a3b8; margin: 4px 0 10px; }
 </style>

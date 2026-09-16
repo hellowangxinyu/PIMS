@@ -47,7 +47,7 @@
         </el-table-column>
         <el-table-column prop="totalAmount" label="价税合计" width="120" align="right" v-if="hasAmountPerm('invoice')">
           <template #default="{ row }">
-            <span :style="Number(row.totalAmount) < 0 ? 'color:#ef4444' : ''">¥{{ fmt(row.totalAmount) }}</span>
+            <span :style="Number(row.totalAmount) < 0 ? 'color:#b56a5c' : ''">¥{{ fmt(row.totalAmount) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="invoiceDate" label="开票日期" width="110" />
@@ -348,5 +348,5 @@ onMounted(async () => {
 .dim { color: #94a3b8; font-size: 12px; }
 .calc-display { font-size: 14px; color: #475569; }
 .calc-display.strong { font-size: 16px; font-weight: 700; color: #0f172a; }
-.flush-tip { font-size: 13px; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; }
+.flush-tip { font-size: 13px; color: #b45309; background: #f5f2e8; border: 1px solid #d9cda3; border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; }
 </style>

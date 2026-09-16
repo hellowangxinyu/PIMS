@@ -29,7 +29,7 @@ import { ref, computed } from 'vue'
 const props = defineProps({
   data: { type: Array, default: () => [] },
   size: { type: Number, default: 180 },
-  colors: { type: Array, default: () => ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'] },
+  colors: { type: Array, default: () => ['#7288a5', '#6f9a86', '#c2a069', '#b56a5c', '#9a8bb8', '#c08a9a', '#7aa39a', '#bd8355'] },
   centerText: { type: String, default: '' }
 })
 

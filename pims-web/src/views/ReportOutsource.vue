@@ -19,11 +19,11 @@
       <div class="chart-grid" style="margin-top:16px">
         <div class="chart-card full">
           <div class="chart-card-title">月度委外加工费（加工费单价 × 订单批量）</div>
-          <SvgLineChart :labels="data.monthlyFee?.labels || []" :series="[{ name: '加工费', values: data.monthlyFee?.values || [], color: '#f59e0b' }]" :height="240" />
+          <SvgLineChart :labels="data.monthlyFee?.labels || []" :series="[{ name: '加工费', values: data.monthlyFee?.values || [], color: '#c2a069' }]" :height="240" />
         </div>
         <div class="chart-card">
           <div class="chart-card-title">代工厂加工费 TOP10</div>
-          <SvgBarChart :data="data.processorRank || []" :horizontal="true" color="#f59e0b" />
+          <SvgBarChart :data="data.processorRank || []" :horizontal="true" color="#c2a069" />
         </div>
         <div class="chart-card">
           <div class="chart-card-title">代工厂得率（已完成入库）</div>
@@ -78,6 +78,6 @@ onMounted(loadData)
 .kpi-card { background: var(--pims-card-bg); border-radius: 16px; padding: 18px 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .kpi-label { font-size: 13px; color: #64748b; margin-bottom: 8px; }
 .kpi-value { font-size: 22px; font-weight: 800; color: var(--pims-text); }
-.num-green { color: #10b981; font-weight: 700; } .num-orange { color: #f59e0b; font-weight: 700; }
+.num-green { color: #6f9a86; font-weight: 700; } .num-orange { color: #c2a069; font-weight: 700; }
 @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
 </style>

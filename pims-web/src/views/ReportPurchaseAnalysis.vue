@@ -134,8 +134,8 @@ onMounted(loadData)
 .kpi-card { background: var(--pims-card-bg); border-radius: 16px; padding: 18px 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .kpi-label { font-size: 13px; color: #64748b; margin-bottom: 8px; }
 .kpi-value { font-size: 22px; font-weight: 800; color: var(--pims-text); }
-.kpi-green { color: #10b981; } .kpi-orange { color: #f59e0b; } .kpi-red { color: #ef4444; }
-.num-red { color: #ef4444; font-weight: 700; }
+.kpi-green { color: #6f9a86; } .kpi-orange { color: #c2a069; } .kpi-red { color: #b56a5c; }
+.num-red { color: #b56a5c; font-weight: 700; }
 .table-card { background: var(--pims-card-bg); border-radius: 12px; padding: 16px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .tab-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
 .tab-count { font-size: 13px; color: #64748b; }

@@ -470,7 +470,7 @@ onMounted(async () => {
 .text-center { text-align: center; }
 .text-right { text-align: right; }
 .editor { padding: 0 4px; max-height: calc(100vh - 220px); overflow-y: auto; }
-.cost-bar { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; background: #f0fdf4; border-radius: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.cost-bar { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; background: #f0f5f0; border-radius: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .cost-bar-label { font-size: 13px; color: #64748b; }
 .cost-bar-total { font-size: 16px; font-weight: 700; color: #15803d; }
 .cost-bar-unit { font-size: 13px; color: #16a34a; font-weight: 600; }

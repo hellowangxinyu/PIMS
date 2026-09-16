@@ -230,12 +230,12 @@ onMounted(fetchRoutes)
 .type-tabs { display: flex; gap: 0; margin-bottom: 14px; background: #f1f5f9; border-radius: 8px; padding: 3px; width: fit-content; }
 .type-tab { padding: 8px 24px; font-size: 13px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; background: transparent; color: #64748b; transition: all 0.2s; }
 .type-tab:hover { color: #334155; }
-.type-tab.active { background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.type-tab.active { background: #fff; color: #4a6785; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .route-name { font-weight: 600; }
-.default-star { color: #f59e0b; margin-left: 4px; }
+.default-star { color: #c2a069; margin-left: 4px; }
 .meta-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .meta-label { font-size: 13px; font-weight: 600; color: #475569; white-space: nowrap; margin-left: 8px; }
-.tip { font-size: 13px; color: #475569; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
+.tip { font-size: 13px; color: #475569; background: #eff4f7; border: 1px solid #c2d5de; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
 .tip code { background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 3px; font-family: Consolas, monospace; }
 .pack-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 16px; }
 .pack-label { font-size: 13px; font-weight: 600; color: #475569; padding-top: 6px; white-space: nowrap; }

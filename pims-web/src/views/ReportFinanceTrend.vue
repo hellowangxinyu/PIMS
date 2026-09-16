@@ -34,8 +34,8 @@
         <div class="chart-card full">
           <div class="chart-card-title">月度应收应付趋势</div>
           <SvgLineChart :labels="data.monthlyTrend?.labels || []" :series="[
-            { name: '应收', values: data.monthlyTrend?.arAmount || [], color: '#6366f1' },
-            { name: '应付', values: data.monthlyTrend?.apAmount || [], color: '#f59e0b' }
+            { name: '应收', values: data.monthlyTrend?.arAmount || [], color: '#7288a5' },
+            { name: '应付', values: data.monthlyTrend?.apAmount || [], color: '#c2a069' }
           ]" :height="260" />
         </div>
         <div class="chart-card full">
@@ -93,8 +93,8 @@ onMounted(() => { loadChart() })
 .summary-value { font-size: 24px; font-weight: 800; color: var(--pims-text); margin-bottom: 12px; }
 .progress-wrap { height: 8px; background: var(--pims-border-light, #e5e7eb); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
 .progress-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
-.progress-bar.green { background: linear-gradient(90deg, #10b981, #059669); }
-.progress-bar.amber { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.progress-bar.green { background: linear-gradient(90deg, #6f9a86, #5f8776); }
+.progress-bar.amber { background: linear-gradient(90deg, #c2a069, #d97706); }
 .summary-sub { font-size: 12px; color: var(--pims-text-secondary); }
 .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .chart-card { background: var(--pims-card-bg); border-radius: 16px; padding: 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }

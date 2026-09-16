@@ -28,8 +28,8 @@
           <SvgLineChart v-if="(data.monthly?.months || []).length"
             :labels="data.monthly.months"
             :series="[
-              { name: '检验批次', data: data.monthly.total, color: '#6366f1' },
-              { name: '不合格', data: data.monthly.reject, color: '#ef4444' }
+              { name: '检验批次', data: data.monthly.total, color: '#7288a5' },
+              { name: '不合格', data: data.monthly.reject, color: '#b56a5c' }
             ]" :height="240" />
           <div v-else class="empty-tip">期间无判定记录</div>
           <div class="rate-row" v-if="(data.monthly?.months || []).length">
@@ -56,7 +56,7 @@
             <el-table-column prop="reject" label="不合格" width="90" align="center" />
             <el-table-column prop="rate" label="不良率" width="100" align="center">
               <template #default="{ row }">
-                <span :style="Number(row.rate) > 10 ? 'color:#ef4444;font-weight:600' : ''">{{ row.rate }}%</span>
+                <span :style="Number(row.rate) > 10 ? 'color:#b56a5c;font-weight:600' : ''">{{ row.rate }}%</span>
               </template>
             </el-table-column>
           </p-table>
@@ -69,7 +69,7 @@
             <el-table-column prop="reject" label="不合格" width="90" align="center" />
             <el-table-column prop="rate" label="不良率" width="100" align="center">
               <template #default="{ row }">
-                <span :style="Number(row.rate) > 10 ? 'color:#ef4444;font-weight:600' : ''">{{ row.rate }}%</span>
+                <span :style="Number(row.rate) > 10 ? 'color:#b56a5c;font-weight:600' : ''">{{ row.rate }}%</span>
               </template>
             </el-table-column>
           </p-table>
@@ -124,7 +124,7 @@ onMounted(fetch)
 .kpi-card { background: var(--pims-card-bg, #fff); border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); border: 1px solid var(--pims-card-border, #e2e8f0); }
 .kpi-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
 .kpi-value { font-size: 20px; font-weight: 700; }
-.kpi-value.red { color: #ef4444; }
+.kpi-value.red { color: #b56a5c; }
 .kpi-value.green { color: #16a34a; }
 .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
 @media (max-width: 1100px) { .chart-grid { grid-template-columns: 1fr } }
@@ -132,6 +132,6 @@ onMounted(fetch)
 .card-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
 .rate-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .rate-chip { font-size: 12px; background: #f1f5f9; border-radius: 6px; padding: 3px 8px; color: #475569; }
-.rate-chip.high { background: #fef2f2; color: #ef4444; }
+.rate-chip.high { background: #f6eded; color: #b56a5c; }
 .empty-tip { text-align: center; color: #94a3b8; padding: 60px 0; font-size: 14px; }
 </style>

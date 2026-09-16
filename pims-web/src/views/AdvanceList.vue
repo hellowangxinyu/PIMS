@@ -285,5 +285,5 @@ onMounted(async () => {
 .sc-value.green { color: #16a34a; }
 .type-tabs { display: flex; align-items: center; margin-bottom: 16px; padding: 12px 16px; background: #fafafa; border-radius: 8px; }
 .type-count { font-size: 13px; color: #64748b; }
-.apply-tip { font-size: 13px; color: #475569; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; }
+.apply-tip { font-size: 13px; color: #475569; background: #eff4f7; border: 1px solid #c2d5de; border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; }
 </style>

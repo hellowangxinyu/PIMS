@@ -197,5 +197,5 @@ onMounted(async () => {
 .type-tabs { display: flex; align-items: center; margin-bottom: 16px; padding: 12px 16px; background: #fafafa; border-radius: 8px; }
 .type-count { font-size: 13px; color: #64748b; }
 .unpaid-tip { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #64748b; }
-.unpaid-amount { color: #ef4444; font-weight: 600; }
+.unpaid-amount { color: #b56a5c; font-weight: 600; }
 </style>

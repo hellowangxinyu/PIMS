@@ -14,7 +14,7 @@
       <div class="summary-card"><div class="sc-label">议题总数</div><div class="sc-value">{{ list.length }}</div></div>
       <div class="summary-card"><div class="sc-value open">{{ openCount }}</div><div class="sc-label">进行中</div></div>
       <div class="summary-card"><div class="sc-value" style="color:#16a34a">{{ closedCount }}</div><div class="sc-label">已结案</div></div>
-      <div class="summary-card"><div class="sc-value" style="color:#ef4444">{{ overdueCount }}</div><div class="sc-label">已逾期（未结案且过计划日）</div></div>
+      <div class="summary-card"><div class="sc-value" style="color:#b56a5c">{{ overdueCount }}</div><div class="sc-label">已逾期（未结案且过计划日）</div></div>
     </div>
 
     <div class="table-card">
@@ -218,9 +218,9 @@ onMounted(async () => {
 .summary-card { background: var(--pims-card-bg, #fff); border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); border: 1px solid var(--pims-card-border, #e2e8f0); text-align: center; }
 .sc-label { font-size: 12px; color: #64748b; margin-top: 4px; }
 .sc-value { font-size: 22px; font-weight: 700; }
-.sc-value.open { color: #f59e0b; }
+.sc-value.open { color: #c2a069; }
 .table-card { background: var(--pims-card-bg, #fff); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); border: 1px solid var(--pims-card-border, #e2e8f0); }
 .filters { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-.overdue-text { color: #ef4444; font-weight: 600; }
+.overdue-text { color: #b56a5c; font-weight: 600; }
 .cell-full { white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
 </style>

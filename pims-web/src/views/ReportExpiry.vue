@@ -175,12 +175,12 @@ onMounted(() => {
 .stat-card { border-radius: 16px; padding: 18px 20px; background: var(--pims-card-bg); box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .stat-num { font-size: 28px; font-weight: 800; line-height: 1.2; }
 .stat-label { font-size: 12px; color: #64748b; margin-top: 4px; }
-.stat-card.red .stat-num { color: #dc2626; }
+.stat-card.red .stat-num { color: #a85d50; }
 .stat-card.warn .stat-num { color: #d97706; }
-.stat-card.total .stat-num { color: #6366f1; }
+.stat-card.total .stat-num { color: #7288a5; }
 .chart-card { background: var(--pims-card-bg); border-radius: 16px; padding: 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .chart-card-title { font-size: 14px; font-weight: 700; color: var(--pims-text); margin-bottom: 16px; }
-.days-red { color: #dc2626; font-weight: 700; }
+.days-red { color: #a85d50; font-weight: 700; }
 .days-warn { color: #d97706; font-weight: 700; }
 @media (max-width: 768px) {
   .stat-cards { grid-template-columns: 1fr; }

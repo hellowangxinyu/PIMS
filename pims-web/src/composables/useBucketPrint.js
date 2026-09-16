@@ -73,7 +73,7 @@ export function useBucketPrint() {
             ])))
           ]) : null,
         (invalid.value || buckets.value.length > 1) ? h('div', {
-          style: `font-size:13px;font-weight:600;color:${balanced() ? '#16a34a' : '#ef4444'}`
+          style: `font-size:13px;font-weight:600;color:${balanced() ? '#16a34a' : '#b56a5c'}`
         }, invalid.value
           ? `手动调整的桶合计已超过总量 ${total}，请调低后再打印（禁止打印）`
           : `各桶合计：${Math.round(sum() * 100) / 100} / 总量 ${total} ${balanced() ? '✓ 守恒' : '✗ 不守恒，禁止打印'}`) : null,

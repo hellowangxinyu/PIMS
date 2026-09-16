@@ -137,8 +137,8 @@ function fmtMs(v) {
 function statusLabel(s) { return { DRAFT: '草稿', CONFIRMED: '已确认', COMPLETED: '已完工' }[s] || s }
 function diffColor(d) {
   const n = Number(d)
-  if (n > 20) return 'color:#ef4444;font-weight:600'
-  if (n < -20) return 'color:#f59e0b;font-weight:600'
+  if (n > 20) return 'color:#b56a5c;font-weight:600'
+  if (n < -20) return 'color:#c2a069;font-weight:600'
   return 'color:#16a34a'
 }
 

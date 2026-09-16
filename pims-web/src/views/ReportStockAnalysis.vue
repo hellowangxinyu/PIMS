@@ -16,7 +16,7 @@
       <div class="chart-grid" style="margin-top:16px">
         <div class="chart-card">
           <div class="chart-card-title">批次库龄分布（金额）</div>
-          <SvgBarChart :data="ageAmountData" :horizontal="false" height="240" color="#8b5cf6" />
+          <SvgBarChart :data="ageAmountData" :horizontal="false" height="240" color="#9a8bb8" />
         </div>
         <div class="chart-card">
           <div class="chart-card-title">库存金额按物料大类</div>
@@ -115,8 +115,8 @@ onMounted(loadData)
 .kpi-card { background: var(--pims-card-bg); border-radius: 16px; padding: 18px 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .kpi-label { font-size: 13px; color: #64748b; margin-bottom: 8px; }
 .kpi-value { font-size: 22px; font-weight: 800; color: var(--pims-text); }
-.kpi-orange { color: #f59e0b; }
-.num-red { color: #ef4444; font-weight: 700; } .num-orange { color: #f59e0b; font-weight: 700; } .num-green { color: #10b981; font-weight: 700; }
+.kpi-orange { color: #c2a069; }
+.num-red { color: #b56a5c; font-weight: 700; } .num-orange { color: #c2a069; font-weight: 700; } .num-green { color: #6f9a86; font-weight: 700; }
 .table-card { background: var(--pims-card-bg); border-radius: 12px; padding: 16px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .tab-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
 .tab-count { font-size: 13px; color: #64748b; }

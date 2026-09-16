@@ -30,11 +30,11 @@
         <div class="chart-card full">
           <div class="chart-card-title">月度经营对比（销售 / 采购 / 收款 / 付款 / 加工费）</div>
           <SvgLineChart :labels="data.monthlyTrend?.labels || []" :series="[
-            { name: '销售', values: data.monthlyTrend?.sales || [], color: '#6366f1' },
-            { name: '采购', values: data.monthlyTrend?.purchase || [], color: '#f59e0b' },
-            { name: '收款', values: data.monthlyTrend?.receipt || [], color: '#10b981' },
-            { name: '付款', values: data.monthlyTrend?.payment || [], color: '#ef4444' },
-            { name: '加工费', values: data.monthlyTrend?.fee || [], color: '#8b5cf6' }
+            { name: '销售', values: data.monthlyTrend?.sales || [], color: '#7288a5' },
+            { name: '采购', values: data.monthlyTrend?.purchase || [], color: '#c2a069' },
+            { name: '收款', values: data.monthlyTrend?.receipt || [], color: '#6f9a86' },
+            { name: '付款', values: data.monthlyTrend?.payment || [], color: '#b56a5c' },
+            { name: '加工费', values: data.monthlyTrend?.fee || [], color: '#9a8bb8' }
           ]" :height="280" />
         </div>
       </div>
@@ -69,7 +69,7 @@
                 <el-radio-button value="customer">客户</el-radio-button>
               </el-radio-group>
             </div>
-            <SvgBarChart :data="marginRank" horizontal :color="'#10b981'" :colors="['#10b981','#34d399','#059669','#6ee7b7','#10b981','#34d399','#059669','#6ee7b7','#10b981','#34d399']" />
+            <SvgBarChart :data="marginRank" horizontal :color="'#6f9a86'" :colors="['#6f9a86','#93b5a4','#5f8776','#a8c4b6','#6f9a86','#93b5a4','#5f8776','#a8c4b6','#6f9a86','#93b5a4']" />
           </div>
           <!-- 库存预警 -->
           <div class="cockpit-card">
@@ -186,7 +186,7 @@ onMounted(loadData)
 .kpi-card { background: var(--pims-card-bg); border-radius: 16px; padding: 18px 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .kpi-label { font-size: 13px; color: #64748b; margin-bottom: 8px; }
 .kpi-value { font-size: 22px; font-weight: 800; color: var(--pims-text); }
-.kpi-green { color: #10b981; } .kpi-orange { color: #f59e0b; } .kpi-red { color: #ef4444; }
+.kpi-green { color: #6f9a86; } .kpi-orange { color: #c2a069; } .kpi-red { color: #b56a5c; }
 @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
 
 /* ===== 经营驾驶舱 ===== */
@@ -216,7 +216,7 @@ onMounted(loadData)
 }
 .cockpit-card:hover { box-shadow: var(--pims-card-shadow-hover); }
 .cockpit-card-title { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--pims-text); margin-bottom: 12px; }
-.cockpit-card-note { font-size: 12px; font-weight: 500; color: #10b981; }
+.cockpit-card-note { font-size: 12px; font-weight: 500; color: #6f9a86; }
 
 /* 库存预警列表 */
 .warn-list { display: flex; flex-direction: column; }
@@ -228,8 +228,8 @@ onMounted(loadData)
 }
 .warn-row:last-child { border-bottom: none; }
 .warn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.dot-red { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.12); }
-.dot-orange { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
+.dot-red { background: #b56a5c; box-shadow: 0 0 0 3px rgba(239,68,68,0.12); }
+.dot-orange { background: #c2a069; box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
 .warn-name { font-weight: 500; color: var(--pims-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; flex-shrink: 0; }
 .warn-meta { margin-left: auto; font-size: 12px; color: #94a3b8; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -245,9 +245,9 @@ onMounted(loadData)
 }
 .exec-stat b { display: block; font-size: 20px; font-weight: 800; line-height: 1.2; }
 .exec-stat span { font-size: 12px; color: #64748b; }
-.exec-stat.good b { color: #10b981; }
-.exec-stat.warn b { color: #f59e0b; }
-.exec-stat.bad b { color: #ef4444; }
+.exec-stat.good b { color: #6f9a86; }
+.exec-stat.warn b { color: #c2a069; }
+.exec-stat.bad b { color: #b56a5c; }
 .exec-stat.total { background: linear-gradient(135deg, var(--pims-primary), var(--pims-primary-dark)); border: none; }
 .exec-stat.total b, .exec-stat.total span { color: #fff; }
 

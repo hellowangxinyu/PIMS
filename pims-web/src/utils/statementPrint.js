@@ -31,7 +31,7 @@ export function buildStatementHtml(data) {
       <td style="padding:6px 8px;border:1px solid #d1d5db">${escHtml(l.note)}</td>
       <td style="padding:6px 8px;border:1px solid #d1d5db;text-align:right">${l.debit ? money(l.debit) : ''}</td>
       <td style="padding:6px 8px;border:1px solid #d1d5db;text-align:right">${l.credit ? money(l.credit) : ''}</td>
-      <td style="padding:6px 8px;border:1px solid #d1d5db;text-align:right;${balance < 0 ? 'color:#dc2626' : ''}">${money(balance)}</td>
+      <td style="padding:6px 8px;border:1px solid #d1d5db;text-align:right;${balance < 0 ? 'color:#a85d50' : ''}">${money(balance)}</td>
     </tr>`
   }).join('')
 
@@ -52,7 +52,7 @@ export function buildStatementHtml(data) {
   thead th { background: #f3f4f6; padding: 7px 8px; border: 1px solid #d1d5db; font-weight: 600 }
   .summary { margin-top: 14px; display: flex; gap: 28px; font-size: 12px }
   .summary .item b { font-size: 14px }
-  .closing { color: #dc2626 }
+  .closing { color: #a85d50 }
   .sign { margin-top: 46px; display: flex; justify-content: space-between; font-size: 12px }
   .sign div { width: 220px }
   .footnote { margin-top: 24px; font-size: 10px; color: #6b7280; line-height: 1.7 }
@@ -84,7 +84,7 @@ export function buildStatementHtml(data) {
       <tr>
         <td colspan="4" style="padding:6px 8px;border:1px solid #d1d5db"><b>期初余额</b></td>
         <td colspan="2" style="border:1px solid #d1d5db"></td>
-        <td style="padding:6px 8px;border:1px solid #d1d5db;text-align:right;${Number(data.opening) < 0 ? 'color:#dc2626' : ''}"><b>${money(data.opening)}</b></td>
+        <td style="padding:6px 8px;border:1px solid #d1d5db;text-align:right;${Number(data.opening) < 0 ? 'color:#a85d50' : ''}"><b>${money(data.opening)}</b></td>
       </tr>
       ${rows || '<tr><td colspan="7" style="padding:14px;text-align:center;border:1px solid #d1d5db;color:#9ca3af">本期无往来记录</td></tr>'}
       <tr>
@@ -94,8 +94,8 @@ export function buildStatementHtml(data) {
         <td style="padding:7px 8px;border:1px solid #d1d5db;background:#f9fafb"></td>
       </tr>
       <tr>
-        <td colspan="6" style="padding:7px 8px;border:1px solid #d1d5db;background:#fef2f2"><b>期末余额（客户应付我司）</b></td>
-        <td style="padding:7px 8px;border:1px solid #d1d5db;background:#fef2f2;text-align:right" class="closing"><b>¥ ${money(data.closing)}</b></td>
+        <td colspan="6" style="padding:7px 8px;border:1px solid #d1d5db;background:#f6eded"><b>期末余额（客户应付我司）</b></td>
+        <td style="padding:7px 8px;border:1px solid #d1d5db;background:#f6eded;text-align:right" class="closing"><b>¥ ${money(data.closing)}</b></td>
       </tr>
     </tbody>
   </table>

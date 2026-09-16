@@ -8,7 +8,7 @@
         <div class="brand-mark">
           <svg viewBox="0 0 64 64" width="20" height="20" aria-hidden="true">
             <path d="M32 11c6.5 9 14.5 16.4 14.5 25a14.5 14.5 0 1 1-29 0c0-8.6 8-16 14.5-25z" fill="#fff"/>
-            <circle cx="26.5" cy="38" r="4.5" fill="#818cf8" opacity="0.55"/>
+            <circle cx="26.5" cy="38" r="4.5" fill="#8d9cc0" opacity="0.55"/>
           </svg>
         </div>
         <div class="brand-text">
@@ -72,32 +72,6 @@
           <span v-else>工作台</span>
         </div>
         <div class="topbar-right">
-          <el-dropdown trigger="click" @command="setTheme" @visible-change="onThemeMenu">
-            <button class="theme-btn" title="切换风格" aria-label="切换风格">
-              <el-icon><Brush /></el-icon>
-            </button>
-            <template #dropdown>
-              <el-dropdown-menu class="theme-menu">
-                <el-dropdown-item v-for="t in themes" :key="t.id" :command="t.id" @mouseenter="previewTheme(t.id)">
-                  <span class="theme-option" :class="{ active: current === t.id }">
-                    <span class="theme-swatches">
-                      <i v-if="t.id === 'glass'" class="glass-chip"></i>
-                      <i v-else-if="t.id === 'skeuo'" class="skeuo-chip"></i>
-                      <i v-else-if="t.id === 'clay'" class="clay-chip"></i>
-                      <i v-else-if="t.id === 'pixel'" class="pixel-chip"></i>
-                      <template v-else>
-                        <i :style="{ background: t.light }"></i>
-                        <i :style="{ background: t.primary }"></i>
-                        <i :style="{ background: t.dark }"></i>
-                      </template>
-                    </span>
-                    <span class="theme-name">{{ t.name }}</span>
-                    <el-icon v-if="current === t.id" class="theme-check"><Check /></el-icon>
-                  </span>
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
           <div class="topbar-time">{{ now }}</div>
         </div>
       </header>
@@ -128,13 +102,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { HomeFilled, Operation, List, Box, TrendCharts, Connection, User, Key, Collection, Notebook, Folder, ShoppingCart, SetUp, Setting, ArrowDown, DataAnalysis, Checked, Money, Van, Avatar, Ticket, House, MagicStick, Document, Upload, Download, ShoppingTrolley, Position, RefreshLeft, Search, Memo, Coin, WalletFilled, Wallet, Odometer, PieChart, Histogram, DataLine, Files, Link, Bell, AlarmClock, CircleCheck, Stopwatch, CreditCard, Aim, Brush, Warning, Check, Calendar, Tickets, Stamp, Grid, Suitcase, OfficeBuilding, PriceTag } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
-import { useTheme } from '../composables/useTheme'
 
-const { themes, current, setTheme, previewTheme, cancelPreview } = useTheme()
 // 下拉关闭且未选择时还原预览
-function onThemeMenu(visible) {
-  if (!visible) cancelPreview()
-}
 
 const router = useRouter()
 const route = useRoute()
@@ -707,20 +676,6 @@ async function logout() {
 }
 
 /* 配色切换按钮 */
-.theme-btn {
-  display: flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px;
-  border: none; border-radius: 10px;
-  background: rgba(var(--pims-primary-rgb),0.1);
-  color: var(--pims-primary);
-  font-size: 17px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.theme-btn:hover {
-  background: rgba(var(--pims-primary-rgb),0.18);
-  transform: translateY(-1px);
-}
 
 /* ===== 页面内容 ===== */
 .page-content {
@@ -811,7 +766,6 @@ async function logout() {
 }
 /* v5.51.1 经典标签页样式（浏览器风）：标签嵌在灰条里、激活页与内容区连通+主题色顶条，与页面按钮彻底区分 */
 .tab-bar { display: flex; align-items: flex-end; gap: 8px; padding: 8px 12px 0; background: #e2e5eb; border-bottom: 1px solid #d3d8e0; }
-:root[data-theme] .tab-bar, [class*=dark] .tab-bar { background: rgba(100, 116, 139, .18); border-bottom-color: rgba(100, 116, 139, .3); }
 .tab-scroll { display: flex; align-items: flex-end; gap: 2px; overflow-x: auto; flex: 1; scrollbar-width: thin; }
 .tab-scroll::-webkit-scrollbar { height: 3px; }
 .tab-scroll::-webkit-scrollbar-thumb { background: #b6bec9; border-radius: 2px; }
@@ -819,13 +773,13 @@ async function logout() {
 .tab-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tab-item:hover { background: rgba(255, 255, 255, .75); color: #1e293b; }
 .tab-item.active { background: var(--pims-card-bg, #fff); color: #1e293b; font-weight: 600; box-shadow: 0 -1px 4px rgba(15, 23, 42, .06); }
-.tab-item.active::before { content: ''; position: absolute; top: 0; left: 10px; right: 10px; height: 3px; border-radius: 0 0 3px 3px; background: var(--pims-primary, #2563eb); }
+.tab-item.active::before { content: ''; position: absolute; top: 0; left: 10px; right: 10px; height: 3px; border-radius: 0 0 3px 3px; background: var(--pims-primary, #5b7a9c); }
 .tab-close { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 4px; font-size: 14px; color: #94a3b8; line-height: 1; }
-.tab-close:hover { background: #ef4444; color: #fff; }
+.tab-close:hover { background: #b56a5c; color: #fff; }
 .tab-item.active .tab-close { color: #64748b; }
 .tab-ops { flex-shrink: 0; display: flex; gap: 2px; margin-bottom: 5px; }
 .tab-op { border: none; background: transparent; color: #64748b; font-size: 12px; padding: 3px 8px; border-radius: 4px; cursor: pointer; }
-.tab-op:hover { color: var(--pims-primary, #2563eb); background: rgba(255, 255, 255, .6); }
+.tab-op:hover { color: var(--pims-primary, #5b7a9c); background: rgba(255, 255, 255, .6); }
 </style>
 
 <style>

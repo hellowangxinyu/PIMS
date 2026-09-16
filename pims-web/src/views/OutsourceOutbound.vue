@@ -108,7 +108,7 @@
                     :key="b.key"
                     :label="(costingMethod === 'FIFO' && bi === 0 ? '【推荐·最早】' : '') + b.label"
                     :value="b.batchNo"
-                    :style="{ color: (b.totalQty || 0) < (row.qty || 0) ? '#dc2626' : '', fontWeight: (b.totalQty || 0) < (row.qty || 0) ? '600' : '400' }"
+                    :style="{ color: (b.totalQty || 0) < (row.qty || 0) ? '#a85d50' : '', fontWeight: (b.totalQty || 0) < (row.qty || 0) ? '600' : '400' }"
                   />
                 </el-select>
               </template>
@@ -344,7 +344,7 @@ onMounted(async () => {
 .type-tabs { display: flex; align-items: center; margin-bottom: 16px; padding: 12px 16px; background: #fafafa; border-radius: 8px; }
 .type-count { font-size: 13px; color: #64748b; }
 .text-muted { color: #94a3b8; font-size: 12px; }
-.cost-cell { color: #ea580c; font-weight: 600; }
+.cost-cell { color: #a8744f; font-weight: 600; }
 .qty-hint { font-size: 12px; color: #94a3b8; margin-top: 6px; }
 .trace-tip { font-size: 12px; color: #64748b; margin: 10px 0 0; }
 </style>

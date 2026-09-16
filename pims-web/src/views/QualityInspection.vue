@@ -505,13 +505,13 @@ onMounted(async () => {
 <style scoped>
 .page-container { width: 100%; }
 .qc-tip {
-  background: #eef2ff; color: #4338ca; border-radius: 6px;
+  background: #eef0f6; color: #5d5f85; border-radius: 6px;
   padding: 8px 14px; font-size: 13px; margin-bottom: 12px;
-  border: 1px solid #c7d2fe;
+  border: 1px solid #ccd3e2;
 }
 .badge {
   display: inline-block; min-width: 18px; height: 18px; line-height: 18px;
-  border-radius: 9px; background: #ef4444; color: #fff; font-size: 11px;
+  border-radius: 9px; background: #b56a5c; color: #fff; font-size: 11px;
   text-align: center; padding: 0 5px; margin-left: 4px; vertical-align: middle;
 }
 .inner-tabs { margin-top: 4px; }
@@ -519,7 +519,7 @@ onMounted(async () => {
 .pagination-bar { display: flex; justify-content: flex-end; padding: 12px 0 4px; }
 .text-muted { color: #9ca3af; font-size: 12px; }
 .form-tip { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 2px; }
-.reinspect-tip { color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 10px; margin: 4px 0 12px; }
+.reinspect-tip { color: #b45309; background: #f5f2e8; border: 1px solid #d9cda3; border-radius: 6px; padding: 8px 10px; margin: 4px 0 12px; }
 /* v5.32：判定弹窗检测项表格 */
 .qc-items { width: 100%; border-collapse: collapse; }
 .qc-items th, .qc-items td { border: 1px solid #e2e8f0; padding: 5px 8px; font-size: 13px; vertical-align: middle; }

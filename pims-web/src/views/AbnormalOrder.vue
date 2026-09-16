@@ -225,7 +225,7 @@ onMounted(() => { loadData() })
 .stat-card { border-radius: 16px; padding: 18px 20px; background: var(--pims-card-bg); box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .stat-num { font-size: 28px; font-weight: 800; line-height: 1.2; }
 .stat-label { font-size: 12px; color: #64748b; margin-top: 4px; }
-.stat-card.red .stat-num { color: #dc2626; }
+.stat-card.red .stat-num { color: #a85d50; }
 .stat-card.warn .stat-num { color: #d97706; }
 .stat-card.total .stat-num { color: #16a34a; }
 .chart-card { background: var(--pims-card-bg); border-radius: 16px; padding: 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
@@ -233,7 +233,7 @@ onMounted(() => { loadData() })
 .type-tabs { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .type-tab { padding: 6px 16px; font-size: 13px; font-weight: 600; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; background: #fff; color: #64748b; transition: all 0.2s; }
 .type-tab:hover { color: #334155; border-color: #cbd5e1; }
-.type-tab.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+.type-tab.active { background: #4a6785; color: #fff; border-color: #4a6785; }
 .tab-badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; font-size: 11px; line-height: 16px; border-radius: 9px; background: rgba(0,0,0,0.08); color: inherit; }
 .type-tab.active .tab-badge { background: rgba(255,255,255,0.25); }
 :deep(.el-table .row-closed > td) { background: #f8fafc !important; }

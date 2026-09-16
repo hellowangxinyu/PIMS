@@ -32,7 +32,7 @@
         <el-table-column prop="stock" label="现库存" width="110" align="right" />
         <el-table-column prop="transit" label="在途" width="100" align="right" />
         <el-table-column prop="gap" label="缺口" width="110" align="right">
-          <template #default="{ row }"><b style="color:#ef4444">{{ row.gap }}</b></template>
+          <template #default="{ row }"><b style="color:#b56a5c">{{ row.gap }}</b></template>
         </el-table-column>
         <el-table-column prop="suggested" label="建议采购(+5%)" width="130" align="right" />
         <el-table-column prop="orders" label="需求来源订单" min-width="170" show-overflow-tooltip />
@@ -93,6 +93,6 @@ onMounted(async () => {
 .kpi-card { background: var(--pims-card-bg, #fff); border-radius: 12px; padding: 12px 18px; border: 1px solid var(--pims-card-border, #e2e8f0); }
 .kpi-label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
 .kpi-value { font-size: 18px; font-weight: 700; }
-.kpi-value.red { color: #ef4444; }
+.kpi-value.red { color: #b56a5c; }
 .empty-tip { text-align: center; color: #94a3b8; padding: 60px 0; font-size: 14px; }
 </style>

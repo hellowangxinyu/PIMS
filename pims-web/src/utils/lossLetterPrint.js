@@ -70,8 +70,8 @@ export function buildLossLetterHtml(trace, template) {
   table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin: 10px 0 }
   th { background: #f3f4f6; padding: 6px 8px; border: 1px solid #d1d5db; font-weight: 600; text-align: left; width: 15%; white-space: nowrap }
   td { padding: 6px 8px; border: 1px solid #d1d5db }
-  .loss-row td { background: #fef2f2; font-size: 13px }
-  .loss-amount { color: #dc2626; font-weight: 700; font-size: 16px }
+  .loss-row td { background: #f6eded; font-size: 13px }
+  .loss-amount { color: #a85d50; font-weight: 700; font-size: 16px }
   .sign { margin-top: 52px; display: flex; justify-content: space-between; font-size: 12.5px }
   .sign div { width: 240px }
   .footnote { margin-top: 26px; font-size: 10px; color: #6b7280; line-height: 1.7 }

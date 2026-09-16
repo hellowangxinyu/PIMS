@@ -17,11 +17,11 @@
       <div class="chart-grid" style="margin-top:16px">
         <div class="chart-card">
           <div class="chart-card-title">应收账龄分层</div>
-          <SvgBarChart :data="data.arBuckets || []" :horizontal="true" color="#ef4444" />
+          <SvgBarChart :data="data.arBuckets || []" :horizontal="true" color="#b56a5c" />
         </div>
         <div class="chart-card">
           <div class="chart-card-title">应付账龄分层</div>
-          <SvgBarChart :data="data.apBuckets || []" :horizontal="true" color="#f59e0b" />
+          <SvgBarChart :data="data.apBuckets || []" :horizontal="true" color="#c2a069" />
         </div>
       </div>
 
@@ -106,8 +106,8 @@ onMounted(loadData)
 .kpi-card { background: var(--pims-card-bg); border-radius: 16px; padding: 18px 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .kpi-label { font-size: 13px; color: #64748b; margin-bottom: 8px; }
 .kpi-value { font-size: 22px; font-weight: 800; color: var(--pims-text); }
-.kpi-red { color: #ef4444; }
-.num-red { color: #ef4444; font-weight: 700; }
+.kpi-red { color: #b56a5c; }
+.num-red { color: #b56a5c; font-weight: 700; }
 .table-card { background: var(--pims-card-bg); border-radius: 12px; padding: 16px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .tab-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
 .tab-count { font-size: 13px; color: #64748b; }

@@ -15,7 +15,7 @@
       <el-upload :show-file-list="false" :http-request="doImport" accept=".xlsx,.xls" v-if="hasPerm('finance:write')">
         <el-button>导入银行流水</el-button>
       </el-upload>
-      <a href="/api/bank/statement/template" download style="color:#4f7cff;font-size:13px">下载模板</a>
+      <a href="/api/bank/statement/template" download style="color:#7d93b5;font-size:13px">下载模板</a>
       <el-button type="primary" @click="autoMatch" :disabled="!accountId" v-if="hasPerm('finance:write')">自动勾对</el-button>
     </div>
 
@@ -59,7 +59,7 @@
             <el-table-column prop="counterparty" label="对方户名" min-width="110" show-overflow-tooltip />
             <el-table-column label="金额" width="110" align="right">
               <template #default="{ row }">
-                <span :style="Number(row.amount) < 0 ? 'color:#ef4444' : 'color:#16a34a'">{{ fmt(row.amount) }}</span>
+                <span :style="Number(row.amount) < 0 ? 'color:#b56a5c' : 'color:#16a34a'">{{ fmt(row.amount) }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="balance" label="余额" width="110" align="right" />
@@ -90,8 +90,8 @@
           <tr><td>加：企业已收、银行未记</td><td class="num">¥{{ fmt(report.firmInNotInBank) }}</td><td>加：银行已收、企业未记</td><td class="num">¥{{ fmt(report.bankInNotInFirm) }}</td></tr>
           <tr><td>减：企业已付、银行未记</td><td class="num">¥{{ fmt(report.firmOutNotInBank) }}</td><td>减：银行已付、企业未记</td><td class="num">¥{{ fmt(report.bankOutNotInFirm) }}</td></tr>
           <tr class="final"><td><b>调节后余额</b></td><td class="num"><b>¥{{ fmt(report.adjustedBank) }}</b></td>
-            <td><b>调节后余额</b></td><td class="num"><b :style="Number(report.diff) !== 0 ? 'color:#ef4444' : 'color:#16a34a'">¥{{ fmt(report.adjustedBank) }}</b></td></tr>
-          <tr><td colspan="4" :style="Number(report.diff) === 0 ? 'color:#16a34a' : 'color:#ef4444'">
+            <td><b>调节后余额</b></td><td class="num"><b :style="Number(report.diff) !== 0 ? 'color:#b56a5c' : 'color:#16a34a'">¥{{ fmt(report.adjustedBank) }}</b></td></tr>
+          <tr><td colspan="4" :style="Number(report.diff) === 0 ? 'color:#16a34a' : 'color:#b56a5c'">
             {{ Number(report.diff) === 0 ? '✓ 调节平衡——账实一致' : `✗ 差异 ¥${fmt(report.diff)}：请检查未勾对明细（手续费等银行扣款请补记费用单后勾对）` }}
           </td></tr>
         </table>
@@ -286,11 +286,11 @@ onMounted(async () => {
 @media (max-width: 1100px) { .two-col { grid-template-columns: 1fr } }
 .table-card { background: var(--pims-card-bg, #fff); border-radius: 12px; padding: 14px; border: 1px solid var(--pims-card-border, #e2e8f0); }
 .card-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #475569; }
-:deep(.row-matched) { background: #f0fdf4 !important; }
+:deep(.row-matched) { background: #f0f5f0 !important; }
 .recon-table { width: 100%; border-collapse: collapse; margin-top: 4px }
 .recon-table td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 13px }
 .recon-table .num { text-align: right; font-variant-numeric: tabular-nums }
 .recon-table .final td { background: #f8fafc }
-.unmatched-row { font-size: 12px; color: #475569; padding: 3px 8px; background: #fefce8; border-radius: 4px; margin-bottom: 4px; display: inline-block; margin-right: 8px }
+.unmatched-row { font-size: 12px; color: #475569; padding: 3px 8px; background: #f3f1e4; border-radius: 4px; margin-bottom: 4px; display: inline-block; margin-right: 8px }
 .empty-tip { text-align: center; color: #94a3b8; padding: 60px 0; font-size: 14px; }
 </style>

@@ -678,13 +678,13 @@ onMounted(async () => {
 .page-container { width: 100%; }
 .full-width { width: 100%; }
 .upload-area { display: flex; align-items: center; gap: 8px; }
-.upload-hint { color: #10b981; font-size: 12px; font-weight: 500; }
+.upload-hint { color: #6f9a86; font-size: 12px; font-weight: 500; }
 .search-card { background: #fff; padding: 12px 16px 0; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 .pagination-bar { display: flex; justify-content: flex-end; padding: 12px 0 4px; }
 .batch-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .batch-title { font-size: 13px; font-weight: 600; color: #374151; }
 .batch-total { text-align: right; padding: 8px 4px; font-size: 13px; color: #374151; }
-.amount-cell { color: #ea580c; font-weight: 600; }
+.amount-cell { color: #a8744f; font-weight: 600; }
 
 .po-head-table { margin-bottom: 12px; }
 .po-head-table :deep(.el-descriptions__label) { width: 110px; background: #f5f7fa; color: #606266; }

@@ -18,13 +18,13 @@
             <div class="chart-card full">
               <div class="chart-card-title">月度销售趋势（收入 = 实发数量 × 订单单价）</div>
               <SvgLineChart :labels="data.monthlyTrend?.labels || []" :series="[
-                { name: '销售收入', values: data.monthlyTrend?.income || [], color: '#6366f1' },
-                { name: '销售成本', values: data.monthlyTrend?.cost || [], color: '#f59e0b' }
+                { name: '销售收入', values: data.monthlyTrend?.income || [], color: '#7288a5' },
+                { name: '销售成本', values: data.monthlyTrend?.cost || [], color: '#c2a069' }
               ]" :height="240" />
             </div>
             <div class="chart-card">
               <div class="chart-card-title">客户销售 TOP10</div>
-              <SvgBarChart :data="data.customerRank || []" :horizontal="true" color="#8b5cf6" />
+              <SvgBarChart :data="data.customerRank || []" :horizontal="true" color="#9a8bb8" />
             </div>
             <div class="chart-card">
               <div class="chart-card-title">产品销售 TOP10</div>
@@ -36,7 +36,7 @@
             </div>
             <div class="chart-card">
               <div class="chart-card-title">制单人销售排行（系统暂无业务员字段）</div>
-              <SvgBarChart :data="data.salesmanRank || []" :horizontal="true" color="#10b981" />
+              <SvgBarChart :data="data.salesmanRank || []" :horizontal="true" color="#6f9a86" />
             </div>
           </div>
         </template>
@@ -56,9 +56,9 @@
             <div class="chart-card full">
               <div class="chart-card-title">月度收入 / 成本 / 毛利</div>
               <SvgLineChart :labels="margin.monthlyTrend?.labels || []" :series="[
-                { name: '收入', values: margin.monthlyTrend?.income || [], color: '#6366f1' },
-                { name: '成本', values: margin.monthlyTrend?.cost || [], color: '#f59e0b' },
-                { name: '毛利', values: margin.monthlyTrend?.margin || [], color: '#10b981' }
+                { name: '收入', values: margin.monthlyTrend?.income || [], color: '#7288a5' },
+                { name: '成本', values: margin.monthlyTrend?.cost || [], color: '#c2a069' },
+                { name: '毛利', values: margin.monthlyTrend?.margin || [], color: '#6f9a86' }
               ]" :height="240" />
             </div>
             <div class="chart-card">
@@ -156,7 +156,7 @@ const exec = reactive({})
 // v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function fmtQty(v) { return Number(v || 0).toLocaleString('zh-CN', { maximumFractionDigits: 3 }) }
 function numColor(v) { return Number(v) < 0 ? 'num-red' : (Number(v) > 0 ? 'num-green' : '') }
-function rateColor(r) { return Number(r) >= 100 ? '#10b981' : (Number(r) > 0 ? '#f59e0b' : '#ef4444') }
+function rateColor(r) { return Number(r) >= 100 ? '#6f9a86' : (Number(r) > 0 ? '#c2a069' : '#b56a5c') }
 
 const statusDist = computed(() => {
   const map = { DRAFT: '草稿', CONFIRMED: '已确认', SHIPPED: '已发货' }
@@ -213,8 +213,8 @@ onMounted(loadData)
 .kpi-card { background: var(--pims-card-bg); border-radius: 16px; padding: 18px 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .kpi-label { font-size: 13px; color: #64748b; margin-bottom: 8px; }
 .kpi-value { font-size: 22px; font-weight: 800; color: var(--pims-text); }
-.kpi-green { color: #10b981; } .kpi-orange { color: #f59e0b; } .kpi-red { color: #ef4444; }
-.num-red { color: #ef4444; font-weight: 700; } .num-green { color: #10b981; font-weight: 700; }
+.kpi-green { color: #6f9a86; } .kpi-orange { color: #c2a069; } .kpi-red { color: #b56a5c; }
+.num-red { color: #b56a5c; font-weight: 700; } .num-green { color: #6f9a86; font-weight: 700; }
 .table-card { background: var(--pims-card-bg); border-radius: 12px; padding: 16px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .tab-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
 .tab-count { font-size: 13px; color: #64748b; }

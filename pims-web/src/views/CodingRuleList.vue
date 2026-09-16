@@ -11,7 +11,7 @@
       <b>防投错料</b>：数字 0001-9999 全局连续、每个数字只使用一次——AC0001 之后无论什么类别都是 0002，工人只看数字也不会拿错料；
       新增原料自动取全局下一号 <b>{{ nextGlobalSeq }}</b>。
     </div>
-    <div class="format-tip" style="background:#f0fdf4;border-color:#bbf7d0;">
+    <div class="format-tip" style="background:#f0f5f0;border-color:#c4d6c8;">
       <b>半成品/成品编码（v5.86 定稿）</b>：与原料 6 位体系彻底分开，看码即知属性——<br>
       · <b>半成品（色浆）8 位</b> = 色浆小类(2) + 主材(1) + 序号(5)：如 <b>BWFT00010</b> = 白浆·丙烯酸系<br>
       · <b>成品 9 位</b> = 漆型(2) + 主材(1) + 色系(1) + 序号(5)：如 <b>CWTH00010</b> = 面漆·聚酯·白<br>

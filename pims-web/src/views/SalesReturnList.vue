@@ -394,8 +394,8 @@ onMounted(async () => {
 .type-tabs { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px; flex-wrap: wrap; }
 .filter-tabs { display: flex; gap: 8px; }
 .filter-btn { background: #fff; border: 1px solid #d1d5db; color: #374151; border-radius: 6px; padding: 6px 16px; font-size: 13px; cursor: pointer; transition: all 0.2s; outline: none; }
-.filter-btn:hover { border-color: #22c55e; color: #15803d; }
-.filter-btn.active { background: #f0fdf4; border-color: #22c55e; color: #15803d; font-weight: 600; }
+.filter-btn:hover { border-color: #7fa07f; color: #15803d; }
+.filter-btn.active { background: #f0f5f0; border-color: #7fa07f; color: #15803d; font-weight: 600; }
 .type-count { font-size: 13px; color: #64748b; }
 .flow-tip { font-size: 12px; color: #94a3b8; margin-left: auto; }
 .text-muted { color: #94a3b8; font-size: 12px; }

@@ -280,7 +280,7 @@ onMounted(async () => {
 .p360-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; }
 .p360-card .k { font-size: 12px; color: #64748b; }
 .p360-card .v { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
-.p360-card .v.red { color: #ef4444; }
+.p360-card .v.red { color: #b56a5c; }
 .p360-card .s { font-size: 11px; color: #94a3b8; }
 .p360-sec { font-size: 14px; font-weight: 600; margin: 18px 0 8px; }
 </style>

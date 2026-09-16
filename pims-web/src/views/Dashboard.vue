@@ -218,26 +218,26 @@ const addQuickVisible = ref(false)
 const newQuick = ref('')
 
 const availableRoutes = [
-  { path:'/inventory', label:'库存管理', icon:'▦', color:'#6366f1' },
-  { path:'/purchase', label:'采购管理', icon:'⇲', color:'#f59e0b' },
-  { path:'/sales', label:'销售管理', icon:'↗', color:'#10b981' },
-  { path:'/outsource', label:'委外管理', icon:'◎', color:'#8b5cf6' },
-  { path:'/report-finance-trend', label:'趋势分析', icon:'¥', color:'#ef4444' },
-  { path:'/supplier', label:'供应商', icon:'🏭', color:'#3b82f6' },
-  { path:'/customer', label:'客户', icon:'👥', color:'#ec4899' },
-  { path:'/material', label:'物料', icon:'📦', color:'#f97316' },
-  { path:'/warehouse', label:'仓库', icon:'🏗', color:'#14b8a6' },
+  { path:'/inventory', label:'库存管理', icon:'▦', color:'#7288a5' },
+  { path:'/purchase', label:'采购管理', icon:'⇲', color:'#c2a069' },
+  { path:'/sales', label:'销售管理', icon:'↗', color:'#6f9a86' },
+  { path:'/outsource', label:'委外管理', icon:'◎', color:'#9a8bb8' },
+  { path:'/report-finance-trend', label:'趋势分析', icon:'¥', color:'#b56a5c' },
+  { path:'/supplier', label:'供应商', icon:'🏭', color:'#6e93b8' },
+  { path:'/customer', label:'客户', icon:'👥', color:'#c08a9a' },
+  { path:'/material', label:'物料', icon:'📦', color:'#bd8355' },
+  { path:'/warehouse', label:'仓库', icon:'🏗', color:'#7aa39a' },
   { path:'/users', label:'用户管理', icon:'👤', color:'#06b6d4' },
-  { path:'/roles', label:'角色权限', icon:'🔑', color:'#e11d48' },
+  { path:'/roles', label:'角色权限', icon:'🔑', color:'#a55a68' },
 ]
 
 const defaultActions = [
-  { path:'/inventory', label:'库存总览', icon:'▦', color:'#6366f1' },
-  { path:'/purchase', label:'采购下单', icon:'⇲', color:'#f59e0b' },
-  { path:'/sales', label:'销售开单', icon:'↗', color:'#10b981' },
-  { path:'/outsource', label:'委外工单', icon:'◎', color:'#8b5cf6' },
-  { path:'/report-finance-trend', label:'趋势分析', icon:'¥', color:'#ef4444' },
-  { path:'/supplier', label:'供应商', icon:'🏭', color:'#3b82f6' },
+  { path:'/inventory', label:'库存总览', icon:'▦', color:'#7288a5' },
+  { path:'/purchase', label:'采购下单', icon:'⇲', color:'#c2a069' },
+  { path:'/sales', label:'销售开单', icon:'↗', color:'#6f9a86' },
+  { path:'/outsource', label:'委外工单', icon:'◎', color:'#9a8bb8' },
+  { path:'/report-finance-trend', label:'趋势分析', icon:'¥', color:'#b56a5c' },
+  { path:'/supplier', label:'供应商', icon:'🏭', color:'#6e93b8' },
 ]
 
 const quickActions = ref([])
@@ -364,14 +364,14 @@ onMounted(async () => {
 .data-card { background: var(--pims-card-bg); border-radius: 16px; padding: 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .data-card-title { font-size: 14px; font-weight: 700; color: var(--pims-text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
 .badge { display:inline-block; background:#f1f5f9; color:var(--pims-text-secondary); font-size:11px; padding:2px 8px; border-radius:10px; font-weight:600; }
-.badge.warn { background:#fef3c7; color:#d97706; }
+.badge.warn { background:#f4efe0; color:#d97706; }
 
 /* 汇总行 */
 .summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--pims-border-light); font-size: 14px; color: var(--pims-text-secondary); }
 .summary-row:last-child { border-bottom: none; }
 .summary-row strong { font-size: 16px; color: var(--pims-text); }
-.summary-row .green { color: #10b981; }
-.summary-row .red { color: #ef4444; }
+.summary-row .green { color: #6f9a86; }
+.summary-row .red { color: #b56a5c; }
 
 /* 响应式 */
 @media (max-width: 768px) {
@@ -392,15 +392,15 @@ onMounted(async () => {
   .stat-icon .el-icon { font-size: 19px; }
   .quick-actions { grid-template-columns: repeat(2, 1fr); }
 }
-.ls-red { color: #ef4444; font-weight: 700; }
-.ls-orange { color: #f59e0b; font-weight: 700; }
+.ls-red { color: #b56a5c; font-weight: 700; }
+.ls-orange { color: #c2a069; font-weight: 700; }
 .ls-muted { color: #94a3b8; }
-.todo-bar { display: flex; align-items: center; gap: 16px; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fde68a; border-radius: 14px; padding: 14px 20px; margin-bottom: 20px; flex-wrap: wrap; }
+.todo-bar { display: flex; align-items: center; gap: 16px; background: linear-gradient(135deg, #f5f2e8, #f4efe0); border: 1px solid #d9cda3; border-radius: 14px; padding: 14px 20px; margin-bottom: 20px; flex-wrap: wrap; }
 .todo-title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: #b45309; white-space: nowrap; }
 .todo-items { display: flex; gap: 10px; flex-wrap: wrap; }
-.todo-chip { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 999px; font-size: 13px; text-decoration: none; background: #fff; border: 1px solid #f59e0b; color: #92400e; }
+.todo-chip { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 999px; font-size: 13px; text-decoration: none; background: #fff; border: 1px solid #c2a069; color: #92400e; }
 .todo-chip b { font-size: 15px; }
-.todo-chip.danger { border-color: #ef4444; color: #b91c1c; background: #fef2f2; }
+.todo-chip.danger { border-color: #b56a5c; color: #b91c1c; background: #f6eded; }
 .todo-chip:hover { box-shadow: 0 2px 8px rgba(245, 158, 11, .25); }
 .todo-sub { font-size: 11px; opacity: .75; }
 </style>

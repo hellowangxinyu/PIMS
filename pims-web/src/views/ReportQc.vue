@@ -20,11 +20,11 @@
       <div class="chart-grid" style="margin-top:16px">
         <div class="chart-card">
           <div class="chart-card-title">月度质检单数</div>
-          <SvgBarChart :data="monthlyCounts" :horizontal="false" height="240" color="#6366f1" />
+          <SvgBarChart :data="monthlyCounts" :horizontal="false" height="240" color="#7288a5" />
         </div>
         <div class="chart-card">
           <div class="chart-card-title">月度合格率（%）</div>
-          <SvgLineChart :labels="data.monthlyTrend?.labels || []" :series="[{ name: '合格率', values: data.monthlyTrend?.passRate || [], color: '#10b981' }]" :height="240" />
+          <SvgLineChart :labels="data.monthlyTrend?.labels || []" :series="[{ name: '合格率', values: data.monthlyTrend?.passRate || [], color: '#6f9a86' }]" :height="240" />
         </div>
         <div class="chart-card">
           <div class="chart-card-title">判定分布</div>
@@ -32,7 +32,7 @@
         </div>
         <div class="chart-card">
           <div class="chart-card-title">不合格（退货）物料 TOP10</div>
-          <SvgBarChart :data="data.rejectMaterialRank || []" :horizontal="true" color="#ef4444" />
+          <SvgBarChart :data="data.rejectMaterialRank || []" :horizontal="true" color="#b56a5c" />
         </div>
       </div>
 
@@ -143,7 +143,7 @@ onMounted(loadData)
 .kpi-card { background: var(--pims-card-bg); border-radius: 16px; padding: 18px 20px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .kpi-label { font-size: 13px; color: #64748b; margin-bottom: 8px; }
 .kpi-value { font-size: 22px; font-weight: 800; color: var(--pims-text); }
-.kpi-green { color: #10b981; } .kpi-red { color: #ef4444; }
+.kpi-green { color: #6f9a86; } .kpi-red { color: #b56a5c; }
 .table-card { background: var(--pims-card-bg); border-radius: 12px; padding: 16px; box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); }
 .tab-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
 .tab-count { font-size: 13px; color: #64748b; }

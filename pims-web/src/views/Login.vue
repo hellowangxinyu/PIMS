@@ -51,7 +51,7 @@
         <!-- 涂料桶排：200kg 开口桶，点击换全屏泼溅色 + 右侧泼漆区 -->
         <div class="bucket-wrap">
           <div class="bucket-row" ref="swatchRef">
-          <button class="bucket" style="--bc:#e23b3b" data-name="赤 · 焰红" @click="pickSplat('#e23b3b')">
+          <button class="bucket" style="--bc:#b56a5c" data-name="赤 · 焰红" @click="pickSplat('#b56a5c')">
 <svg viewBox="0 0 120 150" aria-hidden="true">
               <path d="M24 22 L27 134 Q27.5 140 34 140 L86 140 Q92.5 140 93 134 L96 22 Z" fill="#cdd5df" stroke="#98a3b1" stroke-width="1.5"/>
               <path d="M25 58 Q60 66 95 58" fill="none" stroke="#aeb9c5" stroke-width="5"/>
@@ -63,13 +63,13 @@
               <ellipse cx="60" cy="30" rx="38" ry="12" fill="none" stroke="#98a3b1" stroke-width="4"/>
               <rect x="80" y="22" width="9" height="15" rx="2.5" fill="#7c8694"/>
               <ellipse cx="60" cy="20" rx="36" ry="11" fill="#8b95a3"/>
-              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#e23b3b"/>
-              <path d="M28 18 Q36 6 50 12 Q60 6 68 16 Q58 24 50 21 Q40 25 30 23 Q24 20 28 18 Z" fill="#e23b3b"/>
-              <path d="M32 20 q-2 26 2 38 q1 5 -2 6 q-3 -1 -2 -6 q-4 -12 -1 -38 z" fill="#e23b3b"/>
-              <ellipse cx="31" cy="66" rx="4" ry="2.5" fill="#e23b3b"/>
+              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#b56a5c"/>
+              <path d="M28 18 Q36 6 50 12 Q60 6 68 16 Q58 24 50 21 Q40 25 30 23 Q24 20 28 18 Z" fill="#b56a5c"/>
+              <path d="M32 20 q-2 26 2 38 q1 5 -2 6 q-3 -1 -2 -6 q-4 -12 -1 -38 z" fill="#b56a5c"/>
+              <ellipse cx="31" cy="66" rx="4" ry="2.5" fill="#b56a5c"/>
             </svg>
           </button>
-          <button class="bucket" style="--bc:#f28c1e" data-name="橙 · 蜜橙" @click="pickSplat('#f28c1e')">
+          <button class="bucket" style="--bc:#b08a60" data-name="橙 · 蜜橙" @click="pickSplat('#b08a60')">
 <svg viewBox="0 0 120 150" aria-hidden="true">
               <path d="M24 22 L27 134 Q27.5 140 34 140 L86 140 Q92.5 140 93 134 L96 22 Z" fill="#cdd5df" stroke="#98a3b1" stroke-width="1.5"/>
               <path d="M25 58 Q60 66 95 58" fill="none" stroke="#aeb9c5" stroke-width="5"/>
@@ -81,15 +81,15 @@
               <ellipse cx="60" cy="30" rx="38" ry="12" fill="none" stroke="#98a3b1" stroke-width="4"/>
               <rect x="80" y="22" width="9" height="15" rx="2.5" fill="#7c8694"/>
               <ellipse cx="60" cy="20" rx="36" ry="11" fill="#8b95a3"/>
-              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#f28c1e"/>
-              <path d="M40 20 Q48 8 60 12 Q70 7 78 16 Q70 24 62 21 Q52 25 42 22 Q36 20 40 20 Z" fill="#f28c1e"/>
-              <path d="M50 19 q0 14 1 19 q0.5 3 -1 4 q-2 -1 -1 -4 q-1 -5 0 -19 z" fill="#f28c1e"/>
-              <ellipse cx="50" cy="40" rx="3" ry="2" fill="#f28c1e"/>
-              <path d="M66 18 q0 12 1 16 q0.5 3 -1 4 q-2 -1 -1 -4 q-1 -4 0 -16 z" fill="#f28c1e"/>
-              <ellipse cx="66" cy="36" rx="3" ry="2" fill="#f28c1e"/>
+              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#b08a60"/>
+              <path d="M40 20 Q48 8 60 12 Q70 7 78 16 Q70 24 62 21 Q52 25 42 22 Q36 20 40 20 Z" fill="#b08a60"/>
+              <path d="M50 19 q0 14 1 19 q0.5 3 -1 4 q-2 -1 -1 -4 q-1 -5 0 -19 z" fill="#b08a60"/>
+              <ellipse cx="50" cy="40" rx="3" ry="2" fill="#b08a60"/>
+              <path d="M66 18 q0 12 1 16 q0.5 3 -1 4 q-2 -1 -1 -4 q-1 -4 0 -16 z" fill="#b08a60"/>
+              <ellipse cx="66" cy="36" rx="3" ry="2" fill="#b08a60"/>
             </svg>
           </button>
-          <button class="bucket" style="--bc:#f2c11e" data-name="黄 · 明黄" @click="pickSplat('#f2c11e')">
+          <button class="bucket" style="--bc:#b09e60" data-name="黄 · 明黄" @click="pickSplat('#b09e60')">
 <svg viewBox="0 0 120 150" aria-hidden="true">
               <path d="M24 22 L27 134 Q27.5 140 34 140 L86 140 Q92.5 140 93 134 L96 22 Z" fill="#cdd5df" stroke="#98a3b1" stroke-width="1.5"/>
               <path d="M25 58 Q60 66 95 58" fill="none" stroke="#aeb9c5" stroke-width="5"/>
@@ -101,10 +101,10 @@
               <ellipse cx="60" cy="30" rx="38" ry="12" fill="none" stroke="#98a3b1" stroke-width="4"/>
               <rect x="80" y="22" width="9" height="15" rx="2.5" fill="#7c8694"/>
               <ellipse cx="60" cy="20" rx="36" ry="11" fill="#8b95a3"/>
-              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#f2c11e"/>
-              <path d="M26 20 Q40 10 58 12 Q72 8 84 18 Q74 26 62 23 Q48 27 34 24 Q26 22 26 20 Z" fill="#f2c11e"/>
-              <path d="M70 17 q3 28 -2 52 q-1 5 2 6 q3 -1 2 -6 q5 -24 -2 -52 z" fill="#f2c11e"/>
-              <ellipse cx="70" cy="72" rx="4.5" ry="2.5" fill="#f2c11e"/>
+              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#b09e60"/>
+              <path d="M26 20 Q40 10 58 12 Q72 8 84 18 Q74 26 62 23 Q48 27 34 24 Q26 22 26 20 Z" fill="#b09e60"/>
+              <path d="M70 17 q3 28 -2 52 q-1 5 2 6 q3 -1 2 -6 q5 -24 -2 -52 z" fill="#b09e60"/>
+              <ellipse cx="70" cy="72" rx="4.5" ry="2.5" fill="#b09e60"/>
             </svg>
           </button>
           <button class="bucket" style="--bc:#3fa63f" data-name="绿 · 草绿" @click="pickSplat('#3fa63f')">
@@ -126,7 +126,7 @@
               <path d="M70 15 q0 9 1 12 q0.5 2.5 -1 3.5 q-2 -1 -1 -3.5 q-1 -3 0 -12 z" fill="#3fa63f"/>
             </svg>
           </button>
-          <button class="bucket" style="--bc:#1fb6a8" data-name="青 · 青碧" @click="pickSplat('#1fb6a8')">
+          <button class="bucket" style="--bc:#4c8983" data-name="青 · 青碧" @click="pickSplat('#4c8983')">
 <svg viewBox="0 0 120 150" aria-hidden="true">
               <path d="M24 22 L27 134 Q27.5 140 34 140 L86 140 Q92.5 140 93 134 L96 22 Z" fill="#cdd5df" stroke="#98a3b1" stroke-width="1.5"/>
               <path d="M25 58 Q60 66 95 58" fill="none" stroke="#aeb9c5" stroke-width="5"/>
@@ -138,13 +138,13 @@
               <ellipse cx="60" cy="30" rx="38" ry="12" fill="none" stroke="#98a3b1" stroke-width="4"/>
               <rect x="80" y="22" width="9" height="15" rx="2.5" fill="#7c8694"/>
               <ellipse cx="60" cy="20" rx="36" ry="11" fill="#8b95a3"/>
-              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#1fb6a8"/>
-              <path d="M34 18 Q44 8 58 12 Q66 7 72 15 Q64 22 56 20 Q46 24 36 21 Q30 20 34 18 Z" fill="#1fb6a8"/>
-              <path d="M56 18 q0 18 1 29 q0.5 4 -1.5 5 q-3 -1 -1.5 -5 q-1 -11 0 -29 z" fill="#1fb6a8"/>
-              <ellipse cx="56" cy="50" rx="4" ry="2.5" fill="#1fb6a8"/>
+              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#4c8983"/>
+              <path d="M34 18 Q44 8 58 12 Q66 7 72 15 Q64 22 56 20 Q46 24 36 21 Q30 20 34 18 Z" fill="#4c8983"/>
+              <path d="M56 18 q0 18 1 29 q0.5 4 -1.5 5 q-3 -1 -1.5 -5 q-1 -11 0 -29 z" fill="#4c8983"/>
+              <ellipse cx="56" cy="50" rx="4" ry="2.5" fill="#4c8983"/>
             </svg>
           </button>
-          <button class="bucket" style="--bc:#2b6fd6" data-name="蓝 · 晴蓝" @click="pickSplat('#2b6fd6')">
+          <button class="bucket" style="--bc:#5e79a3" data-name="蓝 · 晴蓝" @click="pickSplat('#5e79a3')">
 <svg viewBox="0 0 120 150" aria-hidden="true">
               <path d="M24 22 L27 134 Q27.5 140 34 140 L86 140 Q92.5 140 93 134 L96 22 Z" fill="#cdd5df" stroke="#98a3b1" stroke-width="1.5"/>
               <path d="M25 58 Q60 66 95 58" fill="none" stroke="#aeb9c5" stroke-width="5"/>
@@ -156,13 +156,13 @@
               <ellipse cx="60" cy="30" rx="38" ry="12" fill="none" stroke="#98a3b1" stroke-width="4"/>
               <rect x="80" y="22" width="9" height="15" rx="2.5" fill="#7c8694"/>
               <ellipse cx="60" cy="20" rx="36" ry="11" fill="#8b95a3"/>
-              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#2b6fd6"/>
-              <path d="M24 22 Q36 12 52 14 Q66 9 80 18 Q70 28 58 25 Q44 30 30 27 Q22 25 24 22 Z" fill="#2b6fd6"/>
-              <path d="M58 16 q6 20 0 46 q-1 5 2 6 q3 -1 2 -6 q6 -26 0 -46 z" fill="#2b6fd6"/>
-              <ellipse cx="60" cy="66" rx="4.5" ry="2.5" fill="#2b6fd6"/>
+              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#5e79a3"/>
+              <path d="M24 22 Q36 12 52 14 Q66 9 80 18 Q70 28 58 25 Q44 30 30 27 Q22 25 24 22 Z" fill="#5e79a3"/>
+              <path d="M58 16 q6 20 0 46 q-1 5 2 6 q3 -1 2 -6 q6 -26 0 -46 z" fill="#5e79a3"/>
+              <ellipse cx="60" cy="66" rx="4.5" ry="2.5" fill="#5e79a3"/>
             </svg>
           </button>
-          <button class="bucket" style="--bc:#8a4fd6" data-name="紫 · 黛紫" @click="pickSplat('#8a4fd6')">
+          <button class="bucket" style="--bc:#8f77ae" data-name="紫 · 黛紫" @click="pickSplat('#8f77ae')">
 <svg viewBox="0 0 120 150" aria-hidden="true">
               <path d="M24 22 L27 134 Q27.5 140 34 140 L86 140 Q92.5 140 93 134 L96 22 Z" fill="#cdd5df" stroke="#98a3b1" stroke-width="1.5"/>
               <path d="M25 58 Q60 66 95 58" fill="none" stroke="#aeb9c5" stroke-width="5"/>
@@ -174,11 +174,11 @@
               <ellipse cx="60" cy="30" rx="38" ry="12" fill="none" stroke="#98a3b1" stroke-width="4"/>
               <rect x="80" y="22" width="9" height="15" rx="2.5" fill="#7c8694"/>
               <ellipse cx="60" cy="20" rx="36" ry="11" fill="#8b95a3"/>
-              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#8a4fd6"/>
-              <path d="M24 20 Q34 10 48 12 Q58 8 64 15 Q54 22 46 20 Q36 24 26 22 Q22 20 24 20 Z" fill="#8a4fd6"/>
-              <path d="M24 20 q-2 32 3 54 q1 5 -2.5 6 q-3.5 -1 -2.5 -6 q-5 -22 -1 -54 z" fill="#8a4fd6"/>
-              <path d="M40 21 q0 14 1 19 q0.5 3 -1 4 q-2 -1 -1 -4 q-1 -5 0 -19 z" fill="#8a4fd6"/>
-              <ellipse cx="25" cy="78" rx="4" ry="2.5" fill="#8a4fd6"/>
+              <ellipse cx="60" cy="20" rx="34" ry="9" fill="#8f77ae"/>
+              <path d="M24 20 Q34 10 48 12 Q58 8 64 15 Q54 22 46 20 Q36 24 26 22 Q22 20 24 20 Z" fill="#8f77ae"/>
+              <path d="M24 20 q-2 32 3 54 q1 5 -2.5 6 q-3.5 -1 -2.5 -6 q-5 -22 -1 -54 z" fill="#8f77ae"/>
+              <path d="M40 21 q0 14 1 19 q0.5 3 -1 4 q-2 -1 -1 -4 q-1 -5 0 -19 z" fill="#8f77ae"/>
+              <ellipse cx="25" cy="78" rx="4" ry="2.5" fill="#8f77ae"/>
             </svg>
           </button>
           </div>
@@ -220,25 +220,25 @@
           <g class="body anim-bob">
             <ellipse class="bf" cx="75" cy="131" rx="37" ry="23" fill="#c9935e" stroke="#a97c4a" stroke-width="2.5"/>
             <circle cx="51" cy="145" r="9" fill="#c9935e"/><circle cx="99" cy="145" r="9" fill="#c9935e"/>
-            <circle cx="51" cy="145" r="4.5" fill="#e8c49a"/><circle cx="99" cy="145" r="4.5" fill="#e8c49a"/>
+            <circle cx="51" cy="145" r="4.5" fill="#cab9a6"/><circle cx="99" cy="145" r="4.5" fill="#cab9a6"/>
             <g class="anim-wave">
               <ellipse cx="118" cy="98" rx="9" ry="20" transform="rotate(35 118 98)" fill="#c9935e"/>
-              <circle cx="127" cy="78" r="8" fill="#c9935e"/><circle cx="127" cy="78" r="4" fill="#e8c49a"/>
+              <circle cx="127" cy="78" r="8" fill="#c9935e"/><circle cx="127" cy="78" r="4" fill="#cab9a6"/>
             </g>
           </g>
           <g class="head-idle anim-sway">
           <g class="head" :style="{ transform: `rotate(${toys.bear.rot + toys.bear.baseRot}deg)` }">
             <circle cx="75.0" cy="37.0" r="7" fill="#a97c4a" opacity="0.9"/><circle cx="47.4" cy="43.2" r="7" fill="#a97c4a" opacity="0.9"/><circle cx="102.6" cy="43.2" r="7" fill="#a97c4a" opacity="0.9"/><circle cx="31.3" cy="66.2" r="6" fill="#a97c4a" opacity="0.9"/><circle cx="118.7" cy="66.2" r="6" fill="#a97c4a" opacity="0.9"/><circle cx="29.0" cy="86.9" r="5" fill="#a97c4a" opacity="0.9"/><circle cx="121.0" cy="86.9" r="5" fill="#a97c4a" opacity="0.9"/>
             <circle class="ef" cx="38" cy="44" r="15" fill="#c9935e"/>
-            <circle cx="38" cy="44" r="7" fill="#e8c49a"/>
+            <circle cx="38" cy="44" r="7" fill="#cab9a6"/>
             <circle class="ef" cx="112" cy="44" r="15" fill="#c9935e"/>
-            <circle cx="112" cy="44" r="7" fill="#e8c49a"/>
+            <circle cx="112" cy="44" r="7" fill="#cab9a6"/>
             <circle class="hf" cx="75" cy="80" r="46" fill="#c9935e" stroke="#a97c4a" stroke-width="2.5"/>
-            <ellipse cx="75" cy="95" rx="20" ry="15" fill="#f3dcc0"/>
+            <ellipse cx="75" cy="95" rx="20" ry="15" fill="#cbbaa4"/>
             <ellipse cx="75" cy="88" rx="7" ry="5" fill="#6b4a2f"/>
             <path d="M75 93 q0 8 -7 8 M75 93 q0 8 7 8" fill="none" stroke="#6b4a2f" stroke-width="2" stroke-linecap="round"/>
-            <ellipse cx="46" cy="88" rx="7" ry="4.5" fill="#f5a8a8" opacity="0.7"/>
-            <ellipse cx="104" cy="88" rx="7" ry="4.5" fill="#f5a8a8" opacity="0.7"/>
+            <ellipse cx="46" cy="88" rx="7" ry="4.5" fill="#cea1a1" opacity="0.7"/>
+            <ellipse cx="104" cy="88" rx="7" ry="4.5" fill="#cea1a1" opacity="0.7"/>
             <g class="eye">
               <ellipse class="eye-white anim-blink" cx="58" cy="72" rx="8" ry="8" fill="#fff"/>
               <circle class="pupil" :style="{ transform: `translate(${toys.bear.pxL}px, ${toys.bear.py}px)` }" cx="58" cy="72" r="4" fill="#2f1f12"/>
@@ -260,25 +260,25 @@
   <svg class="plush" viewBox="0 0 150 150">
           <ellipse class="pshadow" cx="75" cy="143" rx="38" ry="6" fill="rgba(0,0,0,0.24)"/>
           <g class="body anim-bob">
-            <ellipse class="bf" cx="75" cy="131" rx="35" ry="23" fill="#f6ede2" stroke="#e2d3bd" stroke-width="2.5"/>
+            <ellipse class="bf" cx="75" cy="131" rx="35" ry="23" fill="#c7b9a9" stroke="#e2d3bd" stroke-width="2.5"/>
             <ellipse cx="75" cy="135" rx="21" ry="13" fill="#fff"/>
-            <circle cx="55" cy="145" r="8" fill="#f6ede2"/><circle cx="95" cy="145" r="8" fill="#f6ede2"/>
+            <circle cx="55" cy="145" r="8" fill="#c7b9a9"/><circle cx="95" cy="145" r="8" fill="#c7b9a9"/>
           </g>
           <g class="head-idle anim-sway">
           <g class="head" :style="{ transform: `rotate(${toys.bunny.rot + toys.bunny.baseRot}deg)` }">
             <circle cx="75.0" cy="51.0" r="7" fill="#e2d3bd" opacity="0.9"/><circle cx="51.0" cy="56.0" r="7" fill="#e2d3bd" opacity="0.9"/><circle cx="99.0" cy="56.0" r="7" fill="#e2d3bd" opacity="0.9"/><circle cx="37.0" cy="76.0" r="6" fill="#e2d3bd" opacity="0.9"/><circle cx="113.0" cy="76.0" r="6" fill="#e2d3bd" opacity="0.9"/><circle cx="35.0" cy="94.0" r="5" fill="#e2d3bd" opacity="0.9"/><circle cx="115.0" cy="94.0" r="5" fill="#e2d3bd" opacity="0.9"/>
-            <ellipse class="ef" cx="48" cy="26" rx="11" ry="30" transform="rotate(-18 48 26)" fill="#f6ede2"/>
-            <ellipse cx="48" cy="28" rx="6" ry="20" transform="rotate(-18 48 28)" fill="#f3c3cf"/>
+            <ellipse class="ef" cx="48" cy="26" rx="11" ry="30" transform="rotate(-18 48 26)" fill="#c7b9a9"/>
+            <ellipse cx="48" cy="28" rx="6" ry="20" transform="rotate(-18 48 28)" fill="#cba5ae"/>
             <g class="anim-twitch">
-              <ellipse class="ef" cx="102" cy="26" rx="11" ry="30" transform="rotate(42 102 30)" fill="#f6ede2"/>
-              <ellipse cx="102" cy="28" rx="6" ry="20" transform="rotate(42 102 32)" fill="#f3c3cf"/>
+              <ellipse class="ef" cx="102" cy="26" rx="11" ry="30" transform="rotate(42 102 30)" fill="#c7b9a9"/>
+              <ellipse cx="102" cy="28" rx="6" ry="20" transform="rotate(42 102 32)" fill="#cba5ae"/>
             </g>
-            <circle class="hf" cx="75" cy="88" r="40" fill="#f6ede2" stroke="#e2d3bd" stroke-width="2.5"/>
+            <circle class="hf" cx="75" cy="88" r="40" fill="#c7b9a9" stroke="#e2d3bd" stroke-width="2.5"/>
             <ellipse cx="75" cy="102" rx="13" ry="10" fill="#fff"/>
-            <ellipse cx="75" cy="98" rx="5" ry="4" fill="#e58ba2"/>
+            <ellipse cx="75" cy="98" rx="5" ry="4" fill="#caa6af"/>
             <path d="M75 101 q-3 5 -7 2 M75 101 q3 5 7 2" fill="none" stroke="#3a2c22" stroke-width="2" stroke-linecap="round"/>
-            <ellipse cx="52" cy="100" rx="6" ry="4" fill="#f9c6d0" opacity="0.7"/>
-            <ellipse cx="98" cy="100" rx="6" ry="4" fill="#f9c6d0" opacity="0.7"/>
+            <ellipse cx="52" cy="100" rx="6" ry="4" fill="#cfa0aa" opacity="0.7"/>
+            <ellipse cx="98" cy="100" rx="6" ry="4" fill="#cfa0aa" opacity="0.7"/>
             <g class="eye">
               <ellipse class="eye-white anim-blink" cx="60" cy="84" rx="8" ry="8" fill="#fff"/>
               <circle class="pupil" :style="{ transform: `translate(${toys.bunny.pxL}px, ${toys.bunny.py}px)` }" cx="60" cy="84" r="4" fill="#3a2c22"/>
@@ -316,8 +316,8 @@
             <ellipse cx="75" cy="104" rx="14" ry="11" fill="#f0e9de"/>
             <ellipse cx="75" cy="100" rx="5.5" ry="4" fill="#2e2a33"/>
             <path d="M75 104 q0 7 -7 7 M75 104 q0 7 7 7" fill="none" stroke="#2e2a33" stroke-width="2" stroke-linecap="round"/>
-            <ellipse cx="50" cy="100" rx="6" ry="4" fill="#f9c6d0" opacity="0.65"/>
-            <ellipse cx="100" cy="100" rx="6" ry="4" fill="#f9c6d0" opacity="0.65"/>
+            <ellipse cx="50" cy="100" rx="6" ry="4" fill="#cfa0aa" opacity="0.65"/>
+            <ellipse cx="100" cy="100" rx="6" ry="4" fill="#cfa0aa" opacity="0.65"/>
             <g class="eye">
               <ellipse class="eye-white anim-blink" cx="60" cy="84" rx="5.5" ry="5.5" fill="#fff"/>
               <circle class="pupil" :style="{ transform: `translate(${toys.panda.pxL}px, ${toys.panda.py}px)` }" cx="60" cy="84" r="2.8" fill="#1f1b23"/>
@@ -340,27 +340,27 @@
           <ellipse class="pshadow" cx="75" cy="143" rx="38" ry="6" fill="rgba(0,0,0,0.24)"/>
           <g class="body anim-bob">
             <g class="anim-wag">
-            <circle cx="34" cy="118" r="13" fill="#e8834f"/><circle cx="23" cy="130" r="11" fill="#e8834f"/>
-            <circle cx="27" cy="142" r="9" fill="#f8c896"/>
+            <circle cx="34" cy="118" r="13" fill="#ba927d"/><circle cx="23" cy="130" r="11" fill="#ba927d"/>
+            <circle cx="27" cy="142" r="9" fill="#d0b89f"/>
           </g>
-            <ellipse class="bf" cx="75" cy="131" rx="35" ry="23" fill="#e8834f" stroke="#d56f3c" stroke-width="2.5"/>
-            <ellipse cx="75" cy="137" rx="20" ry="13" fill="#f8c896"/>
-            <circle cx="54" cy="145" r="8.5" fill="#e8834f"/><circle cx="96" cy="145" r="8.5" fill="#e8834f"/>
-            <circle cx="54" cy="145" r="4" fill="#f8c896"/><circle cx="96" cy="145" r="4" fill="#f8c896"/>
+            <ellipse class="bf" cx="75" cy="131" rx="35" ry="23" fill="#ba927d" stroke="#a77e6a" stroke-width="2.5"/>
+            <ellipse cx="75" cy="137" rx="20" ry="13" fill="#d0b89f"/>
+            <circle cx="54" cy="145" r="8.5" fill="#ba927d"/><circle cx="96" cy="145" r="8.5" fill="#ba927d"/>
+            <circle cx="54" cy="145" r="4" fill="#d0b89f"/><circle cx="96" cy="145" r="4" fill="#d0b89f"/>
           </g>
           <g class="head-idle anim-sway">
           <g class="head" :style="{ transform: `rotate(${toys.fox.rot + toys.fox.baseRot}deg)` }">
-            <circle cx="75.0" cy="47.0" r="7" fill="#d56f3c" opacity="0.9"/><circle cx="51.0" cy="52.0" r="7" fill="#d56f3c" opacity="0.9"/><circle cx="99.0" cy="52.0" r="7" fill="#d56f3c" opacity="0.9"/><circle cx="37.0" cy="72.0" r="6" fill="#d56f3c" opacity="0.9"/><circle cx="113.0" cy="72.0" r="6" fill="#d56f3c" opacity="0.9"/><circle cx="35.0" cy="90.0" r="5" fill="#d56f3c" opacity="0.9"/><circle cx="115.0" cy="90.0" r="5" fill="#d56f3c" opacity="0.9"/>
-            <path class="ef" d="M40 52 L52 20 L66 44 Z" fill="#e8834f"/>
-            <path d="M47 47 L53 28 L61 43 Z" fill="#f8c896"/>
-            <path class="ef" d="M110 52 L98 20 L84 44 Z" fill="#e8834f"/>
-            <path d="M103 47 L97 28 L89 43 Z" fill="#f8c896"/>
-            <circle class="hf" cx="75" cy="84" r="40" fill="#e8834f" stroke="#d56f3c" stroke-width="2.5"/>
-            <ellipse cx="75" cy="102" rx="20" ry="14" fill="#f8c896"/>
+            <circle cx="75.0" cy="47.0" r="7" fill="#a77e6a" opacity="0.9"/><circle cx="51.0" cy="52.0" r="7" fill="#a77e6a" opacity="0.9"/><circle cx="99.0" cy="52.0" r="7" fill="#a77e6a" opacity="0.9"/><circle cx="37.0" cy="72.0" r="6" fill="#a77e6a" opacity="0.9"/><circle cx="113.0" cy="72.0" r="6" fill="#a77e6a" opacity="0.9"/><circle cx="35.0" cy="90.0" r="5" fill="#a77e6a" opacity="0.9"/><circle cx="115.0" cy="90.0" r="5" fill="#a77e6a" opacity="0.9"/>
+            <path class="ef" d="M40 52 L52 20 L66 44 Z" fill="#ba927d"/>
+            <path d="M47 47 L53 28 L61 43 Z" fill="#d0b89f"/>
+            <path class="ef" d="M110 52 L98 20 L84 44 Z" fill="#ba927d"/>
+            <path d="M103 47 L97 28 L89 43 Z" fill="#d0b89f"/>
+            <circle class="hf" cx="75" cy="84" r="40" fill="#ba927d" stroke="#a77e6a" stroke-width="2.5"/>
+            <ellipse cx="75" cy="102" rx="20" ry="14" fill="#d0b89f"/>
             <ellipse cx="75" cy="94" rx="6.5" ry="4.5" fill="#5c3a2a"/>
             <path d="M75 98 q0 7 -6 7 M75 98 q0 7 6 7" fill="none" stroke="#5c3a2a" stroke-width="2" stroke-linecap="round"/>
-            <ellipse cx="48" cy="96" rx="6" ry="4" fill="#f9a8d4" opacity="0.6"/>
-            <ellipse cx="102" cy="96" rx="6" ry="4" fill="#f9a8d4" opacity="0.6"/>
+            <ellipse cx="48" cy="96" rx="6" ry="4" fill="#d09fba" opacity="0.6"/>
+            <ellipse cx="102" cy="96" rx="6" ry="4" fill="#d09fba" opacity="0.6"/>
             <g class="eye">
               <ellipse class="eye-white anim-blink" cx="60" cy="80" rx="7.5" ry="7.5" fill="#fff"/>
               <circle class="pupil" :style="{ transform: `translate(${toys.fox.pxL}px, ${toys.fox.py}px)` }" cx="60" cy="80" r="3.8" fill="#4a2f1d"/>
@@ -395,8 +395,8 @@
             <circle class="ef" cx="92" cy="56" r="11" fill="#7cc576"/>
             <circle class="hf" cx="75" cy="92" r="40" fill="#7cc576" stroke="#68b061" stroke-width="2.5"/>
             <path d="M52 100 Q75 118 98 100" fill="none" stroke="#2f5d2b" stroke-width="2.5" stroke-linecap="round"/>
-            <ellipse cx="48" cy="104" rx="6.5" ry="4.5" fill="#f9a8d4" opacity="0.55"/>
-            <ellipse cx="102" cy="104" rx="6.5" ry="4.5" fill="#f9a8d4" opacity="0.55"/>
+            <ellipse cx="48" cy="104" rx="6.5" ry="4.5" fill="#d09fba" opacity="0.55"/>
+            <ellipse cx="102" cy="104" rx="6.5" ry="4.5" fill="#d09fba" opacity="0.55"/>
             <g class="eye">
               <ellipse class="eye-white anim-blink" cx="58" cy="56" rx="7.5" ry="7.5" fill="#fff"/>
               <circle class="pupil" :style="{ transform: `translate(${toys.frog.pxL}px, ${toys.frog.py}px)` }" cx="58" cy="56" r="3.6" fill="#264b24"/>
@@ -424,17 +424,17 @@
               <ellipse cx="38" cy="100" rx="9" ry="20" transform="rotate(25 38 100)" fill="#2c4575"/>
               <ellipse cx="112" cy="100" rx="9" ry="20" transform="rotate(-25 112 100)" fill="#2c4575"/>
             </g>
-            <ellipse cx="58" cy="141" rx="10" ry="6" fill="#f59e0b"/><ellipse cx="92" cy="141" rx="10" ry="6" fill="#f59e0b"/>
+            <ellipse cx="58" cy="141" rx="10" ry="6" fill="#c2a069"/><ellipse cx="92" cy="141" rx="10" ry="6" fill="#c2a069"/>
           </g>
           <g class="head-idle anim-sway">
           <g class="head" :style="{ transform: `rotate(${toys.penguin.rot + toys.penguin.baseRot}deg)` }">
             <circle cx="75.0" cy="43.0" r="7" fill="#2c4575" opacity="0.9"/><circle cx="59.4" cy="45.2" r="7" fill="#2c4575" opacity="0.9"/><circle cx="90.6" cy="45.2" r="7" fill="#2c4575" opacity="0.9"/><circle cx="50.3" cy="58.2" r="6" fill="#2c4575" opacity="0.9"/><circle cx="99.7" cy="58.2" r="6" fill="#2c4575" opacity="0.9"/><circle cx="49.0" cy="69.9" r="5" fill="#2c4575" opacity="0.9"/><circle cx="101.0" cy="69.9" r="5" fill="#2c4575" opacity="0.9"/>
             <circle class="hf" cx="75" cy="66" r="26" fill="#3b5b9f" stroke="#2c4575" stroke-width="2.5"/>
             <ellipse cx="75" cy="72" rx="22" ry="16" fill="#fff"/>
-            <path d="M69 76 L81 76 L75 87 Z" fill="#f59e0b"/>
+            <path d="M69 76 L81 76 L75 87 Z" fill="#c2a069"/>
             <circle cx="60" cy="52" r="6" fill="#4a6cb8"/><circle cx="75" cy="47" r="7" fill="#4a6cb8"/><circle cx="90" cy="52" r="6" fill="#4a6cb8"/>
-            <ellipse cx="56" cy="80" rx="5" ry="3.5" fill="#f9a8d4" opacity="0.6"/>
-            <ellipse cx="94" cy="80" rx="5" ry="3.5" fill="#f9a8d4" opacity="0.6"/>
+            <ellipse cx="56" cy="80" rx="5" ry="3.5" fill="#d09fba" opacity="0.6"/>
+            <ellipse cx="94" cy="80" rx="5" ry="3.5" fill="#d09fba" opacity="0.6"/>
             <g class="eye">
               <ellipse class="eye-white anim-blink" cx="62" cy="68" rx="6.5" ry="6.5" fill="#fff"/>
               <circle class="pupil" :style="{ transform: `translate(${toys.penguin.pxL}px, ${toys.penguin.py}px)` }" cx="62" cy="68" r="3.5" fill="#1c2539"/>
@@ -468,9 +468,9 @@
           <g class="head" :style="{ transform: `rotate(${toys.monster.rot + toys.monster.baseRot}deg)` }">
             <circle cx="75.0" cy="49.0" r="7" fill="#3a655e" opacity="0.9"/><circle cx="53.4" cy="53.2" r="7" fill="#3a655e" opacity="0.9"/><circle cx="96.6" cy="53.2" r="7" fill="#3a655e" opacity="0.9"/><circle cx="40.8" cy="71.2" r="6" fill="#3a655e" opacity="0.9"/><circle cx="109.2" cy="71.2" r="6" fill="#3a655e" opacity="0.9"/><circle cx="39.0" cy="87.4" r="5" fill="#3a655e" opacity="0.9"/><circle cx="111.0" cy="87.4" r="5" fill="#3a655e" opacity="0.9"/>
             <circle class="hf" cx="75" cy="82" r="36" fill="#7da59d" stroke="#3a655e" stroke-width="2.5"/>
-            <path d="M62 103 Q75 116 88 103" fill="none" stroke="#5b21b6" stroke-width="3" stroke-linecap="round"/>
-            <ellipse cx="48" cy="96" rx="6.5" ry="4.5" fill="#e9d5ff" opacity="0.75"/>
-            <ellipse cx="102" cy="96" rx="6.5" ry="4.5" fill="#e9d5ff" opacity="0.75"/>
+            <path d="M62 103 Q75 116 88 103" fill="none" stroke="#654e89" stroke-width="3" stroke-linecap="round"/>
+            <ellipse cx="48" cy="96" rx="6.5" ry="4.5" fill="#b69fd0" opacity="0.75"/>
+            <ellipse cx="102" cy="96" rx="6.5" ry="4.5" fill="#b69fd0" opacity="0.75"/>
             <g class="eye">
               <ellipse class="eye-white anim-blink" cx="60" cy="82" rx="8.5" ry="8.5" fill="#fff"/>
               <circle class="pupil" :style="{ transform: `translate(${toys.monster.pxL}px, ${toys.monster.py}px)` }" cx="60" cy="82" r="4.5" fill="#3b1d6e"/>
@@ -494,8 +494,8 @@
       <!-- 幼儿园水彩画背景：元素分布在登录卡片四周（避开中央卡片区），像半透明白纸下的画 -->
       <svg class="watercolor-bg" viewBox="0 0 1000 640" preserveAspectRatio="none" aria-hidden="true">
         <!-- 太阳（左上） -->
-        <circle cx="95" cy="100" r="34" fill="#fcd34d"/>
-        <g stroke="#fcd34d" stroke-width="6" stroke-linecap="round">
+        <circle cx="95" cy="100" r="34" fill="#c3b586"/>
+        <g stroke="#c3b586" stroke-width="6" stroke-linecap="round">
           <line x1="95" y1="45" x2="95" y2="28"/>
           <line x1="95" y1="155" x2="95" y2="172"/>
           <line x1="40" y1="100" x2="23" y2="100"/>
@@ -506,71 +506,71 @@
           <line x1="134" y1="139" x2="146" y2="151"/>
         </g>
         <!-- 云（左上/右上各两朵） -->
-        <path d="M180 118 q-26 -10 -28 -32 q-2 -24 24 -30 q12 -24 40 -14 q26 -8 34 10 q26 2 24 30 q-4 22 -30 26 z" fill="#e0f2fe" stroke="#93c5fd" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M900 76 q-20 -8 -22 -24 q-2 -19 19 -24 q10 -18 31 -11 q20 -6 26 8 q20 1 18 23 q-3 17 -23 21 z" fill="#e0f2fe" stroke="#93c5fd" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M840 150 q-16 -6 -18 -20 q-2 -15 15 -19 q8 -14 25 -8 q16 -5 21 6 q16 1 14 18 q-2 14 -18 17 z" fill="#e0f2fe" stroke="#93c5fd" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M180 118 q-26 -10 -28 -32 q-2 -24 24 -30 q12 -24 40 -14 q26 -8 34 10 q26 2 24 30 q-4 22 -30 26 z" fill="#9fbcd0" stroke="#9fb6d0" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M900 76 q-20 -8 -22 -24 q-2 -19 19 -24 q10 -18 31 -11 q20 -6 26 8 q20 1 18 23 q-3 17 -23 21 z" fill="#9fbcd0" stroke="#9fb6d0" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M840 150 q-16 -6 -18 -20 q-2 -15 15 -19 q8 -14 25 -8 q16 -5 21 6 q16 1 14 18 q-2 14 -18 17 z" fill="#9fbcd0" stroke="#9fb6d0" stroke-width="4" stroke-linejoin="round"/>
         <!-- 彩虹（左中，四道弯） -->
         <g fill="none" stroke-linecap="round">
-          <path d="M55 340 q75 -100 160 0" stroke="#fca5a5" stroke-width="11"/>
-          <path d="M66 340 q69 -80 138 0" stroke="#fcd34d" stroke-width="11"/>
-          <path d="M77 340 q63 -60 116 0" stroke="#a7f3d0" stroke-width="11"/>
-          <path d="M88 340 q57 -42 94 0" stroke="#93c5fd" stroke-width="11"/>
+          <path d="M55 340 q75 -100 160 0" stroke="#d09f9f" stroke-width="11"/>
+          <path d="M66 340 q69 -80 138 0" stroke="#c3b586" stroke-width="11"/>
+          <path d="M77 340 q63 -60 116 0" stroke="#a2cdb9" stroke-width="11"/>
+          <path d="M88 340 q57 -42 94 0" stroke="#9fb6d0" stroke-width="11"/>
         </g>
         <!-- 房子（左下角） -->
-        <path d="M40 440 l55 -66 l55 66 z" fill="#f87171" stroke="#ef4444" stroke-width="4" stroke-linejoin="round"/>
-        <rect x="50" y="446" width="90" height="70" fill="#fde68a" stroke="#f59e0b" stroke-width="4"/>
-        <rect x="76" y="472" width="32" height="44" fill="#d97706"/>
-        <rect x="62" y="456" width="22" height="22" fill="#93c5fd" stroke="#60a5fa" stroke-width="3"/>
-        <rect x="108" y="456" width="22" height="22" fill="#93c5fd" stroke="#60a5fa" stroke-width="3"/>
-        <rect x="122" y="398" width="13" height="32" fill="#d6a35c"/>
-        <path d="M116 398 h24 l-7 14 h-10 z" fill="#f87171"/>
+        <path d="M40 440 l55 -66 l55 66 z" fill="#ce9b9b" stroke="#b56a5c" stroke-width="4" stroke-linejoin="round"/>
+        <rect x="50" y="446" width="90" height="70" fill="#d0c69f" stroke="#c2a069" stroke-width="4"/>
+        <rect x="76" y="472" width="32" height="44" fill="#95724a"/>
+        <rect x="62" y="456" width="22" height="22" fill="#9fb6d0" stroke="#91aac9" stroke-width="3"/>
+        <rect x="108" y="456" width="22" height="22" fill="#9fb6d0" stroke="#91aac9" stroke-width="3"/>
+        <rect x="122" y="398" width="13" height="32" fill="#b19d81"/>
+        <path d="M116 398 h24 l-7 14 h-10 z" fill="#ce9b9b"/>
         <!-- 树（右下角） -->
-        <path d="M848 482 q4 -24 0 -44" stroke="#d6a35c" stroke-width="9" stroke-linecap="round"/>
-        <circle cx="843" cy="408" r="28" fill="#86efac" stroke="#4ade80" stroke-width="4"/>
-        <circle cx="866" cy="430" r="21" fill="#a7f3d0" stroke="#4ade80" stroke-width="3.5"/>
-        <circle cx="823" cy="432" r="17" fill="#6ee7b7" stroke="#4ade80" stroke-width="3.5"/>
+        <path d="M848 482 q4 -24 0 -44" stroke="#b19d81" stroke-width="9" stroke-linecap="round"/>
+        <circle cx="843" cy="408" r="28" fill="#a6d0b5" stroke="#76b28c" stroke-width="4"/>
+        <circle cx="866" cy="430" r="21" fill="#a2cdb9" stroke="#76b28c" stroke-width="3.5"/>
+        <circle cx="823" cy="432" r="17" fill="#a8c4b6" stroke="#76b28c" stroke-width="3.5"/>
         <!-- 花（右中/右下/左下各一朵） -->
         <g>
-          <path d="M800 470 q2 24 0 46" stroke="#4ade80" stroke-width="4" stroke-linecap="round"/>
-          <path d="M787 490 q11 4 25 0" stroke="#4ade80" stroke-width="3.5" stroke-linecap="round"/>
-          <circle cx="786" cy="452" r="10" fill="#f9a8d4"/>
-          <circle cx="800" cy="443" r="10" fill="#f9a8d4"/>
-          <circle cx="814" cy="452" r="10" fill="#f9a8d4"/>
-          <circle cx="792" cy="465" r="10" fill="#f9a8d4"/>
-          <circle cx="808" cy="465" r="10" fill="#f9a8d4"/>
-          <circle cx="800" cy="458" r="8" fill="#fde047"/>
+          <path d="M800 470 q2 24 0 46" stroke="#76b28c" stroke-width="4" stroke-linecap="round"/>
+          <path d="M787 490 q11 4 25 0" stroke="#76b28c" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="786" cy="452" r="10" fill="#d09fba"/>
+          <circle cx="800" cy="443" r="10" fill="#d09fba"/>
+          <circle cx="814" cy="452" r="10" fill="#d09fba"/>
+          <circle cx="792" cy="465" r="10" fill="#d09fba"/>
+          <circle cx="808" cy="465" r="10" fill="#d09fba"/>
+          <circle cx="800" cy="458" r="8" fill="#c2b882"/>
         </g>
         <g>
-          <path d="M910 500 q2 20 0 40" stroke="#4ade80" stroke-width="4" stroke-linecap="round"/>
-          <path d="M898 520 q10 4 23 0" stroke="#4ade80" stroke-width="3.5" stroke-linecap="round"/>
-          <circle cx="897" cy="484" r="9" fill="#c4b5fd"/>
-          <circle cx="910" cy="476" r="9" fill="#c4b5fd"/>
-          <circle cx="923" cy="484" r="9" fill="#c4b5fd"/>
-          <circle cx="902" cy="496" r="9" fill="#c4b5fd"/>
-          <circle cx="917" cy="496" r="9" fill="#c4b5fd"/>
-          <circle cx="910" cy="490" r="7" fill="#fde047"/>
+          <path d="M910 500 q2 20 0 40" stroke="#76b28c" stroke-width="4" stroke-linecap="round"/>
+          <path d="M898 520 q10 4 23 0" stroke="#76b28c" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="897" cy="484" r="9" fill="#c9c2dd"/>
+          <circle cx="910" cy="476" r="9" fill="#c9c2dd"/>
+          <circle cx="923" cy="484" r="9" fill="#c9c2dd"/>
+          <circle cx="902" cy="496" r="9" fill="#c9c2dd"/>
+          <circle cx="917" cy="496" r="9" fill="#c9c2dd"/>
+          <circle cx="910" cy="490" r="7" fill="#c2b882"/>
         </g>
         <g>
-          <path d="M170 500 q1 16 0 34" stroke="#4ade80" stroke-width="4" stroke-linecap="round"/>
-          <circle cx="160" cy="480" r="8" fill="#fcd34d"/>
-          <circle cx="170" cy="473" r="8" fill="#fcd34d"/>
-          <circle cx="180" cy="480" r="8" fill="#fcd34d"/>
-          <circle cx="163" cy="489" r="8" fill="#fcd34d"/>
-          <circle cx="176" cy="489" r="8" fill="#fcd34d"/>
-          <circle cx="170" cy="484" r="6" fill="#f87171"/>
+          <path d="M170 500 q1 16 0 34" stroke="#76b28c" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="160" cy="480" r="8" fill="#c3b586"/>
+          <circle cx="170" cy="473" r="8" fill="#c3b586"/>
+          <circle cx="180" cy="480" r="8" fill="#c3b586"/>
+          <circle cx="163" cy="489" r="8" fill="#c3b586"/>
+          <circle cx="176" cy="489" r="8" fill="#c3b586"/>
+          <circle cx="170" cy="484" r="6" fill="#ce9b9b"/>
         </g>
         <!-- 小鸟（右上/左中） -->
-        <g stroke="#7dd3fc" stroke-width="5" stroke-linecap="round" fill="none">
+        <g stroke="#a6c5d3" stroke-width="5" stroke-linecap="round" fill="none">
           <path d="M860 200 q15 -19 30 0 q15 -19 30 0"/>
           <path d="M60 220 q13 -16 26 0 q13 -16 26 0"/>
         </g>
         <!-- 气球（右中上） -->
         <path d="M900 300 q-3 22 -8 34" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" fill="none"/>
-        <ellipse cx="900" cy="276" rx="17" ry="22" fill="#f9a8d4" stroke="#f472b6" stroke-width="4"/>
-        <path d="M893 295 q7 7 14 0" fill="none" stroke="#f472b6" stroke-width="3" stroke-linecap="round"/>
+        <ellipse cx="900" cy="276" rx="17" ry="22" fill="#d09fba" stroke="#cf9fae" stroke-width="4"/>
+        <path d="M893 295 q7 7 14 0" fill="none" stroke="#cf9fae" stroke-width="3" stroke-linecap="round"/>
         <!-- 草地（底部波浪） -->
-        <path d="M0 600 q30 -14 60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0" fill="none" stroke="#86efac" stroke-width="5" stroke-linecap="round"/>
-        <path d="M0 616 q30 12 60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0" fill="none" stroke="#a7f3d0" stroke-width="4" stroke-linecap="round"/>
+        <path d="M0 600 q30 -14 60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0" fill="none" stroke="#a6d0b5" stroke-width="5" stroke-linecap="round"/>
+        <path d="M0 616 q30 12 60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0" fill="none" stroke="#a2cdb9" stroke-width="4" stroke-linecap="round"/>
       </svg>
       <!-- 金属卷材装饰：卷芯 + 展开的彩涂卷带（漆面颜色随色号选择） -->
       <svg class="coil-art" viewBox="0 0 240 130" aria-hidden="true">
@@ -680,7 +680,7 @@
             <button class="ral-chip" :class="{ active: raal.code === 'RAL 3009' }" style="--c:#643438" data-name="RAL 3009 · 氧化红" @click="applyRal('RAL 3009', '#643438', '#94585c', '#4a2427')"></button>
             <button class="ral-chip" :class="{ active: raal.code === 'RAL 6005' }" style="--c:#114232" data-name="RAL 6005 · 苔藓绿" @click="applyRal('RAL 6005', '#114232', '#3d7a62', '#0b2f24')"></button>
             <button class="ral-chip" :class="{ active: raal.code === 'RAL 7016' }" style="--c:#383e4a" data-name="RAL 7016 · 煤灰" @click="applyRal('RAL 7016', '#383e4a', '#636b78', '#252a33')"></button>
-            <button class="ral-chip" :class="{ active: raal.code === 'RAL 1018' }" style="--c:#e8b93e" data-name="RAL 1018 · 锌黄" @click="applyRal('RAL 1018', '#e8b93e', '#f5d478', '#b98f1f')"></button>
+            <button class="ral-chip" :class="{ active: raal.code === 'RAL 1018' }" style="--c:#b5a271" data-name="RAL 1018 · 锌黄" @click="applyRal('RAL 1018', '#b5a271', '#cfc29e', '#8b7a4d')"></button>
           </div>
 
           <div class="hint-row"><kbd>Enter</kbd> 快速登录</div>
@@ -745,7 +745,7 @@ function applyRal(code, c, light, dark) {
 }
 
 // 全屏泼溅涂料色（点击漆桶切换，默认赤）
-const splat = ref('#e23b3b')
+const splat = ref('#b56a5c')
 // 桶右侧泼漆区：一次泼溅 = 一团主溅 + 数个飞溅小滴，只保留最新一种颜色
 const AREA_SHAPES = [
   '58% 42% 55% 45% / 48% 55% 45% 52%',
@@ -759,50 +759,50 @@ const splashRef = ref(null)
 let areaId = 0
 // 四色调配配方：每色 = 4 种基础色浆，配比合计 100%
 const RECIPES = {
-  '#e23b3b': { name: '赤 · 焰红', items: [
-    { n: '大红', c: '#d63a2f', p: 64 },
+  '#b56a5c': { name: '赤 · 焰红', items: [
+    { n: '大红', c: '#a46561', p: 64 },
     { n: '永固紫', c: '#6b3fa0', p: 16 },
-    { n: '中黄', c: '#f0b429', p: 12 },
+    { n: '中黄', c: '#b39c66', p: 12 },
     { n: '钛白', c: '#f4f4ef', p: 8 }
   ] },
-  '#f28c1e': { name: '橙 · 蜜橙', items: [
-    { n: '中黄', c: '#f0b429', p: 46 },
-    { n: '大红', c: '#d63a2f', p: 24 },
+  '#b08a60': { name: '橙 · 蜜橙', items: [
+    { n: '中黄', c: '#b39c66', p: 46 },
+    { n: '大红', c: '#a46561', p: 24 },
     { n: '钛白', c: '#f4f4ef', p: 26 },
     { n: '炭黑', c: '#2e2e33', p: 4 }
   ] },
-  '#f2c11e': { name: '黄 · 明黄', items: [
-    { n: '中黄', c: '#f0b429', p: 66 },
+  '#b09e60': { name: '黄 · 明黄', items: [
+    { n: '中黄', c: '#b39c66', p: 66 },
     { n: '钛白', c: '#f4f4ef', p: 20 },
-    { n: '大红', c: '#d63a2f', p: 10 },
+    { n: '大红', c: '#a46561', p: 10 },
     { n: '炭黑', c: '#2e2e33', p: 4 }
   ] },
   '#3fa63f': { name: '绿 · 草绿', items: [
     { n: '酞菁绿', c: '#1a9e6e', p: 48 },
-    { n: '中黄', c: '#f0b429', p: 30 },
+    { n: '中黄', c: '#b39c66', p: 30 },
     { n: '钛白', c: '#f4f4ef', p: 17 },
     { n: '炭黑', c: '#2e2e33', p: 5 }
   ] },
-  '#1fb6a8': { name: '青 · 青碧', items: [
-    { n: '酞菁蓝', c: '#2456c9', p: 34 },
+  '#4c8983': { name: '青 · 青碧', items: [
+    { n: '酞菁蓝', c: '#566998', p: 34 },
     { n: '酞菁绿', c: '#1a9e6e', p: 32 },
     { n: '钛白', c: '#f4f4ef', p: 29 },
     { n: '炭黑', c: '#2e2e33', p: 5 }
   ] },
-  '#2b6fd6': { name: '蓝 · 晴蓝', items: [
-    { n: '酞菁蓝', c: '#2456c9', p: 52 },
-    { n: '群青', c: '#3b4bd8', p: 24 },
+  '#5e79a3': { name: '蓝 · 晴蓝', items: [
+    { n: '酞菁蓝', c: '#566998', p: 52 },
+    { n: '群青', c: '#6a70a9', p: 24 },
     { n: '钛白', c: '#f4f4ef', p: 19 },
     { n: '炭黑', c: '#2e2e33', p: 5 }
   ] },
-  '#8a4fd6': { name: '紫 · 黛紫', items: [
+  '#8f77ae': { name: '紫 · 黛紫', items: [
     { n: '永固紫', c: '#6b3fa0', p: 58 },
-    { n: '酞菁蓝', c: '#2456c9', p: 18 },
-    { n: '大红', c: '#d63a2f', p: 9 },
+    { n: '酞菁蓝', c: '#566998', p: 18 },
+    { n: '大红', c: '#a46561', p: 9 },
     { n: '钛白', c: '#f4f4ef', p: 15 }
   ] }
 }
-const recipe = ref(RECIPES['#e23b3b'])
+const recipe = ref(RECIPES['#b56a5c'])
 function pickSplat(c) {
   splat.value = c
   recipe.value = RECIPES[c]
@@ -961,7 +961,7 @@ function onGlobalMouseUp() {
 }
 onMounted(() => {
   window.addEventListener('mouseup', onGlobalMouseUp)
-  pickSplat('#e23b3b')   // 默认先泼一团赤色
+  pickSplat('#b56a5c')   // 默认先泼一团赤色
   scheduleShow()
 })
 onUnmounted(() => {
@@ -1419,25 +1419,25 @@ async function login() {
   border-bottom: 0;
 }
 .bubble.asker {
-  background: #fffbea;
-  border: 1.5px solid #fbbf24;
+  background: #d0c79f;
+  border: 1.5px solid #cdb27e;
   font-weight: 600;
   max-width: 230px;
 }
-.bubble.asker::after { border-top-color: #fffbea; }
+.bubble.asker::after { border-top-color: #d0c79f; }
 .bubble.correct {
-  background: #ecfdf5;
-  border: 1.5px solid #34d399;
+  background: #a0cfb9;
+  border: 1.5px solid #93b5a4;
   font-weight: 700;
 }
-.bubble.correct::after { border-top-color: #ecfdf5; }
+.bubble.correct::after { border-top-color: #a0cfb9; }
 .bubble.cheer {
-  background: #fff1f2;
-  border: 1.5px solid #fb7185;
+  background: #d09fa3;
+  border: 1.5px solid #c48d93;
   font-weight: 700;
-  color: #be123c;
+  color: #8a4656;
 }
-.bubble.cheer::after { border-top-color: #fff1f2; }
+.bubble.cheer::after { border-top-color: #d09fa3; }
 
 /* 答对庆祝：连跳两下 + 扭动 */
 .toywrap.celebrate {
@@ -1725,7 +1725,7 @@ async function login() {
   height: 6px;
   border-radius: 3px;
   margin-bottom: 26px;
-  background: linear-gradient(90deg, #4a7c74 0 25%, #b08968 25% 50%, #b58a3c 50% 75%, #b05a4e 75% 100%);   /* v6.9.1 黛青系 */
+  background: linear-gradient(90deg, #4a7c74 0 25%, #b08968 25% 50%, #918060 50% 75%, #b05a4e 75% 100%);   /* v6.9.1 黛青系 */
   box-shadow:
     inset 0 1px 1px rgba(255,255,255,0.75),
     inset 0 -2px 3px rgba(0,0,0,0.3),
@@ -1941,7 +1941,7 @@ async function login() {
 .error-msg {
   margin-top: 14px;
   text-align: center;
-  color: #dc2626;
+  color: #a85d50;
   font-size: 13px;
   animation: shake 0.4s ease;
 }

@@ -47,7 +47,7 @@
           </el-table-column>
           <el-table-column prop="balance" label="结转余额" width="130" align="right" v-if="hasAmountPerm('finance-report')">
             <template #default="{ row }">
-              <span :style="row.balance < 0 ? 'color:#ef4444' : ''">¥{{ fmt(row.balance) }}</span>
+              <span :style="row.balance < 0 ? 'color:#b56a5c' : ''">¥{{ fmt(row.balance) }}</span>
             </template>
           </el-table-column>
         </p-table>
@@ -124,7 +124,7 @@ onMounted(async () => {
 .kpi-card { background: var(--pims-card-bg, #fff); border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); border: 1px solid var(--pims-card-border, #e2e8f0); }
 .kpi-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
 .kpi-value { font-size: 18px; font-weight: 700; }
-.kpi-value.red { color: #ef4444; }
+.kpi-value.red { color: #b56a5c; }
 .kpi-value.green { color: #16a34a; }
 .table-card { background: var(--pims-card-bg, #fff); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); border: 1px solid var(--pims-card-border, #e2e8f0); }
 .card-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }

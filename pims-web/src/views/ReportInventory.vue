@@ -18,13 +18,13 @@
         <div class="chart-card full">
           <div class="chart-card-title">月度出入库趋势</div>
           <SvgLineChart :labels="data.monthlyTrend?.labels || []" :series="[
-            { name: '入库量', values: data.monthlyTrend?.inQty || [], color: '#10b981' },
-            { name: '出库量', values: data.monthlyTrend?.outQty || [], color: '#ef4444' }
+            { name: '入库量', values: data.monthlyTrend?.inQty || [], color: '#6f9a86' },
+            { name: '出库量', values: data.monthlyTrend?.outQty || [], color: '#b56a5c' }
           ]" :height="260" />
         </div>
         <div class="chart-card">
           <div class="chart-card-title">物料吞吐 TOP10</div>
-          <SvgBarChart :data="data.materialRank || []" :horizontal="true" color="#14b8a6" />
+          <SvgBarChart :data="data.materialRank || []" :horizontal="true" color="#7aa39a" />
         </div>
         <div class="chart-card">
           <div class="chart-card-title">仓库库存分布</div>

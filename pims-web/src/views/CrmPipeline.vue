@@ -275,6 +275,6 @@ onMounted(async () => {
 .sc-value { font-size: 22px; font-weight: 700; margin-top: 2px; }
 .sc-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
 .summary-card.won .sc-value { color: #16a34a; }
-.summary-card.lost .sc-value { color: #ef4444; }
+.summary-card.lost .sc-value { color: #b56a5c; }
 .p360-sec { font-size: 14px; font-weight: 600; margin: 14px 0 8px; }
 </style>

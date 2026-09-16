@@ -670,7 +670,7 @@ onMounted(async () => {
 .status-tabs { display: flex; gap: 0; margin-bottom: 12px; background: #f1f5f9; border-radius: 8px; padding: 3px; width: fit-content; }
 .status-tab { padding: 6px 20px; font-size: 13px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; background: transparent; color: #64748b; transition: all 0.2s; }
 .status-tab:hover { color: #334155; }
-.status-tab.active { background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.status-tab.active { background: #fff; color: #4a6785; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .tab-badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; font-size: 11px; line-height: 16px; border-radius: 9px; background: rgba(0,0,0,0.08); color: inherit; }
 .status-tab.active .tab-badge { background: rgba(29,78,216,0.12); }
 .form-tip { font-size: 12px; color: #94a3b8; line-height: 1.5 }

@@ -309,7 +309,7 @@ onMounted(async () => {
 .summary-card { background: var(--pims-card-bg, #fff); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); border: 1px solid var(--pims-card-border, #e2e8f0); }
 .sc-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
 .sc-value { font-size: 20px; font-weight: 700; }
-.sc-value.orange { color: #ea580c; }
+.sc-value.orange { color: #a8744f; }
 .type-tabs { display: flex; align-items: center; margin-bottom: 16px; padding: 12px 16px; background: #fafafa; border-radius: 8px; }
 .type-count { font-size: 13px; color: #64748b; }
 .entry-expand { padding: 4px 24px 8px; background: #fafbfc; }
@@ -322,5 +322,5 @@ onMounted(async () => {
 .fh-label { font-size: 13px; color: #606266; white-space: nowrap; }
 .entry-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
 .total-bar { display: flex; align-items: center; gap: 18px; font-size: 13px; color: #303133; }
-.total-bar .red { color: #ef4444; }
+.total-bar .red { color: #b56a5c; }
 </style>

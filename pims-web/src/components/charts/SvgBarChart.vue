@@ -28,8 +28,8 @@ const props = defineProps({
   data: { type: Array, default: () => [] },
   horizontal: { type: Boolean, default: true },
   height: { type: Number, default: 260 },
-  color: { type: String, default: '#6366f1' },
-  colors: { type: Array, default: () => ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#818cf8', '#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#818cf8'] }
+  color: { type: String, default: '#7288a5' },
+  colors: { type: Array, default: () => ['#7288a5', '#9a8bb8', '#b3a8cc', '#c9c2dd', '#8d9cc0', '#7288a5', '#9a8bb8', '#b3a8cc', '#c9c2dd', '#8d9cc0'] }
 })
 
 const containerRef = ref(null)

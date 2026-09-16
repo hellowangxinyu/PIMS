@@ -27,14 +27,14 @@
           <el-table-column prop="stockQty" label="当前库存(kg)" width="160" align="right" />
           <el-table-column prop="turnover" label="年化周转次数" width="140" align="center">
             <template #default="{ row }">
-              <b v-if="row.turnover != null" :style="num(row.turnover) < 2 ? 'color:#ef4444' : (num(row.turnover) > 8 ? 'color:#16a34a' : '')">{{ row.turnover }}</b>
+              <b v-if="row.turnover != null" :style="num(row.turnover) < 2 ? 'color:#b56a5c' : (num(row.turnover) > 8 ? 'color:#16a34a' : '')">{{ row.turnover }}</b>
               <span v-else>—</span>
             </template>
           </el-table-column>
           <el-table-column label="解读" min-width="200">
             <template #default="{ row }">
               <span v-if="row.turnover == null" style="color:#94a3b8">无库存</span>
-              <span v-else-if="num(row.turnover) < 2" style="color:#ef4444">偏慢（资金占用大，建议关注呆滞）</span>
+              <span v-else-if="num(row.turnover) < 2" style="color:#b56a5c">偏慢（资金占用大，建议关注呆滞）</span>
               <span v-else-if="num(row.turnover) > 8" style="color:#16a34a">健康（周转快）</span>
               <span v-else>正常</span>
             </template>

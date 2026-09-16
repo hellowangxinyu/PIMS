@@ -18,8 +18,8 @@
         <div class="chart-card full">
           <div class="chart-card-title">月度订单趋势（生产 vs 委外）</div>
           <SvgLineChart :labels="data.monthlyTrend?.labels || []" :series="[
-            { name: '生产订单', values: data.monthlyTrend?.production || [], color: '#6366f1' },
-            { name: '委外订单', values: data.monthlyTrend?.outsource || [], color: '#f59e0b' }
+            { name: '生产订单', values: data.monthlyTrend?.production || [], color: '#7288a5' },
+            { name: '委外订单', values: data.monthlyTrend?.outsource || [], color: '#c2a069' }
           ]" :height="260" />
         </div>
         <div class="chart-card">
@@ -144,7 +144,7 @@ onMounted(loadData)
 .rate-info { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--pims-border-light, #e5e7eb); }
 .rate-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; color: var(--pims-text-secondary); }
 .rate-row strong { color: var(--pims-text); font-size: 15px; }
-.loss-bad { color: #dc2626; font-weight: 600; }
+.loss-bad { color: #a85d50; font-weight: 600; }
 .loss-good { color: #16a34a; font-weight: 600; }
 @media (max-width: 768px) {
   .chart-grid { grid-template-columns: 1fr; }

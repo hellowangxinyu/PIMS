@@ -362,11 +362,11 @@ onMounted(async () => {
 .summary-card { background: var(--pims-card-bg, #fff); border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); border: 1px solid var(--pims-card-border, #e2e8f0); }
 .sc-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
 .sc-value { font-size: 22px; font-weight: 700; }
-.sc-value.red { color: #ef4444; }
+.sc-value.red { color: #b56a5c; }
 .sc-value.green { color: #16a34a; }
 .filter-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .collab { color: #64748b; font-size: 12px; }
-.overdue { color: #ef4444; font-weight: 600; }
+.overdue { color: #b56a5c; font-weight: 600; }
 .latest-progress { color: #475569; font-size: 12px; }
 .text-muted { color: #94a3b8; }
 .task-detail-expand { padding: 8px 24px; background: #fafbfc; }

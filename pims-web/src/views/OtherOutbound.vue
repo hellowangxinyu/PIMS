@@ -221,7 +221,7 @@ onMounted(async () => {
 .type-tabs { display: flex; align-items: center; margin-bottom: 16px; padding: 12px 16px; background: #fafafa; border-radius: 8px; }
 .type-count { font-size: 13px; color: #64748b; }
 .text-muted { color: #94a3b8; font-size: 12px; }
-.cost-cell { color: #ea580c; font-weight: 600; }
+.cost-cell { color: #a8744f; font-weight: 600; }
 
 .po-head-table :deep(.el-descriptions__label) { width: 110px; background: #f5f7fa; color: #606266; }
 .po-head-table :deep(.el-descriptions__content) { padding: 8px 12px; }
