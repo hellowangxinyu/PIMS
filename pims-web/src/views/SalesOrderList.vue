@@ -14,6 +14,7 @@
         <button class="type-tab" :class="{ active: activeTab === 'CLOSED' }" @click="activeTab = 'CLOSED'">已结束 <span class="tab-badge">{{ closedCount }}</span></button>
         <span class="type-count" style="margin-left:auto">共 {{ filteredList.length }} 条</span>
       </div>
+      <template v-if="!isMobile">
       <p-table :data="pagedRows" stripe border style="width:100%">
         <el-table-column prop="orderNo" label="订单号" min-width="130" show-overflow-tooltip />
         <el-table-column prop="customerName" label="客户" min-width="130" show-overflow-tooltip>
@@ -70,6 +71,30 @@
           </template>
         </el-table-column>
       </p-table>
+    </template>
+    <!-- v10.1 手机卡片视图（桌面分支 v-if=!isMobile 渲染路径不变） -->
+    <div v-if="isMobile" class="m-cards">
+      <div v-for="row in pagedRows" :key="row.id" class="m-card">
+        <div class="m-card-head">
+          <div>
+            <div class="m-card-title">{{ row.customerName || custName(row.customerId) }}</div>
+            <div class="m-card-sub">{{ row.orderNo }}</div>
+          </div>
+          <span class="m-status">{{ statusLabel(row.status) }}{{ row.creditExceeded ? ' · 超信用' : '' }}</span>
+        </div>
+        <div class="m-card-row" v-if="row.materialNames"><span>品名</span><span class="m-val">{{ row.materialNames }}</span></div>
+        <div class="m-card-row" v-if="row.materialQtySummary"><span>数量</span><span class="m-val">{{ row.materialQtySummary }}</span></div>
+        <div class="m-card-row"><span>金额</span><span class="m-val num">￥{{ fmt(row.totalAmount || 0) }}</span></div>
+        <div class="m-card-row" v-if="row.expectedShipDate"><span>期望发货</span><span class="m-val">{{ row.expectedShipDate }}</span></div>
+        <div class="m-card-actions">
+          <el-button size="small" @click="openItems(row)">明细</el-button>
+          <el-button v-if="row.status === 'DRAFT'" size="small" @click="openEdit(row)">编辑</el-button>
+          <el-button v-if="row.status === 'DRAFT'" size="small" type="primary" @click="confirmOrder(row)">确认</el-button>
+          <el-button v-if="row.status === 'CONFIRMED'" size="small" type="primary" @click="openShip(row)">发货</el-button>
+        </div>
+      </div>
+      <div v-if="!pagedRows.length" class="m-empty">暂无订单</div>
+    </div>
       <!-- 分页（v5.2） -->
       <div class="pagination-bar">
         <el-pagination
@@ -262,6 +287,7 @@
 <script setup>
 import { todayLocal } from '../utils/date'
 import { statusType } from '../utils/statusTag'
+import { isMobile } from '../composables/useIsMobile'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { loadTaxRate, netOfTax, taxOf, fmtTax } from '../utils/tax'

@@ -39,6 +39,7 @@
       </div>
 
       <!-- v5.22 视图一：按编码聚合（同一编码跨批次/库位合计总量） -->
+      <template v-if="!isMobile">
       <p-table v-if="view === 'code'" :data="rows" stripe border style="width:100%" @header-dragend="onHeaderDragend">
         <el-table-column prop="materialCode" label="编码" :width="cw('编码') || 140" />
         <el-table-column prop="materialName" label="品名" :width="cw('品名') || 160" show-overflow-tooltip />
@@ -108,6 +109,23 @@
           <template #default="{ row }">{{ row.inboundDate || '-' }}</template>
         </el-table-column>
       </p-table>
+    </template>
+    <!-- v10.1 手机卡片视图（按编码；批次视图保留表格横滑） -->
+    <div v-if="isMobile && view === 'code'" class="m-cards">
+      <div v-for="row in rows" :key="row.materialCode" class="m-card">
+        <div class="m-card-head">
+          <div>
+            <div class="m-card-title">{{ row.materialName }}</div>
+            <div class="m-card-sub">{{ row.materialCode }}<template v-if="row.unit"> · {{ row.unit }}</template></div>
+          </div>
+          <span class="m-status">{{ row.batchCount }} 批</span>
+        </div>
+        <div class="m-card-row"><span>可用总量</span><span class="m-val num">{{ row.availableQty }}</span></div>
+        <div class="m-card-row" v-if="Number(row.orderedQty) > 0"><span>已订未发</span><span class="m-val num">{{ row.orderedQty }}</span></div>
+        <div class="m-card-row"><span>可承诺</span><span class="m-val num" :class="{ danger: Number(row.atp) < 0 }">{{ row.atp }}</span></div>
+      </div>
+      <div v-if="!rows.length" class="m-empty">暂无库存</div>
+    </div>
 
       <!-- v5.22 视图二：按编码+批次聚合（同批次跨库位合计余量） -->
       <p-table v-else :data="rows" stripe border style="width:100%" @header-dragend="onHeaderDragend" :row-class-name="rowClassName">
@@ -234,6 +252,7 @@ import { useColumnResize } from '../composables/useColumnResize'
 import SvgLineChart from '../components/charts/SvgLineChart.vue'
 import { downloadFile } from '../utils/download'
 import { buildQcReportHtml } from '../utils/qcPrint'
+import { isMobile } from '../composables/useIsMobile'
 
 const { cw, onHeaderDragend } = useColumnResize('inventory')
 

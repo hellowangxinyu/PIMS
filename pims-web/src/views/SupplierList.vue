@@ -25,6 +25,7 @@
       <span class="type-count">共 {{ list.length }} 条</span>
     </div>
     <div class="table-card">
+      <template v-if="!isMobile">
       <p-table :data="list" stripe border @header-dragend="onHeaderDragend">
         <el-table-column prop="code" label="编码" :width="cw('编码') || 130" />
         <el-table-column prop="name" label="名称" :width="cw('名称') || undefined" min-width="200" show-overflow-tooltip />
@@ -67,6 +68,23 @@
           </template>
         </el-table-column>
       </p-table>
+    </template>
+    <!-- v10.1 手机卡片视图 -->
+    <div v-if="isMobile" class="m-cards">
+      <div v-for="row in list" :key="row.id" class="m-card">
+        <div class="m-card-head">
+          <div>
+            <div class="m-card-title">{{ row.name }}</div>
+            <div class="m-card-sub">{{ row.code }} · {{ row.type === 'FINISHED' ? '成品' : (row.type === 'PROCESSOR' ? '代工' : '原料') }}</div>
+          </div>
+          <span class="m-status">{{ row.enabled === false ? '停用' : (row.blacklisted ? '拉黑' : '正常') }}</span>
+        </div>
+        <div class="m-card-actions">
+          <el-button size="small" @click="openProfile(row)">360°档案</el-button>
+        </div>
+      </div>
+      <div v-if="!list.length" class="m-empty">暂无供应商</div>
+    </div>
     </div>
 
     <!-- v5.49 供应商 360° 抽屉 -->
@@ -153,6 +171,7 @@ import { useColumnResize } from '../composables/useColumnResize'
 import { useExcelImport } from '../composables/useExcelImport'
 // v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
 import { downloadFile } from '../utils/download'
+import { isMobile } from '../composables/useIsMobile'
 const exporting = ref(false)
 async function doExport() {
   exporting.value = true

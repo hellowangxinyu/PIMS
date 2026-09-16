@@ -29,6 +29,7 @@
 
       <!-- ===== 待到货列表（原料/成品） ===== -->
       <template v-if="activeTab !== 'DETAIL'">
+      <template v-if="!isMobile">
       <p-table :data="pagedRows" stripe border @header-dragend="onHeaderDragend">
         <el-table-column prop="orderNo" label="合同号" :width="cw('合同号') || undefined" min-width="140" show-overflow-tooltip />
         <el-table-column prop="supplierName" label="供应商" :width="cw('供应商') || undefined" min-width="120" show-overflow-tooltip />
@@ -61,6 +62,24 @@
           </template>
         </el-table-column>
       </p-table>
+    </template>
+    <!-- v10.1 手机卡片视图：待到货 -->
+    <div v-if="isMobile" class="m-cards">
+      <div v-for="row in pagedRows" :key="row.id" class="m-card">
+        <div class="m-card-head">
+          <div>
+            <div class="m-card-title">{{ row.materialName }}</div>
+            <div class="m-card-sub">{{ row.orderNo }} · {{ row.supplierName }}</div>
+          </div>
+          <span class="m-status">{{ statusLabel(row.status) }}</span>
+        </div>
+        <div class="m-card-row"><span>采购 / 已到 / 未到</span><span class="m-val num">{{ row.qty }} / {{ row.receivedQty || 0 }} / {{ row.qty - (row.receivedQty || 0) }}</span></div>
+        <div class="m-card-actions">
+          <el-button size="small" type="primary" @click="showArrivalDialog(row)">到货录入</el-button>
+        </div>
+      </div>
+      <div v-if="!pagedRows.length" class="m-empty">暂无待到货</div>
+    </div>
       <!-- 分页（v5.2） -->
       <div class="pagination-bar">
         <el-pagination
@@ -88,6 +107,7 @@
           <!-- v5.27：选中到货明细打印 8×10 标签 -->
           <el-button size="small" type="primary" :disabled="!selectedDetailRows.length" @click="printLabelsWithQc(selectedDetailRows)">打印标签（{{ selectedDetailRows.length }}）</el-button>
         </div>
+        <template v-if="!isMobile">
         <p-table :data="detailRows" stripe border @selection-change="sel => selectedDetailRows = sel">
           <el-table-column type="selection" width="40" />
           <el-table-column prop="docNo" label="到货单号" :width="cw('到货单号') || undefined" min-width="150" show-overflow-tooltip>
@@ -121,6 +141,22 @@
           <el-table-column prop="locationName" label="库位" :width="cw('库位') || undefined" min-width="90" />
           <el-table-column prop="operator" label="操作人" width="90" />
         </p-table>
+        </template>
+        <!-- v10.1 手机卡片视图：到货明细 -->
+        <div v-if="isMobile" class="m-cards">
+          <div v-for="row in detailRows" :key="row.id" class="m-card">
+            <div class="m-card-head">
+              <div>
+                <div class="m-card-title">{{ row.materialName }}</div>
+                <div class="m-card-sub">{{ row.docNo }} · {{ row.supplierName }} · {{ row.arrivalDate }}</div>
+              </div>
+              <span class="m-status">{{ statusLabel(row.status) }}</span>
+            </div>
+            <div class="m-card-row"><span>数量</span><span class="m-val num">{{ row.qty }} {{ row.unit || '' }}</span></div>
+            <div class="m-card-row" v-if="row.batchNo"><span>批号</span><span class="m-val">{{ row.batchNo }}</span></div>
+          </div>
+          <div v-if="!detailRows.length" class="m-empty">暂无到货记录</div>
+        </div>
         <!-- 分页（v5.2） -->
         <div class="pagination-bar">
           <el-pagination
@@ -201,6 +237,7 @@ import { printLabels } from '../utils/labelPrint'
 import { useBucketPrint } from '../composables/useBucketPrint'
 // v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
 import { downloadFile } from '../utils/download'
+import { isMobile } from '../composables/useIsMobile'
 const exporting = ref(false)
 async function doExport() {
   exporting.value = true

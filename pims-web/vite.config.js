@@ -12,10 +12,14 @@ export default defineConfig({
   plugins: [
     vue(),
     {
-      // v9.6.1：原子构建修正——robocopy /MIR 经 cmd 转发实测未删旧 hash（同页多版本 chunk 并存，
-      // index 与 chunk 版本错配→对应页面静默空白）。改为「成功后先 del 清空再 xcopy 全量拷」，
-      // 两者均为 Windows 原生命令（中文路径 libuv 坑），语义等价镜像且各步可验证。
+      // v10.1：原子构建三步——①构建前 rd 清 dist 与 static（vite 自身 emptyOutDir 在中文路径下静默失效，
+      // dist 会按版本无限堆积）；②构建成功后 xcopy 镜像到后端 static。
+      // 均为 Windows 原生命令绕开 node fs 中文路径坑；构建失败时 static 为空属预期（jar 打包是显式后续步骤）。
       name: 'pims-atomic-deploy',
+      buildStart() {
+        if (process.platform !== 'win32') return
+        execSync('cmd /c "if exist dist rd /s /q dist >nul 2>&1 & del /q /s ..\\pims-server\\src\\main\\resources\\static\\*.* >nul 2>&1"')
+      },
       closeBundle() {
         if (process.platform !== 'win32') return
         execSync('cmd /c "del /q /s ..\\pims-server\\src\\main\\resources\\static\\*.* >nul 2>&1"')

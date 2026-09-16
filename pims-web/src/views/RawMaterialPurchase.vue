@@ -12,6 +12,7 @@
       <!-- ===== 开立单据 ===== -->
       <el-tab-pane label="开立单据" name="draft">
         <div class="table-card">
+          <template v-if="!isMobile">
           <p-table :data="draftList" stripe border v-loading="loading" @header-dragend="onHeaderDragend">
             <el-table-column prop="orderNo" label="合同号" :width="cw('合同号') || 160" />
             <el-table-column prop="purchaseDate" label="日期" :width="cw('日期') || 100" />
@@ -48,6 +49,22 @@
               </template>
             </el-table-column>
           </p-table>
+          </template>
+          <!-- v10.1 手机卡片视图：开立中 -->
+          <div v-if="isMobile" class="m-cards">
+            <div v-for="row in draftList" :key="row.id" class="m-card">
+              <div class="m-card-head">
+                <div>
+                  <div class="m-card-title">{{ row.materialName }}</div>
+                  <div class="m-card-sub">{{ row.orderNo }} · {{ row.supplierName }} · {{ row.purchaseDate }}</div>
+                </div>
+                <span class="m-status">{{ statusText(row.status) }}</span>
+              </div>
+              <div class="m-card-row"><span>数量</span><span class="m-val num">{{ row.qty }} {{ row.unit || '' }}</span></div>
+              <div class="m-card-row"><span>已到货</span><span class="m-val num">{{ row.receivedQty || 0 }}</span></div>
+            </div>
+            <div v-if="!draftList.length" class="m-empty">暂无开立单据</div>
+          </div>
           <div class="pagination-bar">
             <el-pagination
               v-model:current-page="draftPage"
@@ -86,6 +103,7 @@
           </el-form>
         </div>
         <div class="table-card">
+          <template v-if="!isMobile">
           <p-table :data="historyList" stripe border v-loading="historyLoading" @header-dragend="onHeaderDragend">
             <el-table-column prop="orderNo" label="合同号" :width="cw('合同号') || 160" />
             <el-table-column prop="purchaseDate" label="日期" :width="cw('日期') || 100" />
@@ -121,6 +139,22 @@
               </template>
             </el-table-column>
           </p-table>
+          </template>
+          <!-- v10.1 手机卡片视图：历史 -->
+          <div v-if="isMobile" class="m-cards">
+            <div v-for="row in historyList" :key="row.id" class="m-card">
+              <div class="m-card-head">
+                <div>
+                  <div class="m-card-title">{{ row.materialName }}</div>
+                  <div class="m-card-sub">{{ row.orderNo }} · {{ row.supplierName }} · {{ row.purchaseDate }}</div>
+                </div>
+                <span class="m-status">{{ statusText(row.status) }}</span>
+              </div>
+              <div class="m-card-row"><span>数量</span><span class="m-val num">{{ row.qty }} {{ row.unit || '' }}</span></div>
+              <div class="m-card-row"><span>已到货</span><span class="m-val num">{{ row.receivedQty || 0 }}</span></div>
+            </div>
+            <div v-if="!historyList.length" class="m-empty">暂无历史单据</div>
+          </div>
           <div class="pagination-bar">
             <el-pagination
               v-model:current-page="historyPage"
@@ -302,6 +336,7 @@
 <script setup>
 import { todayLocal } from '../utils/date'
 import { statusType } from '../utils/statusTag'
+import { isMobile } from '../composables/useIsMobile'
 import { fmt } from '../utils/fmt'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

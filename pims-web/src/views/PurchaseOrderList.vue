@@ -17,6 +17,7 @@
     </div>
 
     <div class="table-card">
+      <template v-if="!isMobile">
       <p-table :data="paged" stripe border @header-dragend="onHeaderDragend">
         <el-table-column prop="orderNo" label="单号" :width="cw('单号') || 150" />
         <el-table-column label="供应商" :width="cw('供应商') || undefined" min-width="150" show-overflow-tooltip>
@@ -45,6 +46,25 @@
           </template>
         </el-table-column>
       </p-table>
+    </template>
+    <!-- v10.1 手机卡片视图 -->
+    <div v-if="isMobile" class="m-cards">
+      <div v-for="row in paged" :key="row.id" class="m-card">
+        <div class="m-card-head">
+          <div>
+            <div class="m-card-title">{{ row.supplierName || '待定供应商' }}</div>
+            <div class="m-card-sub">{{ row.orderNo }} · {{ row.orderDate }}</div>
+          </div>
+          <span class="m-status">{{ PO_STATUS_MAP[row.status] || row.status }}</span>
+        </div>
+        <div class="m-card-row" v-if="row.totalAmount"><span>金额</span><span class="m-val num">￥{{ row.totalAmount }}</span></div>
+        <div class="m-card-row" v-if="row.remark"><span>备注</span><span class="m-val">{{ row.remark }}</span></div>
+        <div class="m-card-actions">
+          <el-button size="small" @click="showItems(row)">明细</el-button>
+        </div>
+      </div>
+      <div v-if="!paged.length" class="m-empty">暂无请购单</div>
+    </div>
       <div class="pager" v-if="totalPages > 1">
         <el-pagination layout="prev, pager, next" :total="filtered.length" :page-size="pageSize" v-model:current-page="page" />
       </div>
@@ -142,6 +162,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useColumnResize } from '../composables/useColumnResize'
+import { isMobile } from '../composables/useIsMobile'
 
 const list = ref([])
 const perms = ref([])
@@ -191,7 +212,7 @@ async function fetch() {
   try { list.value = await api.get('/purchase-order') } catch {}
 }
 
-async // v8.6（N1）：DRAFT 态保存明细单价（转采购前置）
+// v8.6（N1）：DRAFT 态保存明细单价（转采购前置）——v10.1 修复：原行首孤立 async 关键字致 setup 必崩（历史脚本错位，页面一直白屏未被发现）
 const savingPrices = ref(false)
 async function savePrices() {
   if (!viewRow.value) return

@@ -204,4 +204,44 @@
   body.pims-mobile .page-header .header-actions {
     row-gap: 8px;
   }
+  /* ================= v10.1 高频页卡片列表（模板里 v-if="isMobile" 分支使用） ================= */
+  .m-cards { display: flex; flex-direction: column; gap: 10px; }
+  .m-card {
+    background: var(--pims-surface, #fff);
+    border: 1px solid var(--pims-border, #e2e8f0);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .m-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .m-card-title { font-size: 14px; font-weight: 600; color: var(--pims-text, #1e293b); word-break: break-all; }
+  .m-card-sub { font-size: 12px; color: var(--pims-text-secondary, #64748b); margin-top: 2px; }
+  .m-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+    font-size: 13px;
+    color: var(--pims-text-secondary, #64748b);
+  }
+  .m-card-row .m-val { color: var(--pims-text, #1e293b); text-align: right; word-break: break-all; }
+  .m-card-row .m-val.num { font-variant-numeric: tabular-nums; }
+  .m-card-row .m-val.danger { color: var(--pims-danger, #b05a4e); font-weight: 700; }
+  .m-card-actions { display: flex; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--pims-border-light, #f1f5f9); }
+  .m-card-actions .el-button { flex: 1; margin: 0; height: 38px; }
+  .m-status {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--pims-bg, #f6f5f1);
+    color: var(--pims-text-secondary, #64748b);
+  }
+  .m-empty { text-align: center; color: var(--pims-text-muted, #94a3b8); padding: 32px 0; font-size: 13px; }
 }
