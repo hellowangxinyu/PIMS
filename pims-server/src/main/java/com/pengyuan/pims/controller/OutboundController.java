@@ -157,6 +157,104 @@ public class OutboundController {
 
     // ==================== 销售出库 ====================
 
+    // ==================== v9.6 列表导出（与各列表同口径同权限） ====================
+
+    private static final org.springframework.data.domain.Pageable EXPORT_PAGE =
+            org.springframework.data.domain.PageRequest.of(0, 100000);
+
+    /** 生产领料导出 */
+    @GetMapping("/production/export")
+    @SaCheckPermission(value = "production:read")
+    public void exportProduction(@RequestParam(defaultValue = "") String keyword,
+                                 jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        java.util.List<Object[]> rows = new java.util.ArrayList<>();
+        for (var d : service.searchProduction(keyword, EXPORT_PAGE).getContent()) {
+            rows.add(new Object[]{d.docNo, "PROD-RET".startsWith(d.docNo) || "RETURN".equals(d.docType) ? "退料" : "领料",
+                    d.productionOrderNo, d.productName, d.materialCode, d.materialName, d.batchNo,
+                    d.warehouseId, d.zoneName, d.locationName, d.qty, d.unit, d.unitPrice, d.cost,
+                    ExcelUtilCn(d.status), d.createTime == null ? "" : d.createTime.toLocalDate(), d.createdBy});
+        }
+        com.pengyuan.pims.common.ExcelUtil.export(response, "生产领料-" + java.time.LocalDate.now(), "生产领料",
+                new String[]{"单号", "类型", "生产订单", "产品", "物料编码", "品名", "批号", "仓库", "分库", "库位",
+                        "数量", "单位", "单价", "成本", "状态", "日期", "经办人"}, rows);
+    }
+
+    /** 委外发料导出 */
+    @GetMapping("/outsource/export")
+    @SaCheckPermission(value = "outsource:read")
+    public void exportOutsource(@RequestParam(defaultValue = "") String keyword,
+                                jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        java.util.List<Object[]> rows = new java.util.ArrayList<>();
+        for (var d : service.searchOutsource(keyword, EXPORT_PAGE).getContent()) {
+            rows.add(new Object[]{d.docNo, d.outsourceOrderNo, d.processorName, d.materialCode, d.batchNo,
+                    d.fromWarehouseId, d.toWarehouseId, d.zoneName, d.locationName, d.qty, d.unit,
+                    d.unitPrice, d.cost, ExcelUtilCn(d.status),
+                    d.createTime == null ? "" : d.createTime.toLocalDate(), d.createdBy});
+        }
+        com.pengyuan.pims.common.ExcelUtil.export(response, "委外发料-" + java.time.LocalDate.now(), "委外发料",
+                new String[]{"单号", "委外订单", "代工厂", "物料编码", "批号", "调出仓", "调入仓", "分库", "库位",
+                        "数量", "单位", "单价", "成本", "状态", "日期", "经办人"}, rows);
+    }
+
+    /** 其他入库导出（含退货入库） */
+    @GetMapping("/other-inbound/export")
+    @SaCheckPermission(value = "inventory:read")
+    public void exportOtherInbound(@RequestParam(defaultValue = "") String keyword,
+                                   jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        java.util.List<Object[]> rows = new java.util.ArrayList<>();
+        for (var d : service.searchOtherInbound(keyword, EXPORT_PAGE).getContent()) {
+            rows.add(new Object[]{d.docNo, d.materialCode, d.materialName, d.batchNo, d.warehouseId,
+                    d.qty, d.unit, d.price, d.qty != null && d.price != null ? d.qty.multiply(d.price) : null,
+                    reasonCn(d.reason), d.returnRefDocNo, ExcelUtilCn(d.status),
+                    d.createTime == null ? "" : d.createTime.toLocalDate(), d.createdBy});
+        }
+        com.pengyuan.pims.common.ExcelUtil.export(response, "其他入库-" + java.time.LocalDate.now(), "其他入库",
+                new String[]{"单号", "物料编码", "品名", "批号", "仓库", "数量", "单位", "单价", "金额",
+                        "事由", "关联退货单", "状态", "日期", "经办人"}, rows);
+    }
+
+    /** 生产入库导出 */
+    @GetMapping("/production-inbound/export")
+    @SaCheckPermission(value = "production:read")
+    public void exportProductionInbound(@RequestParam(defaultValue = "") String keyword,
+                                        jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        java.util.List<Object[]> rows = new java.util.ArrayList<>();
+        for (var d : service.searchProductionInbound(keyword, EXPORT_PAGE).getContent()) {
+            rows.add(new Object[]{d.docNo, d.productionOrderNo, d.productCode, d.productName, d.batchNo,
+                    d.warehouseId, d.zoneName, d.locationName, d.qty, d.theoreticalQty, d.yieldRate,
+                    ExcelUtilCn(d.status), d.createTime == null ? "" : d.createTime.toLocalDate(), d.createdBy});
+        }
+        com.pengyuan.pims.common.ExcelUtil.export(response, "生产入库-" + java.time.LocalDate.now(), "生产入库",
+                new String[]{"单号", "生产订单", "产品编码", "产品名称", "批号", "仓库", "分库", "库位",
+                        "实际产出", "理论产出", "收率%", "状态", "日期", "经办人"}, rows);
+    }
+
+    /** 委外入库导出 */
+    @GetMapping("/outsource-inbound/export")
+    @SaCheckPermission(value = "outsource:read")
+    public void exportOutsourceInbound(@RequestParam(defaultValue = "") String keyword,
+                                       jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        java.util.List<Object[]> rows = new java.util.ArrayList<>();
+        for (var d : service.searchOutsourceInbound(keyword, EXPORT_PAGE).getContent()) {
+            rows.add(new Object[]{d.docNo, d.outsourceOrderNo, d.productCode, d.productName, d.batchNo,
+                    d.warehouseId, d.zoneName, d.locationName, d.qty, d.theoreticalQty, d.yieldRate,
+                    ExcelUtilCn(d.status), d.createTime == null ? "" : d.createTime.toLocalDate(), d.createdBy});
+        }
+        com.pengyuan.pims.common.ExcelUtil.export(response, "委外入库-" + java.time.LocalDate.now(), "委外入库",
+                new String[]{"单号", "委外订单", "产品编码", "产品名称", "批号", "仓库", "分库", "库位",
+                        "实际产出", "理论产出", "收率%", "状态", "日期", "经办人"}, rows);
+    }
+
+    private static String ExcelUtilCn(String s) { return com.pengyuan.pims.common.ExcelUtil.statusCn(s); }
+
+    private static String reasonCn(String r) {
+        if (r == null) return "";
+        return switch (r) {
+            case "RETURN" -> "退货入库"; case "SCRAP" -> "报废"; case "SAMPLE" -> "样品";
+            case "ADJUST" -> "调整"; case "OPENING" -> "期初"; default -> r;
+        };
+    }
+
     @GetMapping("/sales")
     @SaCheckPermission(value = "sales:read")
     public Result<?> listSales(@RequestParam(defaultValue = "1") int page,

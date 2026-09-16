@@ -6,6 +6,7 @@
         <el-input v-model="keyword" placeholder="搜索名称" clearable @keyup.enter="fetch" />
         <el-button @click="fetch">搜索</el-button>
         <el-button type="primary" @click="showDialog(null)" v-if="hasPerm('customer:write')">新增客户</el-button>
+        <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
       </div>
     </div>
     <div class="table-card">
@@ -134,6 +135,16 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useColumnResize } from '../composables/useColumnResize'
+// v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
+import { downloadFile } from '../utils/download'
+const exporting = ref(false)
+async function doExport() {
+  exporting.value = true
+  try {
+    await downloadFile('/customer/export', { keyword: keyword.value || undefined }, `客户-${new Date().toLocaleDateString('sv')}.xlsx`)
+  } finally { exporting.value = false }
+}
+
 
 const list = ref([])
 const keyword = ref('')

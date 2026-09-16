@@ -10,6 +10,7 @@
           <el-button type="primary" :loading="importing">导入Excel</el-button>
         </el-upload>
         <el-button type="primary" @click="showDialog(null)" v-if="hasPerm('supplier:write')">新增供应商</el-button>
+        <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
       </div>
     </div>
 
@@ -150,6 +151,16 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useColumnResize } from '../composables/useColumnResize'
 import { useExcelImport } from '../composables/useExcelImport'
+// v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
+import { downloadFile } from '../utils/download'
+const exporting = ref(false)
+async function doExport() {
+  exporting.value = true
+  try {
+    await downloadFile('/supplier/export', { keyword: keyword.value || undefined }, `供应商-${new Date().toLocaleDateString('sv')}.xlsx`)
+  } finally { exporting.value = false }
+}
+
 
 const { importing, downloadTpl, onFile: onImportFile } = useExcelImport('/supplier', '供应商导入模板.xlsx', '供应商', fetch)
 

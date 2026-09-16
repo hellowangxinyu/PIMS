@@ -22,6 +22,7 @@
           >到货明细</button>
         </div>
         <span class="type-count">{{ activeTab === 'DETAIL' ? `共 ${detailTotal} 条到货记录` : `共 ${list.length} 条待到货` }}</span>
+        <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
       </div>
 
       <!-- ===== 待到货列表（原料/成品） ===== -->
@@ -196,6 +197,16 @@ import { usePaging } from '../composables/usePaging'
 import { useColumnResize } from '../composables/useColumnResize'
 import { printLabels } from '../utils/labelPrint'
 import { useBucketPrint } from '../composables/useBucketPrint'
+// v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
+import { downloadFile } from '../utils/download'
+const exporting = ref(false)
+async function doExport() {
+  exporting.value = true
+  try {
+    await downloadFile('/purchase-arrival/export', { type: detailType.value || undefined, keyword: detailSearch.value.trim() || undefined }, `采购到货明细-${new Date().toLocaleDateString('sv')}.xlsx`)
+  } finally { exporting.value = false }
+}
+
 
 // v5.79.1 打印标签前带出质检结果/检验员：批号精确优先（模糊 LIKE 会撞前缀批号），
 // 多条时优先取已判定的（PASS/CONCESSION/REJECT），查不到再按 合同号+批号 兜底

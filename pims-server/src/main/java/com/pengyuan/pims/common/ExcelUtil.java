@@ -23,6 +23,23 @@ public class ExcelUtil {
 
     private static final int WINDOW_ROWS = 200;
 
+    /** v9.6 导出通用：单据状态码→中文（未知值原样返回） */
+    public static String statusCn(String s) {
+        if (s == null) return "";
+        return switch (s) {
+            case "DRAFT" -> "草稿";
+            case "CONFIRMED" -> "已确认";
+            case "APPROVED" -> "已审核";
+            case "CLOSED" -> "已关闭";
+            case "DONE" -> "已完成";
+            case "CANCELLED" -> "已作废";
+            case "PENDING" -> "待处理";
+            case "SHIPPED" -> "已发货";
+            case "COMPLETED" -> "已完结";
+            default -> s;
+        };
+    }
+
     public static void export(HttpServletResponse response, String fileName, String sheetName,
                               String[] headers, List<Object[]> rows) throws IOException {
         write(response, fileName, sheetName, headers, (wb, sheet, headStyle) -> {

@@ -3,6 +3,7 @@
     <div class="page-header">
       <h2>委外入库</h2>
       <el-button type="primary" @click="openDialog">参照委外单入库</el-button>
+        <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
     </div>
     <div class="table-card">
       <div class="type-tabs">
@@ -171,6 +172,16 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { printLabels } from '../utils/labelPrint'
 import { useBucketPrint } from '../composables/useBucketPrint'
+// v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
+import { downloadFile } from '../utils/download'
+const exporting = ref(false)
+async function doExport() {
+  exporting.value = true
+  try {
+    await downloadFile('/outbound/outsource-inbound/export', { keyword: searchText.value || undefined }, `委外入库-${new Date().toLocaleDateString('sv')}.xlsx`)
+  } finally { exporting.value = false }
+}
+
 
 const rows = ref([])
 // v5.27：多选行（打印标签用）

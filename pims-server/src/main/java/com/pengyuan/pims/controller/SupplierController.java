@@ -9,6 +9,7 @@ import com.pengyuan.pims.service.SupplierService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * 供应商管理接口
@@ -131,6 +132,25 @@ public class SupplierController {
             return Result.ok(FieldFilter.filterListFields(result, FieldFilter.SUPPLIER_PAYMENT_FIELDS));
         }
         return Result.ok(result);
+    }
+
+    /** v9.6 导出：与列表同口径（无 supplier:payment 权限时付款条件/方式留空） */
+    @GetMapping("/export")
+    @SaCheckPermission(value = "supplier:read")
+    public void export(jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        boolean pay = com.pengyuan.pims.common.FieldFilter.hasPerm("supplier:payment");
+        List<Object[]> rows = new ArrayList<>();
+        for (com.pengyuan.pims.entity.Supplier s : service.listAll()) {
+            rows.add(new Object[]{
+                    s.code, s.name, "FINISHED".equals(s.type) ? "成品" : "原料",
+                    pay ? s.paymentTerms : "", pay ? s.paymentMethod : "",
+                    Boolean.TRUE.equals(s.enabled) ? "启用" : "停用",
+                    Boolean.TRUE.equals(s.blacklisted) ? "是" : "否",
+                    s.createTime == null ? "" : s.createTime.toLocalDate()
+            });
+        }
+        com.pengyuan.pims.common.ExcelUtil.export(response, "供应商-" + java.time.LocalDate.now(), "供应商",
+                new String[]{"编码", "名称", "类型", "付款条件", "付款方式", "状态", "是否拉黑", "创建日期"}, rows);
     }
 
     @GetMapping("/{id}")

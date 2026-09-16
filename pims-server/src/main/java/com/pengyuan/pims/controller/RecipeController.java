@@ -59,6 +59,24 @@ public class RecipeController {
         return Result.ok(service.list(keyword, category));
     }
 
+    /** v9.6 导出 */
+    @org.springframework.web.bind.annotation.GetMapping("/export")
+    @SaCheckPermission("recipe:read")
+    public void export(@org.springframework.web.bind.annotation.RequestParam(required = false) String keyword,
+                       jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        java.util.List<Object[]> rows = new java.util.ArrayList<>();
+        for (var r : service.list(keyword, null)) {
+            rows.add(new Object[]{
+                    r.recipeNo, r.productName, r.productCode,
+                    "TINTING".equals(r.recipeType) ? "制漆" : "母液",
+                    r.category, Boolean.TRUE.equals(r.enabled) ? "启用" : "停用",
+                    r.printCount, r.usageCount, r.description
+            });
+        }
+        com.pengyuan.pims.common.ExcelUtil.export(response, "配方-" + java.time.LocalDate.now(), "配方",
+                new String[]{"配方编号", "品名", "物料编码", "类型", "分类", "状态", "打印次数", "使用次数", "描述"}, rows);
+    }
+
     @GetMapping("/{id}")
     @SaCheckPermission("recipe:read")
     public Result detail(@PathVariable Long id) {

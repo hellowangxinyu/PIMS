@@ -223,6 +223,29 @@ public class PurchaseController {
 
     // ==================== 到货管理 ====================
 
+    /** v9.6 导出：到货单（价格列按 purchase:price 权限脱敏，与列表同口径） */
+    @GetMapping("/purchase-arrival/export")
+    @SaCheckPermission(value = "purchase:read")
+    public void exportArrivals(@RequestParam(required = false) String keyword,
+                               @RequestParam(required = false) String type,
+                               jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        boolean price = com.pengyuan.pims.common.FieldFilter.hasPerm("purchase:price");
+        java.util.List<Object[]> rows = new java.util.ArrayList<>();
+        for (var a : service.searchArrivals(keyword == null ? "" : keyword, type,
+                org.springframework.data.domain.PageRequest.of(0, 100000)).getContent()) {
+            rows.add(new Object[]{
+                    a.docNo, "FINISHED".equals(a.type) ? "成品" : "原料", a.refOrderNo, a.supplierName,
+                    a.materialCode, a.materialName, a.qty, a.unit,
+                    price ? a.unitPrice : "", a.taxRate, price ? a.unitPrice : "",
+                    a.arrivalDate, a.warehouseId, a.zoneName, a.locationName, a.batchNo,
+                    com.pengyuan.pims.common.ExcelUtil.statusCn(a.status), a.operator, a.remark
+            });
+        }
+        com.pengyuan.pims.common.ExcelUtil.export(response, "采购到货-" + java.time.LocalDate.now(), "采购到货",
+                new String[]{"单号", "类型", "关联采购单", "供应商", "物料编码", "品名", "数量", "单位",
+                        "单价", "税率%", "金额", "到货日期", "仓库", "分库", "库位", "批号", "状态", "经办人", "备注"}, rows);
+    }
+
     @GetMapping("/purchase-arrival")
     @SaCheckPermission(value = "purchase:read")
     public Result<?> listArrivals(@RequestParam(required = false) String type,

@@ -7,6 +7,7 @@
         <el-button :loading="importing">导入Excel</el-button>
       </el-upload>
       <el-button type="primary" @click="openCreateRecipe">新建配方</el-button>
+        <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
     </div>
 
     <div class="recipe-layout">
@@ -467,6 +468,16 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useExcelImport } from '../composables/useExcelImport'
+// v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
+import { downloadFile } from '../utils/download'
+const exporting = ref(false)
+async function doExport() {
+  exporting.value = true
+  try {
+    await downloadFile('/recipe/export', { keyword: keyword.value || undefined }, `配方-${new Date().toLocaleDateString('sv')}.xlsx`)
+  } finally { exporting.value = false }
+}
+
 
 const { importing, downloadTpl, onFile: onImportFile } = useExcelImport('/recipe', '配方导入模板.xlsx', '配方', fetchList)
 

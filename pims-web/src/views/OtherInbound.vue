@@ -3,6 +3,7 @@
     <div class="page-header">
       <h2>其他入库</h2>
       <el-button type="primary" @click="openDialog">新建入库单</el-button>
+        <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
     </div>
     <div class="table-card">
       <div class="type-tabs"><span class="type-count">共 {{ total }} 条记录</span>
@@ -110,6 +111,16 @@ import { ref, onMounted } from 'vue'
 import { loadTaxRate, netOfTax, taxOf, fmtTax } from '../utils/tax'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
+// v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
+import { downloadFile } from '../utils/download'
+const exporting = ref(false)
+async function doExport() {
+  exporting.value = true
+  try {
+    await downloadFile('/outbound/other-inbound/export', { keyword: searchText.value || undefined }, `其他入库-${new Date().toLocaleDateString('sv')}.xlsx`)
+  } finally { exporting.value = false }
+}
+
 
 const taxRate = ref(13)
 loadTaxRate(api).then(r => { taxRate.value = r })

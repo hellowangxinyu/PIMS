@@ -8,6 +8,7 @@ import com.pengyuan.pims.service.CustomerService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/customer")
@@ -102,6 +103,24 @@ public class CustomerController {
             return Result.ok(Boolean.TRUE.equals(enabled) ? service.searchEnabled(keyword) : service.search(keyword));
         }
         return Result.ok(Boolean.TRUE.equals(enabled) ? service.listEnabled() : service.listAll());
+    }
+
+    /** v9.6 导出 */
+    @GetMapping("/export")
+    @SaCheckPermission(value = "customer:read")
+    public void export(jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        List<Object[]> rows = new ArrayList<>();
+        for (com.pengyuan.pims.entity.Customer c : service.listAll()) {
+            rows.add(new Object[]{
+                    c.name, c.contactPerson, c.contactPhone, c.address, c.abcLevel,
+                    c.legalPerson, c.bankName, c.bankAccount, c.taxNo, c.paymentTerms, c.creditLimit,
+                    Boolean.TRUE.equals(c.enabled) ? "启用" : "停用",
+                    Boolean.TRUE.equals(c.blacklisted) ? "是" : "否",
+                    c.createTime == null ? "" : c.createTime.toLocalDate()
+            });
+        }
+        com.pengyuan.pims.common.ExcelUtil.export(response, "客户-" + java.time.LocalDate.now(), "客户",
+                new String[]{"名称", "联系人", "电话", "地址", "ABC等级", "法定代表人", "开户银行", "银行账号", "税号", "付款条件", "信用额度", "状态", "是否拉黑", "创建日期"}, rows);
     }
 
     @GetMapping("/{id}")
