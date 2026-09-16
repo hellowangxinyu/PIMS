@@ -4,7 +4,9 @@
     <template v-if="mode === 'list'">
       <div class="page-header">
         <h2>工艺路线</h2>
-        <el-button type="primary" @click="openCreate">+ 新建路线</el-button>
+      <div class="header-actions">
+          <el-button type="primary" @click="openCreate">+ 新建路线</el-button>
+      </div>
       </div>
 
       <div class="type-tabs">

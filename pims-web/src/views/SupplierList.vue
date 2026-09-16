@@ -9,8 +9,8 @@
         <el-upload v-if="hasPerm('supplier:write')" :auto-upload="false" :show-file-list="false" accept=".xlsx,.xls" :on-change="onImportFile" style="display:inline-block">
           <el-button type="primary" :loading="importing">导入Excel</el-button>
         </el-upload>
-        <el-button type="primary" @click="showDialog(null)" v-if="hasPerm('supplier:write')">新增供应商</el-button>
         <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
+        <el-button type="primary" @click="showDialog(null)" v-if="hasPerm('supplier:write')">新增供应商</el-button>
       </div>
     </div>
 

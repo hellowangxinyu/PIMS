@@ -2,8 +2,10 @@
   <div class="page-container">
     <div class="page-header">
       <h2>生产入库</h2>
-      <el-button type="primary" @click="openDialog">参照订单入库</el-button>
+      <div class="header-actions">
         <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
+        <el-button type="primary" @click="openDialog">参照订单入库</el-button>
+      </div>
     </div>
     <div class="table-card">
       <div class="type-tabs">

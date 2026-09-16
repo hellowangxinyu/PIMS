@@ -2,7 +2,9 @@
   <div class="page-container">
     <div class="page-header">
       <h2>销售出库</h2>
-      <el-button type="primary" @click="openDialog">新建出库单</el-button>
+      <div class="header-actions">
+        <el-button type="primary" @click="openDialog">新建出库单</el-button>
+      </div>
     </div>
     <div class="table-card">
       <div class="type-tabs"><span class="type-count">共 {{ total }} 条记录</span>

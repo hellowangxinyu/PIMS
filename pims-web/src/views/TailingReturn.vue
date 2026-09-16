@@ -2,7 +2,9 @@
   <div class="page-container">
     <div class="page-header">
       <h2>油尾退回</h2>
-      <el-button type="primary" @click="openCreate">新建油尾退回单</el-button>
+      <div class="header-actions">
+        <el-button type="primary" @click="openCreate">新建油尾退回单</el-button>
+      </div>
     </div>
     <div class="tip-bar">
       客户生产完毕后未用完的油漆（已加稀料）退回芃远：原批号带回、入库「油尾库」，不再销售，仅制漆配方消化或报废。

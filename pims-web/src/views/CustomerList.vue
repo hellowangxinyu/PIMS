@@ -5,8 +5,8 @@
       <div class="header-actions">
         <el-input v-model="keyword" placeholder="搜索名称" clearable @keyup.enter="fetch" />
         <el-button @click="fetch">搜索</el-button>
-        <el-button type="primary" @click="showDialog(null)" v-if="hasPerm('customer:write')">新增客户</el-button>
         <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
+        <el-button type="primary" @click="showDialog(null)" v-if="hasPerm('customer:write')">新增客户</el-button>
       </div>
     </div>
     <div class="table-card">

@@ -2,12 +2,14 @@
   <div class="page-container">
     <div class="page-header">
       <h2>配方管理</h2>
-      <el-button @click="downloadTpl">下载导入模板</el-button>
-      <el-upload :auto-upload="false" :show-file-list="false" accept=".xlsx,.xls" :on-change="onImportFile" style="display:inline-block;margin-right:12px">
-        <el-button :loading="importing">导入Excel</el-button>
-      </el-upload>
-      <el-button type="primary" @click="openCreateRecipe">新建配方</el-button>
+      <div class="header-actions">
         <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
+        <el-button @click="downloadTpl">下载导入模板</el-button>
+        <el-upload :auto-upload="false" :show-file-list="false" accept=".xlsx,.xls" :on-change="onImportFile" style="display:inline-block;margin-right:12px">
+          <el-button :loading="importing">导入Excel</el-button>
+        </el-upload>
+        <el-button type="primary" @click="openCreateRecipe">新建配方</el-button>
+      </div>
     </div>
 
     <div class="recipe-layout">

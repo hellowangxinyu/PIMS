@@ -2,7 +2,9 @@
   <div class="page-container">
     <div class="page-header">
       <h2>生产订单（配方表）</h2>
-      <el-button type="primary" @click="openCreate">新建生产订单</el-button>
+      <div class="header-actions">
+        <el-button type="primary" @click="openCreate">新建生产订单</el-button>
+      </div>
     </div>
     <div class="table-card">
       <div class="type-tabs">

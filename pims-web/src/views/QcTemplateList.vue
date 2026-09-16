@@ -4,7 +4,9 @@
     <template v-if="mode === 'list'">
       <div class="page-header">
         <h2>质检模板</h2>
-        <el-button v-if="hasPerm('qc:write')" type="primary" @click="openCreate">+ 新建模板</el-button>
+      <div class="header-actions">
+          <el-button v-if="hasPerm('qc:write')" type="primary" @click="openCreate">+ 新建模板</el-button>
+      </div>
       </div>
 
       <div class="qc-tip">

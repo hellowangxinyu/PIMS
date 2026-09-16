@@ -2,6 +2,9 @@
   <div class="page-container">
     <div class="page-header">
       <h2>到货录入</h2>
+      <div class="header-actions">
+        <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
+      </div>
     </div>
 
     <div class="table-card">
@@ -22,7 +25,6 @@
           >到货明细</button>
         </div>
         <span class="type-count">{{ activeTab === 'DETAIL' ? `共 ${detailTotal} 条到货记录` : `共 ${list.length} 条待到货` }}</span>
-        <el-button @click="doExport" :loading="exporting">导出 Excel</el-button>
       </div>
 
       <!-- ===== 待到货列表（原料/成品） ===== -->

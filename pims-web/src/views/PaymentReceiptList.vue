@@ -2,8 +2,10 @@
   <div class="page-container">
     <div class="page-header">
       <h2>收款单</h2>
-      <el-button type="primary" @click="openDialog" v-if="hasPerm('finance:write')">新建收款单</el-button>
-      <el-button @click="doExport" :disabled="exporting">{{ exporting ? '导出中…' : '导出 Excel' }}</el-button>
+      <div class="header-actions">
+        <el-button type="primary" @click="openDialog" v-if="hasPerm('finance:write')">新建收款单</el-button>
+        <el-button @click="doExport" :disabled="exporting">{{ exporting ? '导出中…' : '导出 Excel' }}</el-button>
+      </div>
     </div>
     <div class="table-card">
       <div class="type-tabs">

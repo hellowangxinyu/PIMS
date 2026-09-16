@@ -12,17 +12,14 @@ export default defineConfig({
   plugins: [
     vue(),
     {
-      // v9.2（P2-6 审计）：原子构建——原 buildStart 先清空 static，构建中途失败=产物被清空。
-      // 改为构建到本项目 dist，成功后 robocopy /MIR 镜像到后端 static（顺带清掉旧 hash 堆积；
-      // 中文路径必须用系统命令，libuv 已知坑）。robocopy 退出码 0-7 均为成功（1=有文件复制），>=8 才失败。
+      // v9.6.1：原子构建修正——robocopy /MIR 经 cmd 转发实测未删旧 hash（同页多版本 chunk 并存，
+      // index 与 chunk 版本错配→对应页面静默空白）。改为「成功后先 del 清空再 xcopy 全量拷」，
+      // 两者均为 Windows 原生命令（中文路径 libuv 坑），语义等价镜像且各步可验证。
       name: 'pims-atomic-deploy',
       closeBundle() {
         if (process.platform !== 'win32') return
-        try {
-          execSync('robocopy dist "..\\pims-server\\src\\main\\resources\\static" /MIR /NJH /NJS /NDL /NFL >nul', { stdio: 'ignore', shell: 'cmd.exe' })
-        } catch (e) {
-          if (e.status === undefined || e.status >= 8) throw e
-        }
+        execSync('cmd /c "del /q /s ..\\pims-server\\src\\main\\resources\\static\\*.* >nul 2>&1"')
+        execSync('xcopy /E /Y /I /Q dist ..\\pims-server\\src\\main\\resources\\static', { stdio: 'ignore' })
       }
     }
   ],
