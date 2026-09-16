@@ -27,6 +27,7 @@
           <el-input v-model="keyword" placeholder="搜索编号/品名" clearable size="small" style="width:180px" @clear="fetchList" @keyup.enter="fetchList" />
           <el-button size="small" type="primary" @click="fetchList">搜索</el-button>
         </div>
+        <template v-if="!isMobile">
         <p-table :data="filteredRecipes" stripe border size="small" highlight-current-row @current-change="onSelectRecipe" style="width:100%">
           <el-table-column prop="recipeNo" label="编号" width="100" />
           <el-table-column label="产品编码" width="110" show-overflow-tooltip>
@@ -54,6 +55,23 @@
             </template>
           </el-table-column>
         </p-table>
+        </template>
+        <!-- v10.3 手机卡片视图：点卡片选中配方（与表格 current-change 同源） -->
+        <div v-if="isMobile" class="m-cards">
+          <div v-for="row in filteredRecipes" :key="row.id" class="m-card"
+               style="cursor:pointer" @click="onSelectRecipe(row)">
+            <div class="m-card-head">
+              <div>
+                <div class="m-card-title">{{ row.productName }}</div>
+                <div class="m-card-sub">{{ row.recipeNo }} · {{ row.category || '' }}</div>
+              </div>
+              <span class="m-status" :style="row.enabled === false ? 'opacity:.6' : ''">{{ row.enabled === false ? '停用' : '启用' }}</span>
+            </div>
+            <div class="m-card-row"><span>产品编码</span><span class="m-val">{{ row.productCode || '—' }}</span></div>
+            <div class="m-card-row"><span>打印 / 引用</span><span class="m-val num">{{ row.printCount || 0 }} / {{ row.usageCount || 0 }}</span></div>
+          </div>
+          <div v-if="!filteredRecipes.length" class="m-empty">暂无配方</div>
+        </div>
       </div>
 
       <!-- 右侧：详情面板 -->
@@ -472,6 +490,7 @@ import api from '../api'
 import { useExcelImport } from '../composables/useExcelImport'
 // v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
 import { downloadFile } from '../utils/download'
+import { isMobile } from '../composables/useIsMobile'
 const exporting = ref(false)
 async function doExport() {
   exporting.value = true

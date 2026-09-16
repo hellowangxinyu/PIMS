@@ -11,6 +11,7 @@
         <button class="type-tab" :class="{ active: activeTab === 'ACTIVE' }" @click="activeTab = 'ACTIVE'">未完工 <span class="tab-badge">{{ activeCount }}</span></button>
         <button class="type-tab" :class="{ active: activeTab === 'COMPLETED' }" @click="activeTab = 'COMPLETED'">已完工 <span class="tab-badge">{{ completedCount }}</span></button>
       </div>
+      <template v-if="!isMobile">
       <p-table :data="pagedRows" stripe border style="width:100%" :row-class-name="rowClass">
         <el-table-column prop="orderNo" label="订单号" min-width="130" show-overflow-tooltip />
         <el-table-column prop="productName" label="产品名称" min-width="150" show-overflow-tooltip />
@@ -58,6 +59,29 @@
           </template>
         </el-table-column>
       </p-table>
+    </template>
+    <!-- v10.3 手机卡片视图 -->
+    <div v-if="isMobile" class="m-cards">
+      <div v-for="row in pagedRows" :key="row.id" class="m-card">
+        <div class="m-card-head">
+          <div>
+            <div class="m-card-title">{{ row.productName }}</div>
+            <div class="m-card-sub">{{ row.orderNo }}<template v-if="row.salesOrderNo"> · 源{{ row.salesOrderNo }}</template></div>
+          </div>
+          <span class="m-status">{{ statusLabel(row.displayStatus || row.status) }}</span>
+        </div>
+        <div class="m-card-row"><span>批量</span><span class="m-val num">{{ row.batchQty }} {{ row.unit || '' }}</span></div>
+        <div class="m-card-row" v-if="row.ioStatus === 'ABNORMAL'"><span>投出比异常</span><span class="m-val danger">需处理</span></div>
+        <div class="m-card-actions">
+          <el-button size="small" @click="viewDetail(row)">配方</el-button>
+          <el-button v-if="row.status === 'DRAFT'" size="small" @click="openEdit(row)">编辑</el-button>
+          <el-button v-if="row.status === 'DRAFT'" size="small" type="primary" @click="confirm(row)">确认并出库</el-button>
+          <el-button v-else-if="row.status === 'CONFIRMED' || row.status === 'SCHEDULED'" size="small" type="success" @click="complete(row)">完工</el-button>
+          <el-button v-if="row.status !== 'DRAFT'" size="small" @click="viewOutbounds(row)">出库记录</el-button>
+        </div>
+      </div>
+      <div v-if="!pagedRows.length" class="m-empty">暂无生产订单</div>
+    </div>
       <!-- 分页（v5.2） -->
       <div class="pagination-bar">
         <el-pagination
@@ -340,6 +364,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { usePaging } from '../composables/usePaging'
+import { isMobile } from '../composables/useIsMobile'
 const list = ref([])
 const materials = ref([])
 const warehouses = ref([])
