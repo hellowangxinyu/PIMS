@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import './style.css'
+import './mobile.css'   // v10.0 零侵入移动适配层：规则全部锁 @media ≤1024px + body.pims-mobile，桌面零影响
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { Aim, AlarmClock, ArrowDown, Avatar, Bell, Box, Brush, Calendar, Check, Checked, CircleCheck, Close, Coin, Collection, Connection, CreditCard, DataAnalysis, DataLine, Document, Download, Expand, Files, Folder, FolderOpened, Grid, Histogram, HomeFilled, House, Key, Link, List, Loading, MagicStick, Memo, Money, Notebook, Odometer, OfficeBuilding, Operation, PieChart, Position, PriceTag, RefreshLeft, Search, SetUp, Setting, ShoppingCart, ShoppingTrolley, Stamp, Stopwatch, Suitcase, Ticket, Tickets, TrendCharts, Upload, User, Van, Wallet, WalletFilled, Warning } from '@element-plus/icons-vue'
 import App from './App.vue'
@@ -27,3 +28,6 @@ for (const icon of [Aim, AlarmClock, ArrowDown, Avatar, Bell, Box, Brush, Calend
 }
 
 app.mount('#app')
+
+// v10.0 移动适配：窄屏挂标识类（mobile.css 全部规则以此为前提；桌面永不挂）
+if (window.matchMedia('(max-width: 1024px)').matches) document.body.classList.add('pims-mobile')

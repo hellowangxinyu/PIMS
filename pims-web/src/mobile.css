@@ -1,0 +1,207 @@
+/* =====================================================================
+   v10.0 零侵入移动端适配层（手机 ≤768px / 平板 769-1024px）
+   =====================================================================
+   铁律：本文件所有规则都锁在 @media (max-width: 1024px) 内且选择器带
+   body.pims-mobile 前缀（main.js 仅在窄屏挂该类）——桌面浏览器不加载
+   不解析不生效，对现有桌面样式零影响；删除本文件 + main.js 两行即完全还原。
+   ===================================================================== */
+
+/* ================= 平板（769-1024px）：适度放宽 ================= */
+@media (min-width: 769px) and (max-width: 1024px) {
+  body.pims-mobile .el-dialog {
+    width: min(88vw, 860px) !important;
+  }
+  body.pims-mobile .el-input__inner,
+  body.pims-mobile .el-textarea__inner {
+    font-size: 16px; /* 防 iOS Safari 聚焦自动缩放 */
+  }
+  body.pims-mobile .el-table {
+    font-size: 13px;
+  }
+  body.pims-mobile .el-button--small {
+    min-height: 32px;
+  }
+}
+
+/* ================= 手机（≤768px）：全屏弹窗 + 单列表单 + 紧凑表格 ================= */
+@media (max-width: 768px) {
+
+  /* ---- 弹窗全屏抽屉化（Element Plus 弹窗 teleport 到 body，body 类可直接命中） ---- */
+  body.pims-mobile .el-dialog {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+  }
+  body.pims-mobile .el-dialog__header {
+    padding: 13px 16px;
+    margin-right: 0;
+    border-bottom: 1px solid var(--pims-border, #e2e8f0);
+    flex-shrink: 0;
+  }
+  body.pims-mobile .el-dialog__title {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  body.pims-mobile .el-dialog__headerbtn {
+    top: 50%;
+    transform: translateY(-50%);
+    right: 12px;
+    width: 40px;
+    height: 40px;
+  }
+  body.pims-mobile .el-dialog__body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px;
+  }
+  body.pims-mobile .el-dialog__footer {
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--pims-border-light, #f1f5f9);
+    flex-shrink: 0;
+  }
+  body.pims-mobile .el-dialog__footer .el-button {
+    flex: 1;
+    margin-left: 0;
+    margin-right: 8px;
+    height: 42px;
+  }
+  body.pims-mobile .el-dialog__footer .el-button:last-child {
+    margin-right: 0;
+  }
+
+  /* 抽屉（客户360°等）全宽 */
+  body.pims-mobile .el-drawer {
+    width: 100% !important;
+  }
+
+  /* 确认框窄屏适配（保持小窗，不吞全屏） */
+  body.pims-mobile .el-message-box {
+    width: min(92vw, 360px);
+  }
+
+  /* ---- 表单单列化 ---- */
+  body.pims-mobile .el-form .el-form-item,
+  body.pims-mobile .el-form--inline .el-form-item {
+    display: block;
+    margin-right: 0;
+    margin-bottom: 13px;
+  }
+  body.pims-mobile .el-form-item__label {
+    display: flex;
+    justify-content: flex-start;
+    width: 100% !important;
+    height: auto;
+    line-height: 1.4;
+    padding: 0 0 4px;
+    text-align: left;
+    word-break: break-all;
+  }
+  body.pims-mobile .el-form-item__content {
+    margin-left: 0 !important;
+    line-height: 1.5;
+  }
+  /* 弹窗/抽屉/内联表单里的输入控件全宽 */
+  body.pims-mobile .el-dialog .el-select,
+  body.pims-mobile .el-dialog .el-input,
+  body.pims-mobile .el-drawer .el-select,
+  body.pims-mobile .el-drawer .el-input,
+  body.pims-mobile .el-form--inline .el-select,
+  body.pims-mobile .el-form--inline .el-input,
+  body.pims-mobile .el-form--inline .el-date-editor {
+    width: 100%;
+  }
+  body.pims-mobile .el-input__inner,
+  body.pims-mobile .el-textarea__inner {
+    font-size: 16px; /* 防 iOS 聚焦缩放 */
+  }
+  body.pims-mobile .el-input__inner {
+    height: 38px;
+  }
+  body.pims-mobile .el-radio-group,
+  body.pims-mobile .el-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  body.pims-mobile .el-radio,
+  body.pims-mobile .el-checkbox {
+    min-height: 38px; /* 触控目标 */
+    margin-right: 0;
+  }
+
+  /* ---- 表格紧凑化（配合容器横向滚动） ---- */
+  body.pims-mobile .el-table {
+    font-size: 13px;
+  }
+  body.pims-mobile .el-table th.el-table__cell,
+  body.pims-mobile .el-table td.el-table__cell {
+    padding: 6px 0;
+  }
+  body.pims-mobile .el-table .cell {
+    padding-left: 7px;
+    padding-right: 7px;
+    line-height: 1.35;
+    word-break: break-all;
+  }
+  body.pims-mobile .el-table th .cell {
+    white-space: nowrap;
+  }
+  body.pims-mobile .table-card {
+    padding: 8px;
+  }
+  /* 操作列按钮触控目标加大 */
+  body.pims-mobile .el-table .op-btn,
+  body.pims-mobile .el-table .el-button--small {
+    min-height: 38px;
+    padding: 6px 9px;
+  }
+  body.pims-mobile .el-table .el-button + .el-button,
+  body.pims-mobile .el-table .op-btn + .op-btn {
+    margin-left: 4px;
+  }
+
+  /* ---- 分页：居中换行，超小屏隐藏跳页 ---- */
+  body.pims-mobile .el-pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 6px;
+  }
+  @media (max-width: 480px) {
+    body.pims-mobile .el-pagination .el-pagination__sizes,
+    body.pims-mobile .el-pagination .el-pagination__jump {
+      display: none;
+    }
+    body.pims-mobile .el-pagination .el-pager li {
+      min-width: 34px;
+      height: 34px;
+    }
+  }
+
+  /* ---- 下拉面板/日期面板不超屏 ---- */
+  body.pims-mobile .el-select-dropdown,
+  body.pims-mobile .el-picker-panel,
+  body.pims-mobile .el-dropdown-menu {
+    max-width: 92vw;
+  }
+  body.pims-mobile .el-select-dropdown__item {
+    height: 40px; /* 触控行高 */
+    line-height: 40px;
+  }
+
+  /* ---- 顶部弹层安全区（iPhone 刘海屏） ---- */
+  body.pims-mobile .el-message,
+  body.pims-mobile .el-notification {
+    top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  /* ---- 页头操作区已有 style.css 768 断点处理（纵向全宽），此处仅兜底间距 ---- */
+  body.pims-mobile .page-header .header-actions {
+    row-gap: 8px;
+  }
+}
