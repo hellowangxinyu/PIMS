@@ -69,8 +69,8 @@
           </el-select>
         </el-descriptions-item>
         <el-descriptions-item label="物料 *">
-          <el-select v-model="form.materialCode" filterable placeholder="搜索物料" style="width:100%" @change="onMatChange">
-            <el-option v-for="m in invList" :key="m.id" :label="m.materialCode + ' ' + (m.materialName||'')" :value="m.materialCode" />
+          <el-select v-model="form.materialCode" filterable placeholder="搜索物料（编码/品名）" style="width:100%" @change="onMatChange">
+            <el-option v-for="m in invOpts" :key="m.materialCode" :label="m.materialCode + ' ' + (m.materialName||'')" :value="m.materialCode" />
           </el-select>
         </el-descriptions-item>
         <el-descriptions-item label="品名"><span>{{ form.materialName || '-' }}</span></el-descriptions-item>
@@ -112,6 +112,7 @@ const page = ref(1)
 const pageSize = ref(25)
 const warehouses = ref([])
 const invList = ref([])
+const invOpts = ref([])   // v10.4：物料下拉选项（按编码聚合，选中仓库时填充）
 const visible = ref(false)
 const loading = ref(false)
 const form = ref({ warehouseId: '', materialCode: '', materialName: '', batchNo: '', currentQty: 0, qty: 1, reason: 'OTHER', remark: '' })
@@ -138,34 +139,36 @@ async function fetch() {
     total.value = res.total
   } catch {} }
 function onSearch() { page.value = 1; fetch() }
-function openDialog() { form.value = { warehouseId: '', materialCode: '', materialName: '', batchNo: '', currentQty: 0, qty: 1, reason: 'OTHER', remark: '' }; invList.value = []; batchOpts.value = []; visible.value = true }
+function openDialog() { form.value = { warehouseId: '', materialCode: '', materialName: '', batchNo: '', currentQty: 0, qty: 1, reason: 'OTHER', remark: '' }; invList.value = []; invOpts.value = []; batchOpts.value = []; visible.value = true }
 // v5.18 修复：/inventory 已改远程分页（返回 {rows,total}），改为选中仓库后按仓库拉取该仓全部库存
+// v10.4 修复：台账行按「编码+批次+库位」多行，直接渲染选项同一物料出现几十条、下拉塞爆且关键标识 id 重复/缺失
+// → 选项改为按编码聚合（/inventory/summary view=code，同一编码一条）；批次仍按台账行查询（onMatChange）
 async function onWhChange(whId) {
   form.value.materialCode = ''; form.value.materialName = ''; form.value.batchNo = ''; form.value.currentQty = 0
   batchOpts.value = []
   invList.value = []
+  invOpts.value = []
   if (!whId) return
   try {
-    const res = await api.get('/inventory', { params: { warehouseId: whId, pageSize: 5000 } })
-    invList.value = res.rows || []
-    if (invList.value.length === 0) ElMessage.info('该仓库暂无库存')
+    const res = await api.get('/inventory/summary', { params: { view: 'code', warehouseId: whId, page: 1, pageSize: 1000 } })
+    invOpts.value = res.rows || []
+    if (invOpts.value.length === 0) ElMessage.info('该仓库暂无库存')
   } catch { /* ignore */ }
 }
-function onMatChange(code) {
-  const rows = invList.value.filter(r => r.materialCode === code)
-  const first = rows[0]
-  form.value.materialName = first ? (first.materialName || '') : ''
+async function onMatChange(code) {
+  const opt = invOpts.value.find(r => r.materialCode === code)
+  form.value.materialName = opt ? (opt.materialName || '') : ''
   form.value.batchNo = ''
-  // 按批号聚合可选批次（同一批号可能分布在多个库位）
-  const map = {}
-  rows.forEach(r => {
-    if (!r.batchNo) return
-    if (!map[r.batchNo]) map[r.batchNo] = { batchNo: r.batchNo, qty: 0, unitPrice: r.unitPrice }
-    map[r.batchNo].qty += Number(r.qty) || 0
-    if (r.unitPrice != null) map[r.batchNo].unitPrice = r.unitPrice
-  })
-  batchOpts.value = Object.values(map)
-  form.value.currentQty = rows.reduce((s, r) => s + (Number(r.qty) || 0), 0)
+  form.value.currentQty = 0
+  if (!code) return
+  // v10.4：批次从台账接口按「编码+仓库」查询（服务端按批号聚合，含各批可用量与单价）
+  try {
+    const rows = await api.get('/inventory/batch', { params: { materialCode: code, warehouseId: form.value.warehouseId } })
+    batchOpts.value = (rows || []).map(r => ({
+      batchNo: r.batchNo, qty: Number(r.availableQty ?? r.qty) || 0, unitPrice: r.unitPrice ?? null,
+    }))
+    form.value.currentQty = batchOpts.value.reduce((s, b) => s + (Number(b.qty) || 0), 0)
+  } catch { batchOpts.value = [] }
 }
 // 选中批号后可出库存以该批号为准，实际成本按批号单价直取
 function onBatchChange(batchNo) {
