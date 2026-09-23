@@ -40,8 +40,9 @@
           range-separator="至" start-placeholder="开始日" end-placeholder="结束日"
           :shortcuts="rangeShortcuts" style="width:260px" @change="load" />
       </div>
+      <!-- v11.3 默认按超期应付从少到多 -->
       <p-table :data="list" stripe border style="width:100%" show-summary
-                :summary-method="getSummary">
+                :summary-method="getSummary" :default-sort="{ prop: 'overdueAmount', order: 'ascending' }">
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="supplierName" label="供应商" min-width="220" show-overflow-tooltip />
         <el-table-column prop="docCount" label="单据数" width="90" align="center" />
@@ -61,6 +62,12 @@
         <el-table-column prop="remainingAmount" label="剩余未付" width="130" align="right" v-if="hasAmountPerm('finance-ar')">
           <template #default="{ row }">
             <span :style="{ color: row.remainingAmount > 0 ? '#b56a5c' : '#16a34a' }">¥{{ fmt(row.remainingAmount) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="overdueAmount" label="超期应付" width="130" align="right" sortable v-if="hasAmountPerm('finance-ar')">
+          <template #default="{ row }">
+            <span v-if="Number(row.overdueAmount) > 0" style="color:#b05a4e;font-weight:700">¥{{ fmt(row.overdueAmount) }}</span>
+            <span v-else class="text-muted">—</span>
           </template>
         </el-table-column>
         <el-table-column label="付款率" width="180" align="center" v-if="hasAmountPerm('finance-ar')">

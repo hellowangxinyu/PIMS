@@ -17,6 +17,12 @@ public interface AccountsPayableRepository extends JpaRepository<AccountsPayable
             "WHERE a.supplier_id IS NOT NULL GROUP BY a.supplier_id ORDER BY MIN(a.id)", nativeQuery = true)
     List<Object[]> totalBySupplier();
 
+    /** v11.3 应付总表：超期应付（已过账期未付余额）按供应商聚合 */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT a.supplierId, COALESCE(SUM(a.amount - COALESCE(a.paidAmount, 0)), 0) " +
+            "FROM AccountsPayable a WHERE a.status <> 'PAID' AND a.dueDate < :today GROUP BY a.supplierId")
+    java.util.List<Object[]> overdueBySupplier(@org.springframework.data.repository.query.Param("today") java.time.LocalDate today);
+
     /** 按供应商查询未结清应付单（按创建时间升序，用于付款 FIFO 冲减） */
     List<AccountsPayable> findBySupplierIdAndStatusNotOrderByCreateTimeAsc(Long supplierId, String status);
 

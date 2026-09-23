@@ -212,6 +212,11 @@ public class FinanceService {
         java.util.Map<Long, java.math.BigDecimal> closePaid = hasPeriod
                 ? groupToMap(disbursementRepo.cumPaidBySupplier(endEx)) : java.util.Map.of();
 
+        // v11.3 超期应付（已过账期未付余额），用于总表排序与展示
+        java.util.Map<Long, java.math.BigDecimal> overdueBySupplier = new java.util.HashMap<>();
+        for (Object[] o : apRepo.overdueBySupplier(java.time.LocalDate.now())) {
+            overdueBySupplier.put(((Number) o[0]).longValue(), money(o[1]));
+        }
         List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
         for (Object[] r : apRepo.totalBySupplier()) {
             java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
@@ -226,6 +231,7 @@ public class FinanceService {
             row.put("partialCount", ((Number) r[6]).intValue());
             row.put("paidCount", ((Number) r[7]).intValue());
             row.put("remainingAmount", total.subtract(paid));
+            row.put("overdueAmount", overdueBySupplier.getOrDefault(((Number) r[0]).longValue(), BigDecimal.ZERO));
             row.put("paidRate", total.compareTo(BigDecimal.ZERO) > 0
                     ? paid.multiply(new BigDecimal("100")).divide(total, 2, java.math.RoundingMode.HALF_UP)
                     : BigDecimal.ZERO);
@@ -240,6 +246,9 @@ public class FinanceService {
             }
             result.add(row);
         }
+        // v11.3 超期应付从少到多（无超期的自然排前，超期多的排后面）
+        result.sort(java.util.Comparator.comparing(m ->
+                (java.math.BigDecimal) m.getOrDefault("overdueAmount", BigDecimal.ZERO)));
         return result;
     }
 
