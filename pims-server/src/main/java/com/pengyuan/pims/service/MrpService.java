@@ -34,16 +34,12 @@ public class MrpService {
     private final FinishedProductPurchaseRepository finishedRepo;
     private final PurchaseOrderService purchaseOrderService;
     private final JdbcTemplate jdbc;
-    private final com.pengyuan.pims.repository.StatMaterialUsageRepository statUsageRepo;   // v11.1 历史用量维度
-    private final com.pengyuan.pims.repository.InventoryLedgerRepository ledgerRepo;        // v11.1 当前库存
 
     public MrpService(SalesOrderRepository salesOrderRepo, SalesOrderItemRepository salesItemRepo,
                       MaterialRepository materialRepo, RecipeRepository recipeRepo,
                       RecipeVersionRepository versionRepo, RecipeTreeNodeRepository treeNodeRepo,
                       RawMaterialPurchaseRepository rawRepo, FinishedProductPurchaseRepository finishedRepo,
-                      PurchaseOrderService purchaseOrderService, JdbcTemplate jdbc,
-                      com.pengyuan.pims.repository.StatMaterialUsageRepository statUsageRepo,
-                      com.pengyuan.pims.repository.InventoryLedgerRepository ledgerRepo) {
+                      PurchaseOrderService purchaseOrderService, JdbcTemplate jdbc) {
         this.salesOrderRepo = salesOrderRepo;
         this.salesItemRepo = salesItemRepo;
         this.materialRepo = materialRepo;
@@ -54,8 +50,6 @@ public class MrpService {
         this.finishedRepo = finishedRepo;
         this.purchaseOrderService = purchaseOrderService;
         this.jdbc = jdbc;
-        this.statUsageRepo = statUsageRepo;
-        this.ledgerRepo = ledgerRepo;
     }
 
     /** 采购建议分析：orderIds 为空 = 全部 CONFIRMED 订单 */
@@ -211,108 +205,5 @@ public class MrpService {
 
     private static BigDecimal toBd(Object v) {
         return v == null ? BigDecimal.ZERO : (v instanceof BigDecimal b ? b : new BigDecimal(String.valueOf(v)));
-    }
-
-    // ==================== v11.1 历史用量维度 ====================
-
-    /**
-     * 基于历史用量的采购建议（与"按订单配方"并列的第二维度）：
-     * 每日用量 = 历史出库合计 / 统计天数（stat_material_usage 口径，与低库存报表同源）
-     * 平均到货周期 = 最近到货的 采购日期→到货日期 天数均值（无历史默认 7 天）
-     * 请购点 = 每日用量 × (平均到货周期 + 缓冲天数)
-     * 当前可供 = 现库存 + 在途（已审核未到货）；低于请购点 → 建议量 = 请购点 - 当前可供
-     * 仅统计原料类物料（A助剂/P颜料/F填料/R树脂/S溶剂）
-     */
-    public java.util.Map<String, Object> suggestByUsage(int bufferDays) {
-        if (bufferDays < 0) bufferDays = 0;
-        java.util.Set<String> rawCats = java.util.Set.of("A", "P", "F", "R", "S");
-        java.util.Map<String, com.pengyuan.pims.entity.Material> materials = new java.util.LinkedHashMap<>();
-        for (var m : materialRepo.findAll()) {
-            if (m.code != null && m.category != null && rawCats.contains(m.category)) materials.put(m.code, m);
-        }
-
-        // 日均用量（按物料跨仓库汇总）
-        java.util.Map<String, BigDecimal> usageTotal = new java.util.HashMap<>();
-        java.util.Map<String, Integer> usageDays = new java.util.HashMap<>();
-        for (var u : statUsageRepo.findAll()) {
-            if (!materials.containsKey(u.materialCode)) continue;
-            usageTotal.merge(u.materialCode, u.outQty != null ? u.outQty : BigDecimal.ZERO, BigDecimal::add);
-            usageDays.merge(u.materialCode, u.usageDays != null ? u.usageDays : 0, Integer::sum);
-        }
-
-        // 当前库存（qty 合计，与低库存报表同口径）
-        java.util.Map<String, BigDecimal> stockByMat = new java.util.HashMap<>();
-        java.util.Map<String, String> unitByMat = new java.util.HashMap<>();
-        for (Object[] row : ledgerRepo.sumQtyGroupByMaterial()) {
-            if (row[0] != null) {
-                stockByMat.put(String.valueOf(row[0]), toBd(row[1]));
-                if (row[2] != null) unitByMat.putIfAbsent(String.valueOf(row[0]), row[2].toString());
-            }
-        }
-
-        // 在途（已审核采购单未到货量）
-        java.util.Map<String, BigDecimal> transitByMat = new java.util.HashMap<>();
-        for (java.util.Map<String, Object> r : jdbc.queryForList(
-                "SELECT material_code AS code, SUM(qty - COALESCE(received_qty, 0)) AS t " +
-                "FROM raw_material_purchase WHERE status = 'APPROVED' AND qty > COALESCE(received_qty, 0) " +
-                "GROUP BY material_code")) {
-            if (r.get("code") != null) transitByMat.put(String.valueOf(r.get("code")), toBd(r.get("t")));
-        }
-
-        // 平均到货周期（毫秒日期→天数，按物料取最近 10 次均值）
-        java.util.Map<String, java.util.List<Long>> leads = new java.util.HashMap<>();
-        for (java.util.Map<String, Object> r : jdbc.queryForList(
-                "SELECT pa.material_code AS code, pa.arrival_date AS ad, rp.purchase_date AS pd " +
-                "FROM purchase_arrival pa JOIN raw_material_purchase rp ON rp.order_no = pa.ref_order_no " +
-                "WHERE pa.status = 'APPROVED' AND pa.type = 'RAW' AND rp.purchase_date IS NOT NULL AND pa.arrival_date IS NOT NULL")) {
-            String code = String.valueOf(r.get("code"));
-            if (!materials.containsKey(code)) continue;
-            long ad = ((Number) r.get("ad")).longValue(), pd = ((Number) r.get("pd")).longValue();
-            long days = java.time.temporal.ChronoUnit.DAYS.between(
-                    java.time.LocalDate.ofEpochDay(pd / 86400000L), java.time.LocalDate.ofEpochDay(ad / 86400000L));
-            leads.computeIfAbsent(code, k -> new java.util.ArrayList<>()).add(Math.max(days, 0));
-        }
-
-        java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
-        for (var e : materials.entrySet()) {
-            String code = e.getKey();
-            BigDecimal total = usageTotal.getOrDefault(code, BigDecimal.ZERO);
-            int days = usageDays.getOrDefault(code, 0);
-            if (days == 0 || total.compareTo(BigDecimal.ZERO) <= 0) continue;
-            BigDecimal avgDaily = total.divide(BigDecimal.valueOf(days), 3, java.math.RoundingMode.HALF_UP);
-            if (avgDaily.compareTo(BigDecimal.ZERO) <= 0) continue;
-            var leadList = leads.getOrDefault(code, java.util.List.of());
-            double avgLead = leadList.isEmpty() ? 7.0
-                    : leadList.stream().limit(10).mapToLong(Long::longValue).average().orElse(7.0);
-            BigDecimal stock = stockByMat.getOrDefault(code, BigDecimal.ZERO);
-            BigDecimal transit = transitByMat.getOrDefault(code, BigDecimal.ZERO);
-            BigDecimal available = stock.add(transit);
-            BigDecimal targetDays = BigDecimal.valueOf(avgLead + bufferDays);
-            BigDecimal coverDays = available.divide(avgDaily, 1, java.math.RoundingMode.HALF_UP);
-            if (coverDays.compareTo(targetDays) >= 0) continue;
-            BigDecimal targetQty = avgDaily.multiply(targetDays).setScale(2, java.math.RoundingMode.HALF_UP);
-            BigDecimal suggested = targetQty.subtract(available).setScale(2, java.math.RoundingMode.HALF_UP);
-            if (suggested.compareTo(BigDecimal.ZERO) <= 0) continue;
-            var m = e.getValue();
-            java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
-            row.put("materialCode", code);
-            row.put("materialName", m.name);
-            row.put("unit", unitByMat.getOrDefault(code, ""));
-            row.put("avgDailyQty", avgDaily);
-            row.put("avgLeadDays", BigDecimal.valueOf(avgLead).setScale(1, java.math.RoundingMode.HALF_UP));
-            row.put("stockQty", stock);
-            row.put("transitQty", transit);
-            row.put("coverDays", coverDays);
-            row.put("targetDays", targetDays.setScale(1, java.math.RoundingMode.HALF_UP));
-            row.put("suggested", suggested);
-            row.put("level", coverDays.compareTo(BigDecimal.valueOf(bufferDays)) < 0 ? "RED" : "ORANGE");
-            rows.add(row);
-        }
-        rows.sort(java.util.Comparator.comparing(r -> (BigDecimal) r.get("coverDays")));
-        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
-        result.put("bufferDays", bufferDays);
-        result.put("materialCount", rows.size());
-        result.put("lines", rows);
-        return result;
     }
 }

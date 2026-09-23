@@ -58,10 +58,17 @@
               <el-tag size="small" type="info">{{ row.warehouseName || '-' }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="安全库存" width="110" align="right">
+          <!-- v11.2 动态请购点：安全库存 = 日均 × (平均到货周期+10天缓冲) -->
+          <el-table-column label="请购点库存" width="115" align="right">
             <template #default="{ row }">
-              <span class="safe-stock" title="安全库存 = 日均用量 × 30 天">{{ fmtNum(row.safeStock) }}</span>
+              <span class="safe-stock" :title="`请购点 = 日均用量 × (平均到货周期 ${row.avgLeadDays ?? 7} 天 + 缓冲 ${data?.bufferDays ?? 10} 天)`">{{ fmtNum(row.safeStock) }}</span>
             </template>
+          </el-table-column>
+          <el-table-column label="平均到货周期" width="110" align="right">
+            <template #default="{ row }">{{ row.avgLeadDays ?? 7 }} 天</template>
+          </el-table-column>
+          <el-table-column label="建议采购量" width="115" align="right">
+            <template #default="{ row }"><strong>{{ fmtNum(row.suggestedQty) }}</strong></template>
           </el-table-column>
           <el-table-column label="月均用量" width="100" align="right">
             <template #default="{ row }">{{ fmtNum(row.avgMonthlyQty) }}</template>
@@ -69,9 +76,10 @@
           <el-table-column label="日均用量" width="100" align="right">
             <template #default="{ row }">{{ fmtNum(row.avgDailyQty) }}</template>
           </el-table-column>
-          <el-table-column label="可用天数" width="110" align="right">
+          <el-table-column label="可用/请购点(天)" width="135" align="right">
             <template #default="{ row }">
               <span :class="isRed(row) ? 'days-red' : 'days-warn'">{{ row.availableDays }}</span>
+              <span class="text-muted" style="font-size:12px"> / {{ row.targetDays ?? '?' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="预警级别" width="110" align="center">

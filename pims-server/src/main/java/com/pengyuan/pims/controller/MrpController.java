@@ -32,16 +32,6 @@ public class MrpController {
     }
 
     /** 一键生成请购单（DRAFT，走请购审核流） */
-    /** v11.1 历史用量维度：每日用量×(平均到货周期+缓冲) 低于请购点提醒采购 */
-    @PostMapping("/suggest-usage")
-    @SaCheckPermission("purchase:read")
-    public Result<java.util.Map<String, Object>> suggestUsage(@RequestBody(required = false) java.util.Map<String, Object> body) {
-        int buffer = 10;
-        if (body != null && body.get("bufferDays") != null)
-            buffer = Integer.parseInt(String.valueOf(body.get("bufferDays")));
-        return Result.ok(service.suggestByUsage(buffer));
-    }
-
     @PostMapping("/create-order")
     @SaCheckPermission(value = "purchase:write")
     public Result<Map<String, Object>> createOrder(@RequestBody Map<String, Object> body) {

@@ -644,6 +644,25 @@ private Map<String, Object> doLowStockReport() {
                     .merge(whId, toBigDecimal(row[2]), BigDecimal::add);
         }
 
+        // v11.2 动态请购点：每物料平均到货周期（最近10次 采购日期→到货日期 均值，无历史默认7天）
+        final int bufferDays = 10;
+        Map<String, List<Long>> leadsByMat = new HashMap<>();
+        for (Map<String, Object> r : jdbc.queryForList(
+                "SELECT pa.material_code AS code, pa.arrival_date AS ad, rp.purchase_date AS pd " +
+                "FROM purchase_arrival pa JOIN raw_material_purchase rp ON rp.order_no = pa.ref_order_no " +
+                "WHERE pa.status = 'APPROVED' AND pa.type = 'RAW' AND rp.purchase_date IS NOT NULL AND pa.arrival_date IS NOT NULL")) {
+            String code = String.valueOf(r.get("code"));
+            long ad = ((Number) r.get("ad")).longValue(), pd = ((Number) r.get("pd")).longValue();
+            long lead = java.time.temporal.ChronoUnit.DAYS.between(
+                    java.time.LocalDate.ofEpochDay(pd / 86400000L), java.time.LocalDate.ofEpochDay(ad / 86400000L));
+            leadsByMat.computeIfAbsent(code, k -> new ArrayList<>()).add(Math.max(lead, 0));
+        }
+        Map<String, BigDecimal> leadDaysByMat = new HashMap<>();
+        for (Map.Entry<String, List<Long>> e2 : leadsByMat.entrySet()) {
+            double avg = e2.getValue().stream().limit(10).mapToLong(Long::longValue).average().orElse(7.0);
+            leadDaysByMat.put(e2.getKey(), BigDecimal.valueOf(avg).setScale(1, RoundingMode.HALF_UP));
+        }
+
         List<Map<String, Object>> rows = new ArrayList<>();
         for (Map.Entry<String, BigDecimal> e : usageTotal.entrySet()) {
             String[] parts = e.getKey().split("\\|", 2);
@@ -659,10 +678,14 @@ private Map<String, Object> doLowStockReport() {
             // v5.34：当前库存/安全库存/可用天数均按该仓库计算
             BigDecimal stock = stockByWhId.getOrDefault(code, new java.util.LinkedHashMap<>())
                     .getOrDefault(whId, BigDecimal.ZERO);
-            BigDecimal safeStock = avgDaily.multiply(BigDecimal.valueOf(30)).setScale(2, RoundingMode.HALF_UP);
+            // v11.2 请购点 = 平均到货周期 + 缓冲(10天)；低于请购点才提醒（替代原固定15天阈值）
+            BigDecimal leadDays = leadDaysByMat.getOrDefault(code, BigDecimal.valueOf(7));
+            BigDecimal targetDays = leadDays.add(BigDecimal.valueOf(bufferDays));
             BigDecimal availableDays = stock.divide(avgDaily, 1, RoundingMode.HALF_UP);
-            // 预警过滤：该仓库可用天数 < 15 天
-            if (availableDays.compareTo(BigDecimal.valueOf(15)) >= 0) continue;
+            if (availableDays.compareTo(targetDays) >= 0) continue;
+            BigDecimal suggested = avgDaily.multiply(targetDays).subtract(stock)
+                    .setScale(2, RoundingMode.HALF_UP);
+            BigDecimal safeStock = avgDaily.multiply(targetDays).setScale(2, RoundingMode.HALF_UP);
 
             Material m = rawMaterials.get(code);
             Map<String, Object> row = new LinkedHashMap<>();
@@ -683,19 +706,24 @@ private Map<String, Object> doLowStockReport() {
             row.put("avgMonthlyQty", avgMonthly);
             row.put("avgDailyQty", avgDaily);
             row.put("availableDays", availableDays);
-            row.put("level", availableDays.compareTo(BigDecimal.TEN) < 0 ? "RED" : "ORANGE");
+            // v11.2 动态请购点输出
+            row.put("avgLeadDays", leadDays);
+            row.put("targetDays", targetDays.setScale(1, RoundingMode.HALF_UP));
+            row.put("suggestedQty", suggested.max(BigDecimal.ZERO));
+            row.put("level", availableDays.compareTo(BigDecimal.valueOf(bufferDays)) < 0 ? "RED" : "ORANGE");
             rows.add(row);
         }
         // 按可用天数升序（最紧急在前），无库存(=0)自然排最前
         rows.sort(Comparator.comparing(r -> (BigDecimal) r.get("availableDays")));
 
         long redCount = rows.stream().filter(r -> "RED".equals(r.get("level"))).count();
-        return Map.of(
+        Map<String, Object> out = new LinkedHashMap<>(Map.of(
                 "rows", rows,
                 "warningCount", rows.size(),
                 "redCount", redCount,
-                "totalRawCount", rawMaterials.size()
-        );
+                "totalRawCount", rawMaterials.size()));
+        out.put("bufferDays", bufferDays);   // v11.2 动态请购点口径说明
+        return out;
     }
 
     // ==================== 批次过期预警报表（v5.23） ====================
