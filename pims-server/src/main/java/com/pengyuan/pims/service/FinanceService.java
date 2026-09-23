@@ -199,16 +199,19 @@ public class FinanceService {
      * v7.6：加周转指标（口径同应收总表，余额=累计立账−累计付款）
      */
     public List<java.util.Map<String, Object>> listAPTotalBySupplier(String start, String end) {
-        boolean hasPeriod = start != null && !start.isBlank() && end != null && !end.isBlank();
-        String endEx = hasPeriod ? java.time.LocalDate.parse(end).plusDays(1).toString() : null;
+        // v11.4 支持单日期筛选：只传截止日 = 期初清零看累计（对账口径）；都空 = 全部
+        boolean hasPeriod = (start != null && !start.isBlank()) || (end != null && !end.isBlank());
+        String effStart = (start != null && !start.isBlank()) ? start : "1970-01-01";
+        String endEx = (end != null && !end.isBlank())
+                ? java.time.LocalDate.parse(end).plusDays(1).toString() : "9999-01-01";
         java.util.Map<Long, java.math.BigDecimal> billed = hasPeriod
-                ? groupToMap(apRepo.billedBySupplier(start, endEx)) : java.util.Map.of();
+                ? groupToMap(apRepo.billedBySupplier(effStart, endEx)) : java.util.Map.of();
         java.util.Map<Long, java.math.BigDecimal> openBilled = hasPeriod
-                ? groupToMap(apRepo.cumBilledBySupplier(start)) : java.util.Map.of();
+                ? groupToMap(apRepo.cumBilledBySupplier(effStart)) : java.util.Map.of();
         java.util.Map<Long, java.math.BigDecimal> closeBilled = hasPeriod
                 ? groupToMap(apRepo.cumBilledBySupplier(endEx)) : java.util.Map.of();
         java.util.Map<Long, java.math.BigDecimal> openPaid = hasPeriod
-                ? groupToMap(disbursementRepo.cumPaidBySupplier(start)) : java.util.Map.of();
+                ? groupToMap(disbursementRepo.cumPaidBySupplier(effStart)) : java.util.Map.of();
         java.util.Map<Long, java.math.BigDecimal> closePaid = hasPeriod
                 ? groupToMap(disbursementRepo.cumPaidBySupplier(endEx)) : java.util.Map.of();
 
