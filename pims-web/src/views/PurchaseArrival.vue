@@ -140,6 +140,12 @@
           <el-table-column prop="zoneName" label="分库" :width="cw('分库') || undefined" min-width="90" />
           <el-table-column prop="locationName" label="库位" :width="cw('库位') || undefined" min-width="90" />
           <el-table-column prop="operator" label="操作人" width="90" />
+          <el-table-column label="操作" width="90" align="center">
+            <template #default="{ row }">
+              <!-- v11.0 到货后续调价（已审核且未付款可重算应付；已付款需走退货红冲） -->
+              <button v-if="row.status === 'APPROVED'" class="op-btn op-btn-warn" @click="openAdjust(row)">调价</button>
+            </template>
+          </el-table-column>
         </p-table>
         </template>
         <!-- v10.1 手机卡片视图：到货明细 -->
@@ -173,6 +179,28 @@
     </div>
 
     <!-- 录入到货弹窗 -->
+    <!-- v11.0 到货调价 -->
+    <el-dialog title="到货调价（重算应付）" v-model="adjustVisible" width="min(480px, 94vw)" destroy-on-close>
+      <el-form label-width="100px">
+        <el-form-item label="到货单号"><span>{{ adjustRow?.docNo }}</span></el-form-item>
+        <el-form-item label="物料"><span>{{ adjustRow?.materialName }}（{{ adjustRow?.materialCode }}）</span></el-form-item>
+        <el-form-item label="数量"><span>{{ adjustRow?.qty }} {{ adjustRow?.unit || '' }}</span></el-form-item>
+        <el-form-item label="原含税单价"><span>￥{{ fmtTax(adjustRow?.unitPrice) }}</span></el-form-item>
+        <el-form-item label="新含税单价" required>
+          <el-input-number v-model="adjustForm.price" :min="0.01" :precision="4" :step="0.1" style="width:100%" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="调价原因" required>
+          <el-input v-model="adjustForm.reason" type="textarea" :rows="2" placeholder="必填：对账追责依据" maxlength="200" show-word-limit />
+        </el-form-item>
+        <el-alert type="warning" :closable="false" show-icon
+          title="调价后将重算应付金额；已付款的应付不可调价（请走采购退货红冲）；已入库批次的库存成本同步重估" style="margin-bottom:4px" />
+      </el-form>
+      <template #footer>
+        <el-button @click="adjustVisible = false">取消</el-button>
+        <el-button type="primary" :loading="adjusting" @click="submitAdjust">确认调价</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog title="录入到货" v-model="arrivalVisible" width="min(1100px, 96vw)" destroy-on-close>
       <el-form :model="arrivalForm" label-width="90px">
         <el-form-item label="合同号">
@@ -298,6 +326,30 @@ const perms = ref([])
 const activeTab = ref('RAW')       // RAW / FINISHED / DETAIL
 const detailType = ref('RAW')      // 明细内部分类
 const detailRows = ref([])
+// v11.0 到货调价
+const adjustVisible = ref(false)
+const adjusting = ref(false)
+const adjustRow = ref(null)
+const adjustForm = ref({ price: null, reason: '' })
+function openAdjust(row) {
+  adjustRow.value = row
+  adjustForm.value = { price: Number(row.unitPrice) || null, reason: '' }
+  adjustVisible.value = true
+}
+async function submitAdjust() {
+  if (!adjustForm.value.price || adjustForm.value.price <= 0) { ElMessage.warning('请输入大于 0 的新单价'); return }
+  if (!adjustForm.value.reason || !adjustForm.value.reason.trim()) { ElMessage.warning('调价必须填写原因'); return }
+  adjusting.value = true
+  try {
+    await api.put(`/purchase-arrival/${adjustRow.value.id}/price`, {
+      price: adjustForm.value.price, reason: adjustForm.value.reason.trim() })
+    ElMessage.success('调价成功，应付已重算')
+    adjustVisible.value = false
+    fetchDetails()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || '调价失败')
+  } finally { adjusting.value = false }
+}
 const detailTotal = ref(0)
 // v5.27：多选到货明细（打印标签用）
 const selectedDetailRows = ref([])

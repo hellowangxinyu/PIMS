@@ -275,6 +275,17 @@ public class PurchaseController {
         return Result.ok(service.reverseAuditArrival(id));
     }
 
+    /** v11.0 到货后续调价：改含税单价并重算应付（已付款禁止，需填原因，锁期/质检/台账三联动） */
+    @PutMapping("/purchase-arrival/{id}/price")
+    @SaCheckPermission(value = "purchase:write")
+    public Result<PurchaseArrival> adjustArrivalPrice(@PathVariable Long id,
+                                                      @RequestBody java.util.Map<String, Object> body) {
+        java.math.BigDecimal price = new java.math.BigDecimal(String.valueOf(body.get("price")));
+        String reason = body.get("reason") != null ? String.valueOf(body.get("reason")) : "";
+        return Result.ok(service.adjustArrivalPrice(id, price, reason,
+                userService.currentOperatorName()));
+    }
+
     // ==================== 到货录入（新） ====================
 
     /** 获取未完全到货的订单列表 */

@@ -27,6 +27,8 @@ List<QualityInspection> findByStatusOrderByCreateTimeDesc(String status);
 
     List<QualityInspection> findByRefDocNoAndType(String refDocNo, String type);
 
+    List<QualityInspection> findByArrivalId(Long arrivalId);
+
     /** 查询某物料+批次是否有合格/让步的质检记录 */
     List<QualityInspection> findByMaterialCodeAndBatchNoAndStatusIn(String materialCode, String batchNo, List<String> statuses);
 

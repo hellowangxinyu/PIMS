@@ -43,6 +43,8 @@ public class PurchaseService {
     private final WarehouseZoneRepository zoneRepo;
     // v5.24：全局写锁（合同号生成+保存共用，防并发撞号）
     private final WriteQueue writeQueue;
+    private final PeriodGuard periodGuard;   // v11.0 到货调价：锁期校验
+    private final com.pengyuan.pims.repository.InventoryLedgerRepository ledgerRepo;   // v11.0 到货调价：已入库批次成本重估
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;   // v6.5 B3
     private final MaterialService materialService;
     // v5.60：制单人写入
@@ -66,7 +68,9 @@ public class PurchaseService {
                            MaterialService materialService,
                            UserService userService,
                            WarehouseRepository warehouseRepo, com.pengyuan.pims.repository.QualityInspectionRepository qcRepo,
-                       org.springframework.jdbc.core.JdbcTemplate jdbc) {
+                       org.springframework.jdbc.core.JdbcTemplate jdbc,
+                       PeriodGuard periodGuard,
+                       com.pengyuan.pims.repository.InventoryLedgerRepository ledgerRepo) {
         this.rawRepo = rawRepo;
         this.finishedRepo = finishedRepo;
         this.arrivalRepo = arrivalRepo;
@@ -79,6 +83,8 @@ public class PurchaseService {
         this.locationRepo = locationRepo;
         this.zoneRepo = zoneRepo;
         this.writeQueue = writeQueue;
+        this.periodGuard = periodGuard;
+        this.ledgerRepo = ledgerRepo;
         this.qcRepo = qcRepo;
         this.materialService = materialService;
         this.userService = userService;
@@ -944,6 +950,90 @@ public class PurchaseService {
         ap.remark = "采购到货自动生成 " + orderNo + "（到货单#" + pa.id + "）";
         financeService.createAP(ap);
         log.info("到货审核生成AP(按到货单): 到货单#{} 订单={} 供应商={} 金额={}", pa.id, orderNo, supplierName, amount);
+    }
+
+    // ==================== v11.0 到货调价（调价后重算应付） ====================
+
+    /**
+     * 采购到货后续调价：改含税单价 → 重算应付 + 同步未判定质检单 + 已入库批次台账成本重估。
+     * 口径（宁可禁止不可乱账）：
+     *  - 仅 APPROVED 到货单可调；DRAFT 引导审核前修正，避免双口径
+     *  - 已付款/部分付款的 AP 禁止调价（差额会扭曲已付款流水，引导走采购退货红冲，同反审核拦截口径）
+     *  - 税率不可调（价税分离用全局字典税率，改税率会使台账/AP 口径分叉）
+     *  - 已入库批次按"余量重估"（剩余 qty × 新不含税价）；已出库部分不回溯（与月末成本回填同口径）
+     *  - 调价必须填写原因（作废/变更类动作铁律），单据与 AP 双方留痕
+     */
+    public PurchaseArrival adjustArrivalPrice(Long id, java.math.BigDecimal newPrice, String reason, String operator) {
+        if (newPrice == null || newPrice.compareTo(java.math.BigDecimal.ZERO) <= 0)
+            throw new IllegalArgumentException("新单价必须大于 0");
+        if (reason == null || reason.isBlank())
+            throw new IllegalArgumentException("调价必须填写原因（对账追责依据）");
+        return writeQueue.executeTx(() -> {
+            PurchaseArrival pa = arrivalRepo.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("到货单不存在"));
+            if (!"APPROVED".equals(pa.status))
+                throw new IllegalArgumentException("仅已审核到货单可调价，未审核单请在审核前修正");
+            // 锁期：按到货业务日期（同收付款口径）
+            periodGuard.checkOpen(pa.arrivalDate != null ? pa.arrivalDate : java.time.LocalDate.now());
+
+            java.math.BigDecimal oldPrice = pa.unitPrice;
+            java.math.BigDecimal qty = pa.qty != null ? pa.qty : java.math.BigDecimal.ZERO;
+            pa.unitPrice = newPrice;
+            pa.remark = (pa.remark == null || pa.remark.isBlank() ? "" : pa.remark + "；")
+                    + "调价 " + oldPrice + "→" + newPrice + "（" + reason + "，" + operator + "）";
+            arrivalRepo.save(pa);
+
+            // ① 重算应付（arrivalId 精确匹配；含税口径 qty×新价）
+            apRepo.findByArrivalId(pa.id).stream().findFirst().ifPresent(ap -> {
+                java.math.BigDecimal paid = ap.paidAmount != null ? ap.paidAmount : java.math.BigDecimal.ZERO;
+                if (paid.compareTo(java.math.BigDecimal.ZERO) > 0)
+                    throw new IllegalStateException("该到货单应付已付款 " + paid + " 元，不可调价；请走采购退货红冲");
+                java.math.BigDecimal newAmount = qty.multiply(newPrice).setScale(2, java.math.RoundingMode.HALF_UP);
+                ap.amount = newAmount;
+                ap.status = "UNPAID";
+                ap.updateTime = java.time.LocalDateTime.now();
+                ap.remark = (ap.remark == null || ap.remark.isBlank() ? "" : ap.remark + "；")
+                        + "调价重算 " + oldPrice + "→" + newPrice + "（" + reason + "）";
+                apRepo.save(ap);
+                log.info("到货#{} 调价重算AP: {}→{} 新金额={}", pa.id, oldPrice, newPrice, newAmount);
+            });
+
+            // ② 质检单同步：PENDING 改价（判定后按新价入库）；已 PASS 的不动单价而是走台账重估
+            for (com.pengyuan.pims.entity.QualityInspection qc : qcRepo.findByArrivalId(pa.id)) {
+                if ("PENDING".equals(qc.status)) {
+                    qc.unitPrice = newPrice;
+                    qcRepo.save(qc);
+                    log.info("到货#{} 调价同步待检质检单 {}: {}", pa.id, qc.inspectionNo, newPrice);
+                } else if ("PASS".equals(qc.status) || "CONCESSION".equals(qc.status)) {
+                    // ③ 已入库批次：台账成本余量重估（价税分离口径，与 triggerInventory 同源）
+                    java.math.BigDecimal rate = taxRatePercent();
+                    java.math.BigDecimal netPrice = rate.compareTo(java.math.BigDecimal.ZERO) > 0
+                            ? newPrice.divide(java.math.BigDecimal.ONE.add(
+                                    rate.divide(new java.math.BigDecimal("100"), 6, java.math.RoundingMode.HALF_UP)),
+                                    4, java.math.RoundingMode.HALF_UP)
+                            : newPrice.setScale(4, java.math.RoundingMode.HALF_UP);
+                    for (var l : ledgerRepo.findByQcInspectionNo(qc.inspectionNo)) {
+                        l.unitPrice = netPrice;
+                        // 余量重估：剩余 qty × 新价；qty=0 批次金额清零（尾差已由末次出库担）
+                        l.amount = (l.qty != null ? l.qty : java.math.BigDecimal.ZERO).multiply(netPrice)
+                                .setScale(2, java.math.RoundingMode.HALF_UP);
+                        ledgerRepo.save(l);
+                    }
+                    log.info("到货#{} 调价重估台账批次（质检单 {}）: 不含税价={}", pa.id, qc.inspectionNo, netPrice);
+                }
+            }
+            log.info("到货调价: 到货单#{} {} 单价 {}→{} 原因={} 操作人={}", pa.id, pa.docNo, oldPrice, newPrice, reason, operator);
+            return pa;
+        });
+    }
+
+    /** v11.0：价税分离全局税率（与 QualityInspectionService.taxRatePercent 同 SQL 同源） */
+    private java.math.BigDecimal taxRatePercent() {
+        try {
+            var rows = jdbc.queryForList("SELECT value FROM dict_item WHERE type = 'tax_rate' AND enabled = 1 ORDER BY sort_order ASC LIMIT 1");
+            if (!rows.isEmpty()) return new java.math.BigDecimal(String.valueOf(rows.get(0).get("value")));
+        } catch (Exception ignored) { }
+        return new java.math.BigDecimal("13");
     }
 
     /** v8.0（P0-8）：到货审核前超收校验——其他已审核到货 + 本单 ≤ 订单量（与 recordArrival 同口径） */
