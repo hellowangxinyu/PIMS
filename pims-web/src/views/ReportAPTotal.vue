@@ -35,13 +35,15 @@
 
     <div class="table-card">
       <div class="tab-toolbar">
-        <span class="tab-count">共 {{ list.length }} 个供应商</span>
+        <!-- v11.5 供应商搜索：本地过滤，显示某个供应商的应付 -->
+        <el-input v-model="supplierKeyword" placeholder="搜索供应商" clearable size="small" style="width:200px" @keyup.enter="void 0" />
+        <span class="tab-count">共 {{ filteredList.length }} 个供应商{{ supplierKeyword ? `（筛选自 ${list.length} 家）` : '' }}</span>
         <!-- v11.4 单日期筛选：选"截至日"看当天累计应付（对账口径）；清空看全部 -->
         <el-date-picker v-model="endDate" type="date" size="small" value-format="YYYY-MM-DD"
           placeholder="统计截至（默认全部）" :shortcuts="dateShortcuts" style="width:190px" clearable @change="load" />
       </div>
       <!-- v11.3 默认按超期应付从少到多 -->
-      <p-table :data="list" stripe border style="width:100%" show-summary
+      <p-table :data="filteredList" stripe border style="width:100%" show-summary
                 :summary-method="getSummary" :default-sort="{ prop: 'overdueAmount', order: 'ascending' }">
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="supplierName" label="供应商" min-width="220" show-overflow-tooltip />
@@ -110,6 +112,13 @@ import { ref, computed, onMounted } from 'vue'
 import api from '../api'
 
 const list = ref([])
+// v11.5 供应商搜索（本地过滤）
+const supplierKeyword = ref('')
+const filteredList = computed(() => {
+  const kw = supplierKeyword.value.trim().toLowerCase()
+  if (!kw) return list.value
+  return list.value.filter(r => (r.supplierName || '').toLowerCase().includes(kw))
+})
 const perms = ref([])
 
 function hasPerm(c) { return perms.value.includes(c) }
