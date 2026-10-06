@@ -20,7 +20,7 @@
         <div class="sc-value" style="color:#b56a5c">¥{{ fmt(totalRemaining) }}</div>
       </div>
       <div class="summary-card">
-        <div class="sc-label">整体付款率</div>
+        <div class="sc-label">付款率</div>
         <div class="sc-value">{{ paidRate }}%</div>
       </div>
       <div class="summary-card">
@@ -36,7 +36,7 @@
     <div class="table-card">
       <div class="tab-toolbar">
         <!-- v11.5 供应商搜索：本地过滤，显示某个供应商的应付 -->
-        <el-input v-model="supplierKeyword" placeholder="搜索供应商" clearable size="small" style="width:200px" @keyup.enter="void 0" />
+        <el-input v-model="supplierKeyword" placeholder="搜索供应商" clearable size="small" style="width:200px" />
         <span class="tab-count">共 {{ filteredList.length }} 个供应商{{ supplierKeyword ? `（筛选自 ${list.length} 家）` : '' }}</span>
         <!-- v11.4 单日期筛选：选"截至日"看当天累计应付（对账口径）；清空看全部 -->
         <el-date-picker v-model="endDate" type="date" size="small" value-format="YYYY-MM-DD"
@@ -121,7 +121,6 @@ const filteredList = computed(() => {
 })
 const perms = ref([])
 
-function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
 // v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function progressColor(rate) {
@@ -131,16 +130,16 @@ function progressColor(rate) {
   return '#b56a5c'
 }
 
-// 汇总计算
-const totalAmount = computed(() => list.value.reduce((s, r) => s + Number(r.totalAmount || 0), 0))
-const totalPaid = computed(() => list.value.reduce((s, r) => s + Number(r.paidAmount || 0), 0))
+// 汇总计算（v11.6 随供应商搜索联动，与表格口径一致）
+const totalAmount = computed(() => filteredList.value.reduce((s, r) => s + Number(r.totalAmount || 0), 0))
+const totalPaid = computed(() => filteredList.value.reduce((s, r) => s + Number(r.paidAmount || 0), 0))
 const totalRemaining = computed(() => totalAmount.value - totalPaid.value)
 const paidRate = computed(() => {
   if (totalAmount.value <= 0) return '0.00'
   return (totalPaid.value * 100 / totalAmount.value).toFixed(2)
 })
 
-// v7.6 应付周转：期间筛选（默认本年初~今天），整体值=Σ行立账 ÷ ((Σ期初+Σ期末)/2)（不可对行周转率求和/平均）
+// v7.6 应付周转：Σ行立账 ÷ ((Σ期初+Σ期末)/2)，不可对行周转率求和/平均；v11.6 起随供应商筛选子集重算，与可见行同口径
 const endDate = ref('')
 const periodLabel = computed(() => endDate.value ? `截至 ${endDate.value.slice(5)}` : '')
 const dateShortcuts = [
@@ -149,9 +148,9 @@ const dateShortcuts = [
   { text: '上月末', value: () => { const d = new Date(); d.setDate(0); return d } }
 ]
 const overallTurnover = computed(() => {
-  const b = list.value.reduce((s, r) => s + Number(r.billedAmount || 0), 0)
-  const op = list.value.reduce((s, r) => s + Number(r.openingBalance || 0), 0)
-  const cl = list.value.reduce((s, r) => s + Number(r.closingBalance || 0), 0)
+  const b = filteredList.value.reduce((s, r) => s + Number(r.billedAmount || 0), 0)
+  const op = filteredList.value.reduce((s, r) => s + Number(r.openingBalance || 0), 0)
+  const cl = filteredList.value.reduce((s, r) => s + Number(r.closingBalance || 0), 0)
   const avg = (op + cl) / 2
   if (avg <= 0 || b <= 0) return null
   return b / avg
@@ -178,7 +177,7 @@ function getSummary({ columns, data }) {
       sums[idx] = '¥' + fmt(data.reduce((s, r) => s + Number(r[prop] || 0), 0))
       return
     }
-    // v7.6 周转合计 = 整体口径（Σ立账 ÷ 平均Σ余额），非行值加总
+    // 周转合计 = Σ立账 ÷ 平均Σ余额（v11.6 随筛选子集重算，非行值加总）
     if (prop === 'turnover' || prop === 'turnoverDays') {
       if (overallTurnover.value == null) { sums[idx] = '—'; return }
       sums[idx] = prop === 'turnover' ? overallTurnover.value.toFixed(2) : overallDays.value.toFixed(1)

@@ -135,15 +135,6 @@ const filtered = computed(() => {
 // v5.66.1 订单下拉（搜索选择 + 选中带出客户）
 const orders = ref([])
 const orderOptions = ref([])
-function orderFilter(kw) {
-  const k = (kw || '').trim().toLowerCase()
-  orderOptions.value = !k ? orders.value.slice(0, 60)
-    : orders.value.filter(o => (o.orderNo || '').toLowerCase().includes(k) || (o.customerName || '').toLowerCase().includes(k)).slice(0, 60)
-}
-function onOrderChange(orderNo) {
-  const o = orders.value.find(x => x.orderNo === orderNo)
-  if (o && !form.value.customerName) form.value.customerName = o.customerName || ''
-}
 
 // v5.66.2 发货单下拉（主入口）：已确认销售出库单，选中带出订单/客户
 const byOrderDirect = ref(false)
@@ -186,17 +177,6 @@ function openDialog(row) {
   visible.value = true
 }
 
-async function resolveOutbound() {
-  if (!form.value.outboundDocNo) { ElMessage.warning('请先填发货单号'); return }
-  try {
-    const r = await api.get('/shipping/resolve-outbound', { params: { outboundDocNo: form.value.outboundDocNo.trim() } })
-    form.value.salesOrderNo = r.salesOrderNo || form.value.salesOrderNo
-    form.value.customerName = r.customerName || form.value.customerName
-    ElMessage.success('已带出订单与客户')
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.msg || e?.message || '带出失败')
-  }
-}
 
 async function submit() {
   if (!form.value.salesOrderNo) { ElMessage.warning('销售订单号必填（选发货单自动带出或手填）'); return }

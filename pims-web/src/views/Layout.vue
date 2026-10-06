@@ -41,6 +41,10 @@
             <div class="nav-group-body"><div class="ngb-inner">
               <router-link v-for="i in g.items" :key="i.path" :to="i.path" class="nav-item sub" :class="{ active: route.path === i.path }">
                 <el-icon class="sub-ic"><component :is="i.icon" /></el-icon>{{ i.title }}
+                <!-- v11.7 任务督办红点：我的待办任务数（逾期标红），60s 轮询 + 切路由刷新 -->
+                <span v-if="i.path === '/task' && taskBadge && taskBadge.myOpenTasks > 0"
+                      class="task-badge" :class="{ overdue: taskBadge.overdueTasks > 0 }"
+                      :title="taskBadge.overdueTasks > 0 ? `${taskBadge.overdueTasks} 项已逾期` : '我的待办任务'">{{ taskBadge.myOpenTasks }}</span>
               </router-link>
             </div></div>
           </div>
@@ -97,9 +101,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { HomeFilled, Operation, List, Box, TrendCharts, Connection, User, Key, Collection, Notebook, Folder, ShoppingCart, SetUp, Setting, ArrowDown, DataAnalysis, Checked, Money, Van, Avatar, Ticket, House, MagicStick, Document, Upload, Download, ShoppingTrolley, Position, RefreshLeft, Search, Memo, Coin, WalletFilled, Wallet, Odometer, PieChart, Histogram, DataLine, Files, Link, Bell, AlarmClock, CircleCheck, Stopwatch, CreditCard, Aim, Brush, Warning, Check, Calendar, Tickets, Stamp, Grid, Suitcase, OfficeBuilding, PriceTag } from '@element-plus/icons-vue'
+import { HomeFilled, Operation, List, Box, TrendCharts, Connection, User, Key, Collection, Notebook, Folder, ShoppingCart, SetUp, Setting, ArrowDown, DataAnalysis, Checked, Money, Van, Avatar, Ticket, House, MagicStick, Document, Upload, Download, ShoppingTrolley, Position, RefreshLeft, Search, Memo, Coin, WalletFilled, Wallet, Odometer, PieChart, Histogram, DataLine, Files, Link, Bell, AlarmClock, CircleCheck, Stopwatch, CreditCard, Aim, Brush, Warning, Calendar, Tickets, Stamp, Grid, Suitcase, OfficeBuilding, PriceTag } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 
@@ -353,7 +357,6 @@ function closeAll() {
 function onTabMouseDown(e, path) {
   if (e.button === 1 && path !== '/') { e.preventDefault(); closeTab(path) }
 }
-import { watch } from 'vue'
 watch(() => route.path, () => addCurrentTab(), { immediate: true })
 const ready = ref(false)
 // v6.4 全局加载指示（api 请求计数广播）
@@ -363,6 +366,14 @@ window.addEventListener('pims-loading', e => { loadingActive.value = !!e.detail 
 function hasPerm(code) { return perms.value.includes(code) }
 
 let timer
+// v11.7 任务督办角标：我的待办任务数（后端 /task/my-count 此前闲置），60s 轮询 + 切路由刷新
+const taskBadge = ref(null)
+let taskTimer
+async function loadTaskBadge() {
+  if (!hasPerm('task:read')) { taskBadge.value = null; return }
+  try { taskBadge.value = await api.get('/task/my-count') } catch {}
+}
+watch(() => route.path, () => { if (ready.value) loadTaskBadge() })
 onMounted(async () => {
   // v6.1 安全：首次登录/重置后强制改密
   // v6.1.1 修复：不再把明文密码存 localStorage（login-pwd，XSS 可直接窃取）——改为改密时现场输入原密码验证
@@ -407,9 +418,11 @@ onMounted(async () => {
   }
   updateTime()
   timer = setInterval(updateTime, 30000)
+  loadTaskBadge()
+  taskTimer = setInterval(loadTaskBadge, 60000)
 })
 
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => { clearInterval(timer); clearInterval(taskTimer) })
 
 function updateTime() {
   const d = new Date()
@@ -564,6 +577,15 @@ async function logout() {
   transition: all 0.18s ease;
   position: relative;
 }
+
+/* v11.7 任务督办角标 */
+.task-badge {
+  margin-left: auto; min-width: 18px; height: 18px; line-height: 18px;
+  border-radius: 9px; padding: 0 5px;
+  background: #64748b; color: #fff;
+  font-size: 11px; font-weight: 700; text-align: center; flex-shrink: 0;
+}
+.task-badge.overdue { background: #b05a4e; }
 
 .nav-item:hover {
   background: var(--pims-sidebar-hover);

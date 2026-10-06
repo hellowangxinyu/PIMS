@@ -180,7 +180,7 @@ const form = ref({ supplierId: null, orderDate: todayLocal(), expectedDeliveryDa
 const { cw, onHeaderDragend } = useColumnResize('purchase_order')
 
 function hasPerm(c) { return perms.value.includes(c) }
-const hasAmountPerm = computed(() => perms.value.includes('purchase:amount') || perms.value.includes('finance:amount'))
+const hasAmountPerm = computed(() => perms.value.includes('finance:amount'))
 const PO_STATUS_MAP = { DRAFT: '草稿', APPROVED: '已审核', RECEIVED: '已到货', CLOSED: '已关闭', CANCELLED: '已取消' }
 function poStatusLabel(s) { return s ? (PO_STATUS_MAP[s] || '未知') : '-' }
 // v6.4 状态色统一（原 APPROVED=橙与采购他页绿相反，误导操作判断）

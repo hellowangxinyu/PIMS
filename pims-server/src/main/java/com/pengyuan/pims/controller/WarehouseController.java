@@ -95,14 +95,7 @@ public class WarehouseController {
 
     // ==================== 库位 ====================
 
-    @GetMapping("/{warehouseId}/locations")
-    @SaCheckPermission(value = "warehouse:read")
-    public Result<List<WarehouseLocation>> listLocationsByWarehouse(
-            @PathVariable Long warehouseId,
-            @RequestParam(defaultValue = "false") boolean includeIsolated) {
-        // v5.38：默认排除隔离分库（隔离区/油尾区）库位；includeIsolated=true 供隔离货管理场景（质检判定选位）
-        return Result.ok(locationService.listByWarehouse(warehouseId, includeIsolated));
-    }
+    // v11.7 清理：/warehouse/{id}/locations 整仓库位列表端点删除（前端走 /warehouse/{id}/zone 分库 + /warehouse/zone/{id}/location 库位两级接口）
 
     /** v5.38：按类型取隔离分库（不合格品库×3/油尾库×2）的库位（质检判定选位等隔离货管理场景专用）；
      *  v5.38.1 warehouseId 可选——每个一级仓都有自己的隔离分库，指定仓取该仓的（不传取第一个）；

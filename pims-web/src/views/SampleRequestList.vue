@@ -232,12 +232,6 @@ function openCreate() {
   dialogVisible.value = true
 }
 
-function openEdit(row) {
-  editing.value = row
-  form.value = { customerId: row.customerId, customerName: row.customerName, refSampleId: row.refSampleId || null, materialDesc: row.materialDesc, qty: Number(row.qty), unit: row.unit, sampleSize: row.sampleSize || 'NORMAL', applicant: row.applicant, remark: row.remark }
-  loadRefFormulas()
-  dialogVisible.value = true
-}
 
 function onCustChange(val) {
   const c = customers.value.find(c => c.name === val)

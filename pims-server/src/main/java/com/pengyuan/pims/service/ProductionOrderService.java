@@ -352,30 +352,7 @@ public class ProductionOrderService {
         return order;
     }
 
-    /**
-     * v5.27：调整排产顺序（上移/下移，与相邻单子交换顺序号）
-     * @param direction 1=下移(往后排)，-1=上移(往前排)
-     */
-    @Transactional
-    public void moveSchedule(Long id, int direction) {
-        ProductionOrder order = getById(id);
-        if (!"SCHEDULED".equals(order.status) || order.scheduleSeq == null)
-            throw new IllegalArgumentException("只有已排产的订单可调整顺序");
-        List<ProductionOrder> scheduled = orderRepo.findByStatusOrderByScheduleSeqAsc("SCHEDULED");
-        int idx = -1;
-        for (int i = 0; i < scheduled.size(); i++) {
-            if (scheduled.get(i).id.equals(id)) { idx = i; break; }
-        }
-        int target = idx + direction;
-        if (idx < 0 || target < 0 || target >= scheduled.size())
-            throw new IllegalArgumentException("已到排产队列边界");
-        ProductionOrder other = scheduled.get(target);
-        Integer tmp = order.scheduleSeq;
-        order.scheduleSeq = other.scheduleSeq;
-        other.scheduleSeq = tmp;
-        orderRepo.save(order);
-        orderRepo.save(other);
-    }
+    // v11.7 清理：moveSchedule 单单上移下移已随 /{id}/move-schedule 端点下线删除（排产页统一走 reorderSchedule 批量重排）
 
     /**
      * 确认生产订单

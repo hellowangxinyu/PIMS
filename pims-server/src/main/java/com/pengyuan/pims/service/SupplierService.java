@@ -27,8 +27,7 @@ public class SupplierService {
     /** 查询所有启用的供应商（下拉选择用） */
     public List<Supplier> listAll() { return repo.findByEnabledTrue(); }
 
-    /** v5.27：管理列表全部（正常 + 已拉黑，排除已删除） */
-    public List<Supplier> listAllManage() { return repo.findAllActiveOrBlacklisted(); }
+    // v11.7 清理：listAllManage 已删除（管理列表走分页搜索；其仓库方法 findAllActiveOrBlacklisted 一并删除）
 
     /** v5.27：下拉选择全部启用（含搜索用） */
     public List<Supplier> listEnabled() { return repo.findByEnabledTrue(); }

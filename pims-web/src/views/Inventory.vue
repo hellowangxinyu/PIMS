@@ -261,7 +261,7 @@
 <script setup>
 import { todayLocal } from '../utils/date'
 import { statusType as globalStatusType } from '../utils/statusTag'
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { loadTaxRate, netOfTax, taxOf, fmtTax } from '../utils/tax'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'

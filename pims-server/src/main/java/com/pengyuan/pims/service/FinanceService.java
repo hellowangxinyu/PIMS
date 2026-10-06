@@ -148,19 +148,27 @@ public class FinanceService {
      *   期间外客户（期间无立账且期初期末均 0）不输出周转值
      */
     public List<java.util.Map<String, Object>> listARTotalByCustomer(String start, String end) {
-        boolean hasPeriod = start != null && !start.isBlank() && end != null && !end.isBlank();
-        String endEx = hasPeriod ? java.time.LocalDate.parse(end).plusDays(1).toString() : null;
+        // v11.7 同步应付总表：支持单日期筛选（只传截止日 = 期初清零看累计对账口径）；都空 = 全部
+        boolean hasPeriod = (start != null && !start.isBlank()) || (end != null && !end.isBlank());
+        String effStart = (start != null && !start.isBlank()) ? start : "1970-01-01";
+        String endEx = (end != null && !end.isBlank())
+                ? java.time.LocalDate.parse(end).plusDays(1).toString() : "9999-01-01";
         java.util.Map<Long, java.math.BigDecimal> billed = hasPeriod
-                ? groupToMap(arRepo.billedByCustomer(start, endEx)) : java.util.Map.of();
+                ? groupToMap(arRepo.billedByCustomer(effStart, endEx)) : java.util.Map.of();
         java.util.Map<Long, java.math.BigDecimal> openBilled = hasPeriod
-                ? groupToMap(arRepo.cumBilledByCustomer(start)) : java.util.Map.of();
+                ? groupToMap(arRepo.cumBilledByCustomer(effStart)) : java.util.Map.of();
         java.util.Map<Long, java.math.BigDecimal> closeBilled = hasPeriod
                 ? groupToMap(arRepo.cumBilledByCustomer(endEx)) : java.util.Map.of();
         java.util.Map<Long, java.math.BigDecimal> openRecv = hasPeriod
-                ? groupToMap(receiptRepo.cumReceivedByCustomer(start)) : java.util.Map.of();
+                ? groupToMap(receiptRepo.cumReceivedByCustomer(effStart)) : java.util.Map.of();
         java.util.Map<Long, java.math.BigDecimal> closeRecv = hasPeriod
                 ? groupToMap(receiptRepo.cumReceivedByCustomer(endEx)) : java.util.Map.of();
 
+        // v11.7 超期应收（已过账期未收余额），用于总表排序与展示（口径同应付总表 v11.3）
+        java.util.Map<Long, java.math.BigDecimal> overdueByCustomer = new java.util.HashMap<>();
+        for (Object[] o : arRepo.overdueByCustomer(java.time.LocalDate.now())) {
+            overdueByCustomer.put(((Number) o[0]).longValue(), money(o[1]));
+        }
         List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
         for (Object[] r : arRepo.totalByCustomer()) {
             java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
@@ -175,6 +183,7 @@ public class FinanceService {
             row.put("partialCount", ((Number) r[6]).intValue());
             row.put("paidCount", ((Number) r[7]).intValue());
             row.put("remainingAmount", total.subtract(received));
+            row.put("overdueAmount", overdueByCustomer.getOrDefault(((Number) r[0]).longValue(), BigDecimal.ZERO));
             row.put("receivedRate", total.compareTo(BigDecimal.ZERO) > 0
                     ? received.multiply(new BigDecimal("100")).divide(total, 2, java.math.RoundingMode.HALF_UP)
                     : BigDecimal.ZERO);
@@ -189,6 +198,9 @@ public class FinanceService {
             }
             result.add(row);
         }
+        // v11.7 超期应收从少到多（无超期的自然排前，超期多的排后面；同应付总表 v11.3）
+        result.sort(java.util.Comparator.comparing(m ->
+                (java.math.BigDecimal) m.getOrDefault("overdueAmount", BigDecimal.ZERO)));
         return result;
     }
 

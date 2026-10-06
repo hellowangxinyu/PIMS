@@ -73,20 +73,7 @@ public class FinanceController {
         return Result.ok(service.createAP(ap));
     }
 
-    @PostMapping("/ar/{id}/receive")
-    @SaCheckPermission(value = "finance:write")
-    public Result<?> receivePayment(@PathVariable Long id, @RequestParam String amount) {
-        // v6.1.4：double 传参有浮点尾差（0.1+0.2 类误差可进账），改字符串直转 BigDecimal
-        service.receivePayment(id, new BigDecimal(amount));
-        return Result.ok("回款成功");
-    }
-
-    @PostMapping("/ap/{id}/pay")
-    @SaCheckPermission(value = "finance:write")
-    public Result<?> makePayment(@PathVariable Long id, @RequestParam String amount) {
-        service.makePayment(id, new BigDecimal(amount));   // v6.1.4 同上，字符串直转
-        return Result.ok("付款成功");
-    }
+    // v11.7 清理：/ar/{id}/receive 与 /ap/{id}/pay 按单核销端点已下线（前端统一走 /finance/receipt、/finance/disbursement 整单收付款；service 方法由预收冲抵复用保留）
 
     // ============ 收款单 / 付款单 ============
 

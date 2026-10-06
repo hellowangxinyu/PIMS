@@ -111,7 +111,7 @@
 import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, onMounted } from 'vue'
 import { loadTaxRate, netOfTax, taxOf, fmtTax } from '../utils/tax'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import api from '../api'
 // v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
 import { downloadFile } from '../utils/download'
@@ -203,10 +203,6 @@ async function submit() {
   } catch {} finally { loading.value = false }
 }
 
-async function confirm(row) {
-  // 其他入库已改为创建即提交质检，QC判定合格后自动入库，无需手动确认
-  ElMessage.info('该单据已提交质检，请到「质量管理」判定，合格后自动入库')
-}
 
 
 // ===== 分页（v5.9 后端分页）：搜索关键字传后端模糊匹配 =====

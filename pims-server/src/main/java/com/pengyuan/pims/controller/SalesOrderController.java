@@ -181,12 +181,7 @@ public class SalesOrderController {
         return Result.ok(null);
     }
 
-    /** v6.1.6：/ship 遗留入口下线——无批号出库必撞"精确到批次铁律"且不立应收，前端发货走 /outbound/sales/from-order 出库单流程 */
-    @PostMapping("/{id}/ship")
-    @SaCheckPermission(value = "sales:write")
-    public Result<?> ship(@PathVariable Long id) {
-        return Result.fail(410, "该入口已下线，请通过「销售出库单」发货（走批次与应收完整链路）");
-    }
+    // v11.7 清理：/ship 410 桩端点删除（v6.1.6 已下线，前端发货走 /outbound/sales/from-order 出库单流程）
 
     /**
      * v5.27：手工结束订单（已确认/已发货可结束；结束后不可发货、不可转生产/委外）

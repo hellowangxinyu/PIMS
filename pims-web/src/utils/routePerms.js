@@ -22,6 +22,7 @@ export const ROUTE_PERMS = {
   '/finished-product-purchase': 'purchase:read',
   '/purchase-arrival': 'purchase:read',
   '/purchase-order': 'purchase:read',
+  '/purchase': 'purchase:read',
   '/mrp-suggest': 'purchase:read',
   '/return-order': 'purchase:read',
   '/supplier-quality-trace': 'strace:read',

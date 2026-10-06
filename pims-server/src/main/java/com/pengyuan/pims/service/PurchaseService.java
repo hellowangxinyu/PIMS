@@ -529,8 +529,6 @@ public class PurchaseService {
 
     // ==================== 到货管理 ====================
 
-    public List<PurchaseArrival> listArrivals() { return arrivalRepo.findAll(); }
-    public List<PurchaseArrival> listArrivalsByType(String type) { return arrivalRepo.findByTypeOrderByCreateTimeDesc(type); }
 
     /** v5.9：到货列表关键字分页搜索（带类型时关键字同样生效） */
     public org.springframework.data.domain.Page<PurchaseArrival> searchArrivals(String keyword, String type, org.springframework.data.domain.Pageable pageable) {
@@ -710,63 +708,6 @@ public class PurchaseService {
         // v6.1.6：直达路径（到货录入即 APPROVED）同样立应付——原仅 auditArrival 立账，走直达的到货永不生 AP
         generateAPForArrival(pa);
     }
-
-    /**
-     * 手动结束采购订单（即使未完全到货）。
-     * v6.8 短量完结正规化：① 状态守卫——RECEIVED 已到齐无需关闭、DRAFT 请删除或先审核，防手滑误关；
-     * ② 短量（已到 < 订量）时 reason 必填；③ 原因与到货快照追加进 remark，事后可查"为什么 100 只到了 95"。
-     */
-    @Transactional
-    public void closeOrder(Long id, String type, String reason) {
-        if ("RAW".equals(type)) {
-            RawMaterialPurchase rp = rawRepo.findById(id)
-                    .orElseThrow(() -> new IllegalArgumentException("原料采购单不存在"));
-            if ("RECEIVED".equals(rp.status)) throw new IllegalArgumentException("订单已全额到货（RECEIVED），无需关闭");
-            if ("DRAFT".equals(rp.status)) throw new IllegalArgumentException("草稿单请直接删除或先审核，不支持关闭");
-            if ("CLOSED".equals(rp.status)) throw new IllegalArgumentException("订单已关闭");
-            java.math.BigDecimal received = rp.receivedQty == null ? java.math.BigDecimal.ZERO : rp.receivedQty;
-            boolean shortQty = received.compareTo(rp.qty == null ? java.math.BigDecimal.ZERO : rp.qty) < 0;
-            if (shortQty && (reason == null || reason.isBlank())) {
-                throw new IllegalArgumentException(String.format(
-                        "短量关闭必须填写原因：到货 %s / 订量 %s，尚差 %s", received.stripTrailingZeros().toPlainString(),
-                        rp.qty.stripTrailingZeros().toPlainString(),
-                        rp.qty.subtract(received).stripTrailingZeros().toPlainString()));
-            }
-            rp.status = "CLOSED";
-            if (shortQty) {
-                rp.remark = (rp.remark == null || rp.remark.isBlank() ? "" : rp.remark + "；")
-                        + String.format("短量关闭：到货 %s/%s，原因：%s", received.stripTrailingZeros().toPlainString(),
-                        rp.qty.stripTrailingZeros().toPlainString(), reason.trim());
-            }
-            rp.updateTime = java.time.LocalDateTime.now();
-            rawRepo.save(rp);
-            log.info("原料采购单手动关闭: {} 短量={} 原因={}", rp.orderNo, shortQty, reason);
-        } else {
-            FinishedProductPurchase fp = finishedRepo.findById(id)
-                    .orElseThrow(() -> new IllegalArgumentException("成品采购单不存在"));
-            if ("RECEIVED".equals(fp.status)) throw new IllegalArgumentException("订单已全额到货（RECEIVED），无需关闭");
-            if ("DRAFT".equals(fp.status)) throw new IllegalArgumentException("草稿单请直接删除或先审核，不支持关闭");
-            if ("CLOSED".equals(fp.status)) throw new IllegalArgumentException("订单已关闭");
-            java.math.BigDecimal received = fp.receivedQty == null ? java.math.BigDecimal.ZERO : fp.receivedQty;
-            boolean shortQty = received.compareTo(fp.qty == null ? java.math.BigDecimal.ZERO : fp.qty) < 0;
-            if (shortQty && (reason == null || reason.isBlank())) {
-                throw new IllegalArgumentException(String.format(
-                        "短量关闭必须填写原因：到货 %s / 订量 %s，尚差 %s", received.stripTrailingZeros().toPlainString(),
-                        fp.qty.stripTrailingZeros().toPlainString(),
-                        fp.qty.subtract(received).stripTrailingZeros().toPlainString()));
-            }
-            fp.status = "CLOSED";
-            if (shortQty) {
-                fp.remark = (fp.remark == null || fp.remark.isBlank() ? "" : fp.remark + "；")
-                        + String.format("短量关闭：到货 %s/%s，原因：%s", received.stripTrailingZeros().toPlainString(),
-                        fp.qty.stripTrailingZeros().toPlainString(), reason.trim());
-            }
-            fp.updateTime = java.time.LocalDateTime.now();
-            finishedRepo.save(fp);
-            log.info("成品采购单手动关闭: {} 短量={} 原因={}", fp.orderNo, shortQty, reason);
-        }
-    }
-
     /** 创建到货记录（开立状态，不触发入库） */
     // v6.1（高#12）：锁内包事务（executeTx），提交后才放锁——防取号窗口撞号，不再用外层 @Transactional
     public PurchaseArrival createArrival(PurchaseArrival pa) {
@@ -892,7 +833,6 @@ public class PurchaseService {
         log.info("到货审核(待检): {} -> {}", pa.type, pa.refOrderNo);
         return arrivalRepo.save(pa);
     }
-
     /**
      * 到货审核时生成应付账款（v5.27：按到货单立账）
      * 金额 = 本到货单数量 × 采购单价（非采购订单整单金额；未到货不负债）
@@ -1035,7 +975,6 @@ public class PurchaseService {
         } catch (Exception ignored) { }
         return new java.math.BigDecimal("13");
     }
-
     /** v8.0（P0-8）：到货审核前超收校验——其他已审核到货 + 本单 ≤ 订单量（与 recordArrival 同口径） */
     private void validateNotOverReceived(PurchaseArrival pa) {
         arrivalRepo.flush();
@@ -1095,56 +1034,60 @@ public class PurchaseService {
         }
     }
 
-    /** 反审核到货：APPROVED→DRAFT，冲正库存 */
+    /**
+     * 手动结束采购订单（即使未完全到货）。
+     * v6.8 短量完结正规化：① 状态守卫——RECEIVED 已到齐无需关闭、DRAFT 请删除或先审核，防手滑误关；
+     * ② 短量（已到 < 订量）时 reason 必填；③ 原因与到货快照追加进 remark，事后可查"为什么 100 只到了 95"。
+     */
     @Transactional
-    public PurchaseArrival reverseAuditArrival(Long id) {
-        PurchaseArrival pa = arrivalRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("到货记录不存在"));
-        if (!"APPROVED".equals(pa.status))
-            throw new IllegalArgumentException("只有已审核状态的到货单可反审核");
-        final String operator = pa.operator;
-
-        // v6.1 重写反审核（v5.80 审查高#5：原实现批号 null 撞铁律必失败、按整单量冲、硬编码仓、不冲AP不删QC）
-        // ① 已判定的质检单不可反审核（库存可能已动/退货单可能已生成）
-        // v6.1.2：按 arrivalId 精确隔离——同订单同物料分批到货时只看本到货单的质检单，
-        // 不再误拦/误删他批（历史单无 arrivalId 回退 订单号+物料 旧条件）
-        for (var qc : qcRepo.findByRefDocNoAndType(pa.refOrderNo, "INCOMING")) {
-            boolean mine = qc.arrivalId != null ? qc.arrivalId.equals(pa.id)
-                    : (pa.materialCode != null && pa.materialCode.equals(qc.materialCode));
-            if (mine && !"PENDING".equals(qc.status)) {
-                throw new IllegalArgumentException("该到货的质检单已判定（" + qc.inspectionNo + "），不能反审核；请先处理质检");
+    public void closeOrder(Long id, String type, String reason) {
+        if ("RAW".equals(type)) {
+            RawMaterialPurchase rp = rawRepo.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("原料采购单不存在"));
+            if ("RECEIVED".equals(rp.status)) throw new IllegalArgumentException("订单已全额到货（RECEIVED），无需关闭");
+            if ("DRAFT".equals(rp.status)) throw new IllegalArgumentException("草稿单请直接删除或先审核，不支持关闭");
+            if ("CLOSED".equals(rp.status)) throw new IllegalArgumentException("订单已关闭");
+            java.math.BigDecimal received = rp.receivedQty == null ? java.math.BigDecimal.ZERO : rp.receivedQty;
+            boolean shortQty = received.compareTo(rp.qty == null ? java.math.BigDecimal.ZERO : rp.qty) < 0;
+            if (shortQty && (reason == null || reason.isBlank())) {
+                throw new IllegalArgumentException(String.format(
+                        "短量关闭必须填写原因：到货 %s / 订量 %s，尚差 %s", received.stripTrailingZeros().toPlainString(),
+                        rp.qty.stripTrailingZeros().toPlainString(),
+                        rp.qty.subtract(received).stripTrailingZeros().toPlainString()));
             }
-        }
-        // ② 反审核只回滚"审核动作"：立 AP、PENDING QC、已到货量。
-        // v6.1.1 修复：到货审核本身不入库（质检合格才入库），此前误调 reverseInbound 冲库存——
-        // 台账无此批次行（或行在库位上对不上），100% 抛"库存不足无法冲正"，反审核整体不可用。
-        // ①已拦截非 PENDING 质检单 ⇒ 走到这里必然尚未入库，无库存可冲。
-        // ③ 删该到货单立的 AP（arrivalId 幂等立账，精准冲）
-        // v8.0（P0-2）：已付款的 AP 物理删除会留孤儿付款单、账实不符——拦截，引导走红冲
-        for (AccountsPayable ap : apRepo.findByArrivalId(pa.id)) {
-            java.math.BigDecimal paidAmt = ap.paidAmount == null ? java.math.BigDecimal.ZERO : ap.paidAmount;
-            if (paidAmt.compareTo(java.math.BigDecimal.ZERO) > 0 || "PAID".equals(ap.status)) {
-                throw new IllegalArgumentException("该到货单的应付 " + ap.docNo + " 已有付款记录（已付 ¥" + paidAmt +
-                        "），不能反审核删除；请走付款红冲或联系财务处理");
+            rp.status = "CLOSED";
+            if (shortQty) {
+                rp.remark = (rp.remark == null || rp.remark.isBlank() ? "" : rp.remark + "；")
+                        + String.format("短量关闭：到货 %s/%s，原因：%s", received.stripTrailingZeros().toPlainString(),
+                        rp.qty.stripTrailingZeros().toPlainString(), reason.trim());
             }
-        }
-        apRepo.findByArrivalId(pa.id).forEach(apRepo::delete);
-        // ④ 删该到货生成的 PENDING 质检单（v6.1.2：按 arrivalId 精确隔离，同上）
-        for (var qc : qcRepo.findByRefDocNoAndType(pa.refOrderNo, "INCOMING")) {
-            boolean mine = qc.arrivalId != null ? qc.arrivalId.equals(pa.id)
-                    : (pa.materialCode != null && pa.materialCode.equals(qc.materialCode));
-            if (mine && "PENDING".equals(qc.status)) {
-                qcRepo.delete(qc);
+            rp.updateTime = java.time.LocalDateTime.now();
+            rawRepo.save(rp);
+            log.info("原料采购单手动关闭: {} 短量={} 原因={}", rp.orderNo, shortQty, reason);
+        } else {
+            FinishedProductPurchase fp = finishedRepo.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("成品采购单不存在"));
+            if ("RECEIVED".equals(fp.status)) throw new IllegalArgumentException("订单已全额到货（RECEIVED），无需关闭");
+            if ("DRAFT".equals(fp.status)) throw new IllegalArgumentException("草稿单请直接删除或先审核，不支持关闭");
+            if ("CLOSED".equals(fp.status)) throw new IllegalArgumentException("订单已关闭");
+            java.math.BigDecimal received = fp.receivedQty == null ? java.math.BigDecimal.ZERO : fp.receivedQty;
+            boolean shortQty = received.compareTo(fp.qty == null ? java.math.BigDecimal.ZERO : fp.qty) < 0;
+            if (shortQty && (reason == null || reason.isBlank())) {
+                throw new IllegalArgumentException(String.format(
+                        "短量关闭必须填写原因：到货 %s / 订量 %s，尚差 %s", received.stripTrailingZeros().toPlainString(),
+                        fp.qty.stripTrailingZeros().toPlainString(),
+                        fp.qty.subtract(received).stripTrailingZeros().toPlainString()));
             }
+            fp.status = "CLOSED";
+            if (shortQty) {
+                fp.remark = (fp.remark == null || fp.remark.isBlank() ? "" : fp.remark + "；")
+                        + String.format("短量关闭：到货 %s/%s，原因：%s", received.stripTrailingZeros().toPlainString(),
+                        fp.qty.stripTrailingZeros().toPlainString(), reason.trim());
+            }
+            fp.updateTime = java.time.LocalDateTime.now();
+            finishedRepo.save(fp);
+            log.info("成品采购单手动关闭: {} 短量={} 原因={}", fp.orderNo, shortQty, reason);
         }
-        // ⑤ 回写采购行已到货量：先置 DRAFT 落库再重算（v6.1.1 修复时序——
-        // 此前 backfill 在置 DRAFT 前调用，approved 汇总仍含本单，已到货量减不回去）
-        pa.status = "DRAFT";
-        arrivalRepo.save(pa);
-        backfillReceivedQty(pa);
-        log.info("到货反审核: {} -> {}（删AP + 删PENDING QC + 回写已到货量，PENDING 阶段无库存动作）",
-                pa.type, pa.refOrderNo);
-        return pa;
     }
 
     // ==================== v6.5 B3：请购单转采购支撑 ====================

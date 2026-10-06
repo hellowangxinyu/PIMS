@@ -199,12 +199,7 @@ public class RecipeController {
         return Result.ok(null);
     }
 
-    @GetMapping("/version/{versionId}/expand")
-    @SaCheckPermission("recipe:read")
-    public Result expand(@PathVariable Long versionId,
-                         @RequestParam(required = false) BigDecimal qty) {
-        return Result.ok(service.expandTree(versionId, qty));
-    }
+    // v11.7 清理：/version/{id}/expand 全展开端点删除（BOM 展开走 /plan 订单视图与前端配方树编辑）
 
     /** v5.6：订单配方明细（半成品保留为一行不展开，供生产/委外订单引用） */
     @GetMapping("/version/{versionId}/plan")
@@ -254,13 +249,7 @@ public class RecipeController {
 
     // ==================== 溯源 ====================
 
-    /** 溯源：根据配方版本ID递归展开完整配方谱系 */
-    @GetMapping("/version/{versionId}/trace")
-    @SaCheckPermission("recipe:read")
-    public Result trace(@PathVariable Long versionId,
-                        @RequestParam(required = false) BigDecimal qty) {
-        return Result.ok(service.traceRecipe(versionId, qty));
-    }
+    // v11.7 清理：/version/{id}/trace 按版本溯源端点删除（前端只用 /{recipeId}/trace 按配方溯源）
 
     /** v5.6：按配方 ID 溯源（订单半成品行 ref_recipe_id 存的是配方 ID，取其最新 RELEASED 版本溯源） */
     @GetMapping("/{recipeId}/trace")

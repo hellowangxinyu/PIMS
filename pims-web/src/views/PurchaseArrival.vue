@@ -255,13 +255,12 @@
 
 <script setup>
 import { statusType as globalStatusType } from '../utils/statusTag'
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { loadTaxRate, netOfTax, taxOf, fmtTax } from '../utils/tax'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { usePaging } from '../composables/usePaging'
 import { useColumnResize } from '../composables/useColumnResize'
-import { printLabels } from '../utils/labelPrint'
 import { useBucketPrint } from '../composables/useBucketPrint'
 // v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
 import { downloadFile } from '../utils/download'
@@ -365,7 +364,6 @@ function switchDetailType(t) {
   fetchDetails()
 }
 
-function hasPerm(c) { return perms.value.includes(c) }
 
 // 仓库 ID → 名称
 function whName(id) {

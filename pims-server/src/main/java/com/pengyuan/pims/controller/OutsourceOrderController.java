@@ -220,13 +220,7 @@ public class OutsourceOrderController {
         return Result.ok(service.unschedule(id));
     }
 
-    /** v5.27：调整排产顺序（direction=1 下移往后排，-1 上移往前排） */
-    @PostMapping("/{id}/move-schedule")
-    @SaCheckPermission(value = "outsource:write")
-    public Result moveSchedule(@PathVariable Long id, @RequestParam int direction) {
-        service.moveSchedule(id, direction);
-        return Result.ok(null);
-    }
+    // v11.7 清理：/{id}/move-schedule 单单上移下移端点删除（排产页拖拽统一走 /reorder-schedule 批量重排；service.moveSchedule 一并删除）
 
     /** v5.27：拖拽排序后批量重排（body: {ids: [按新顺序排列的订单ID]}） */
     @PostMapping("/reorder-schedule")

@@ -28,22 +28,7 @@ public class QualityInspectionController {
         this.userService = userService;
     }
 
-    /** 查询全部质检单 */
-    @GetMapping
-    @SaCheckPermission(value = "qc:read")
-    public Result<List<QualityInspection>> list(@RequestParam(required = false) String type) {
-        if (type != null && !type.isBlank()) {
-            return Result.ok(service.listByType(type));
-        }
-        return Result.ok(service.listAll());
-    }
-
-    /** 查询待检列表 */
-    @GetMapping("/pending")
-    @SaCheckPermission(value = "qc:read")
-    public Result<List<QualityInspection>> listPending(@RequestParam String type) {
-        return Result.ok(service.listPending(type));
-    }
+    // v11.7 清理：GET /qc 全量列表与 /qc/pending 待检列表端点删除（页面与回归脚本统一走 /qc/search；service.listAll/listByType/listPending 一并删除）
 
     /** v6.3 质量统计分析：期间不良率总览/月趋势/物料 TOP/大类/供应商 */
     @GetMapping("/statistics")
@@ -127,12 +112,7 @@ public class QualityInspectionController {
         return Result.ok(service.getItems(id));
     }
 
-    /** v5.32：按质检单号取检测项（库存页展开查看批次检测明细；权限随库存页，无质检权限的库存用户也可看） */
-    @GetMapping("/items-by-no/{inspectionNo}")
-    @SaCheckPermission(value = "inventory:read")
-    public Result<List<com.pengyuan.pims.entity.QualityInspectionItem>> itemsByNo(@PathVariable String inspectionNo) {
-        return Result.ok(service.getItemsByNo(inspectionNo));
-    }
+    // v11.7 清理：/qc/items-by-no/{no} 端点删除（库存页查看检测明细走 /qc/by-no/{no} 完整信息接口）
 
     /** v5.32：按质检单号取质检单完整信息+检测项（库存页点击检测结果弹窗查看质检报告） */
     @GetMapping("/by-no/{inspectionNo}")

@@ -6,7 +6,6 @@ import java.util.List;
 
 public interface WarehouseZoneRepository extends JpaRepository<WarehouseZone, Long> {
     List<WarehouseZone> findByWarehouseIdAndEnabledTrueOrderBySortOrderAsc(Long warehouseId);
-    List<WarehouseZone> findByWarehouseIdOrderBySortOrderAsc(Long warehouseId);
     long countByWarehouseId(Long warehouseId);
 
     /** v5.38：按分库类型找隔离分库（UNQUALIFIED=隔离区 / TAILING=油尾区；全局第一个，兜底用） */

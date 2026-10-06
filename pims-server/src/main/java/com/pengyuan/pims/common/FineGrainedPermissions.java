@@ -21,13 +21,11 @@ public final class FineGrainedPermissions {
         // 采购域
         expand(m, "purchase:read", "raw-material-purchase", "finished-purchase", "purchase-arrival", "purchase-return");
         expand(m, "purchase:write", "raw-material-purchase", "finished-purchase", "purchase-arrival", "purchase-return");
-        expand(m, "purchase:audit", "raw-material-purchase", "finished-purchase", "purchase-arrival");
-        expand(m, "purchase:reverse-audit", "raw-material-purchase", "finished-purchase", "purchase-arrival");
+        expand(m, "purchase:audit", "raw-material-purchase", "finished-purchase");
+        expand(m, "purchase:reverse-audit", "raw-material-purchase", "finished-purchase");
         // 销售域
         expand(m, "sales:read", "quotation", "sales-order", "sales-outbound", "sales-return", "tailing-return", "shipping");
         expand(m, "sales:write", "quotation", "sales-order", "sales-outbound", "sales-return", "tailing-return", "shipping");
-        expand(m, "sales:audit", "quotation", "sales-order");
-        expand(m, "sales:reverse-audit", "quotation", "sales-order");
         // 财务域
         expand(m, "finance:read", "voucher", "payment-receipt", "payment-disbursement", "invoice", "expense",
                 "advance", "salary", "employee", "asset", "account-subject", "finance-report", "costing");
@@ -43,8 +41,6 @@ public final class FineGrainedPermissions {
         // 委外域
         expand(m, "outsource:read", "outsource-order", "outsource-outbound", "outsource-inbound");
         expand(m, "outsource:write", "outsource-order", "outsource-outbound", "outsource-inbound");
-        expand(m, "outsource:audit", "outsource-order");
-        expand(m, "outsource:reverse-audit", "outsource-order");
         // 库存域
         expand(m, "inventory:read", "inventory-view", "stock-check", "other-outbound", "other-inbound");
         expand(m, "inventory:write", "stock-check", "other-outbound", "other-inbound");

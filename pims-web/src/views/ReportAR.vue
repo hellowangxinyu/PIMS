@@ -58,7 +58,6 @@ const arList = ref([])
 const perms = ref([])
 const exporting = ref(false)
 
-function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
 // v6.4 金额格式统一（utils/fmt 千分位 2 位）
 // v5.23：导出全部应收明细（金额列按后端 finance:amount 权限脱敏）

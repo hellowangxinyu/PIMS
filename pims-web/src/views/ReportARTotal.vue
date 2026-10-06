@@ -35,13 +35,16 @@
 
     <div class="table-card">
       <div class="tab-toolbar">
-        <span class="tab-count">共 {{ list.length }} 个客户</span>
-        <el-date-picker v-model="range" type="daterange" size="small" value-format="YYYY-MM-DD"
-          range-separator="至" start-placeholder="开始日" end-placeholder="结束日"
-          :shortcuts="rangeShortcuts" style="width:260px" @change="load" />
+        <!-- v11.7 客户搜索：本地过滤（同应付总表 v11.5 供应商搜索） -->
+        <el-input v-model="customerKeyword" placeholder="搜索客户" clearable size="small" style="width:200px" />
+        <span class="tab-count">共 {{ filteredList.length }} 个客户{{ customerKeyword ? `（筛选自 ${list.length} 家）` : '' }}</span>
+        <!-- v11.7 单日期筛选：选"截至日"看当天累计应收（对账口径）；清空看全部（同应付总表 v11.4） -->
+        <el-date-picker v-model="endDate" type="date" size="small" value-format="YYYY-MM-DD"
+          placeholder="统计截至（默认全部）" :shortcuts="dateShortcuts" style="width:190px" clearable @change="load" />
       </div>
-      <p-table :data="list" stripe border style="width:100%" show-summary
-                :summary-method="getSummary">
+      <!-- v11.7 默认按超期应收从少到多（同应付总表 v11.3） -->
+      <p-table :data="filteredList" stripe border style="width:100%" show-summary
+                :summary-method="getSummary" :default-sort="{ prop: 'overdueAmount', order: 'ascending' }">
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="customerName" label="客户" min-width="220" show-overflow-tooltip />
         <el-table-column prop="docCount" label="单据数" width="90" align="center" />
@@ -61,6 +64,12 @@
         <el-table-column prop="remainingAmount" label="剩余未收" width="130" align="right" v-if="hasAmountPerm('finance-ar')">
           <template #default="{ row }">
             <span :style="{ color: row.remainingAmount > 0 ? '#b56a5c' : '#16a34a' }">¥{{ fmt(row.remainingAmount) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="overdueAmount" label="超期应收" width="130" align="right" sortable v-if="hasAmountPerm('finance-ar')">
+          <template #default="{ row }">
+            <span v-if="Number(row.overdueAmount) > 0" style="color:#b05a4e;font-weight:700">¥{{ fmt(row.overdueAmount) }}</span>
+            <span v-else class="text-muted">—</span>
           </template>
         </el-table-column>
         <el-table-column label="回款率" width="180" align="center" v-if="hasAmountPerm('finance-ar')">
@@ -103,9 +112,15 @@ import { ref, computed, onMounted } from 'vue'
 import api from '../api'
 
 const list = ref([])
+// v11.7 客户搜索（本地过滤，同应付总表）
+const customerKeyword = ref('')
+const filteredList = computed(() => {
+  const kw = customerKeyword.value.trim().toLowerCase()
+  if (!kw) return list.value
+  return list.value.filter(r => (r.customerName || '').toLowerCase().includes(kw))
+})
 const perms = ref([])
 
-function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
 // v6.4 金额格式统一（utils/fmt 千分位 2 位）
 function progressColor(rate) {
@@ -115,28 +130,27 @@ function progressColor(rate) {
   return '#b56a5c'
 }
 
-// 汇总计算
-const totalAmount = computed(() => list.value.reduce((s, r) => s + Number(r.totalAmount || 0), 0))
-const totalReceived = computed(() => list.value.reduce((s, r) => s + Number(r.receivedAmount || 0), 0))
+// 汇总计算（随客户搜索联动，与表格口径一致；同应付总表 v11.6）
+const totalAmount = computed(() => filteredList.value.reduce((s, r) => s + Number(r.totalAmount || 0), 0))
+const totalReceived = computed(() => filteredList.value.reduce((s, r) => s + Number(r.receivedAmount || 0), 0))
 const totalRemaining = computed(() => totalAmount.value - totalReceived.value)
 const receivedRate = computed(() => {
   if (totalAmount.value <= 0) return '0.00'
   return (totalReceived.value * 100 / totalAmount.value).toFixed(2)
 })
 
-// v7.6 应收周转：期间筛选（默认本年初~今天），整体值=Σ行立账 ÷ ((Σ期初+Σ期末)/2)（不可对行周转率求和/平均）
-const range = ref([])
-const periodLabel = computed(() => range.value && range.value.length === 2
-  ? `${range.value[0].slice(5)}~${range.value[1].slice(5)}` : '')
-const rangeShortcuts = [
-  { text: '今年', value: () => { const y = new Date().getFullYear(); return [new Date(y, 0, 1), new Date()] } },
-  { text: '近一年', value: () => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return [d, new Date()] } },
-  { text: '近90天', value: () => { const d = new Date(); d.setDate(d.getDate() - 90); return [d, new Date()] } }
+// v7.6 应收周转：Σ行立账 ÷ ((Σ期初+Σ期末)/2)，不可对行周转率求和/平均；随筛选子集重算（同应付总表 v11.6）
+const endDate = ref('')
+const periodLabel = computed(() => endDate.value ? `截至 ${endDate.value.slice(5)}` : '')
+const dateShortcuts = [
+  { text: '今天', value: () => new Date() },
+  { text: '本月初', value: () => { const d = new Date(); d.setDate(1); return d } },
+  { text: '上月末', value: () => { const d = new Date(); d.setDate(0); return d } }
 ]
 const overallTurnover = computed(() => {
-  const b = list.value.reduce((s, r) => s + Number(r.billedAmount || 0), 0)
-  const op = list.value.reduce((s, r) => s + Number(r.openingBalance || 0), 0)
-  const cl = list.value.reduce((s, r) => s + Number(r.closingBalance || 0), 0)
+  const b = filteredList.value.reduce((s, r) => s + Number(r.billedAmount || 0), 0)
+  const op = filteredList.value.reduce((s, r) => s + Number(r.openingBalance || 0), 0)
+  const cl = filteredList.value.reduce((s, r) => s + Number(r.closingBalance || 0), 0)
   const avg = (op + cl) / 2
   if (avg <= 0 || b <= 0) return null
   return b / avg
@@ -163,7 +177,7 @@ function getSummary({ columns, data }) {
       sums[idx] = '¥' + fmt(data.reduce((s, r) => s + Number(r[prop] || 0), 0))
       return
     }
-    // v7.6 周转合计 = 整体口径（Σ立账 ÷ 平均Σ余额），非行值加总
+    // 周转合计 = Σ立账 ÷ 平均Σ余额（随筛选子集重算，非行值加总）
     if (prop === 'turnover' || prop === 'turnoverDays') {
       if (overallTurnover.value == null) { sums[idx] = '—'; return }
       sums[idx] = prop === 'turnover' ? overallTurnover.value.toFixed(2) : overallDays.value.toFixed(1)
@@ -177,19 +191,14 @@ function getSummary({ columns, data }) {
 async function load() {
   try {
     const params = {}
-    if (range.value && range.value.length === 2) { params.start = range.value[0]; params.end = range.value[1] }
+    if (endDate.value) { params.end = endDate.value }
     list.value = await api.get('/finance/ar/total', { params })
   } catch {}
 }
 
 onMounted(async () => {
   try { perms.value = JSON.parse(localStorage.getItem('user') || '{}').permissions || [] } catch {}
-  // 默认本年初~今天
-  const y = new Date().getFullYear()
-  const n = new Date()
-  const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
-  range.value = [`${y}-01-01`, today]
-  load()
+  load()   // v11.7 默认全部（单日期筛选由用户自选截至日，同应付总表口径）
 })
 </script>
 

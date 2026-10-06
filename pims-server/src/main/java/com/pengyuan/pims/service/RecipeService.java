@@ -644,30 +644,7 @@ public class RecipeService {
         return result;
     }
 
-    /**
-     * 展开树为扁平原料清单（递归计算用量）
-     * 用于生产订单参照配方时自动生成明细
-     */
-    public List<Map<String, Object>> expandTree(Long versionId, BigDecimal targetQty) {
-        RecipeVersion v = getVersion(versionId);
-        if (!"RELEASED".equals(v.status)) {
-            throw new IllegalArgumentException("只有已发布版本可展开");
-        }
-        // 校验配方未被禁用（禁用配方不可被单据引用）
-        checkReferenceable(v.recipeId);
-        BigDecimal batchQty = v.batchQty != null && v.batchQty.compareTo(BigDecimal.ZERO) > 0
-                ? v.batchQty : BigDecimal.ONE;
-        BigDecimal ratio = targetQty != null
-                ? targetQty.divide(batchQty, 6, RoundingMode.HALF_UP)
-                : BigDecimal.ONE;
-
-        List<RecipeTreeNode> nodes = treeNodeRepo.findByVersionIdOrderBySortOrder(versionId);
-        List<Map<String, Object>> result = new ArrayList<>();
-        java.util.Set<Long> visited = new java.util.HashSet<>();
-        if (v.recipeId != null) visited.add(v.recipeId);   // 根先入集，防配方直接引用自己
-        expandNodes(nodes, null, ratio, result, visited);
-        return result;
-    }
+    // v11.7 清理：expandTree 已随 /recipe/version/{id}/expand 端点下线删除（订单展开走 expandForOrder）
 
     /**
      * v5.6：订单配方明细（半成品保留为一行，不展开原料）

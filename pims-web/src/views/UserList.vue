@@ -24,7 +24,7 @@
           <template #default="{row}">
             <button class="op-btn op-btn-primary" @click="showDialog(row)">编辑</button>
             <button class="op-btn op-btn-primary" @click="resetPwd(row)">重置密码</button>
-            <button class="op-btn op-btn-danger" @click="del(row.id)">禁用</button>
+            <button class="op-btn op-btn-danger" v-if="hasPerm('user:delete')" @click="del(row.id)">禁用</button>
           </template>
         </el-table-column>
       </p-table>

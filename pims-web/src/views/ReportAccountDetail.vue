@@ -77,7 +77,6 @@ const from = ref(nowMonth)
 const to = ref(nowMonth)
 const auxName = ref('')
 
-function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
 // v6.4 金额格式统一（utils/fmt 千分位 2 位）
 async function fetch() {

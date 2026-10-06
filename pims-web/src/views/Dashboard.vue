@@ -6,6 +6,11 @@
         <h1 class="welcome-title">{{ greeting }}，{{ realName }}</h1>
         <p class="welcome-sub">芃远新材料综合管理系统 · 进销存</p>
       </div>
+      <!-- v11.7 运维通道入口：手动备份/重建统计（后端此前无前端入口，仅每日 4:30 定时备份） -->
+      <div class="admin-ops" v-if="hasPerm('user:write')">
+        <el-button size="small" plain type="primary" :loading="backingUp" @click="backupNow">手动备份</el-button>
+        <el-button size="small" plain @click="rebuildStats">重建统计</el-button>
+      </div>
       <div class="date-badge">{{ today }}</div>
     </div>
 
@@ -187,6 +192,7 @@ import { statusType as globalStatusType } from '../utils/statusTag'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Close, OfficeBuilding, Box, Van, User, Avatar, Grid, ShoppingCart, TrendCharts, Connection, DataAnalysis, Key, House, Bell} from '@element-plus/icons-vue'
 import api from '../api'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useColumnResize } from '../composables/useColumnResize'
 
 // 快捷入口图标映射：历史数据中的字符图标 → SVG 图标组件（未知字符保持原样显示）
@@ -207,6 +213,28 @@ const hasAnyTodo = computed(() => {
 const data = reactive({ warehouseCount:0, materialCount:0, materialCategoryCount:0, supplierCount:0, customerCount:0, recentPurchases:[], recentSales:[], recentOutsource:[], lowStock:[], arTotal:0, arReceived:0, arPending:0, apTotal:0, apPaid:0, apPending:0 })
 const perms = ref([])
 function hasPerm(c) { return perms.value.includes(c) }
+
+// v11.7 运维通道：手动备份/重建统计（升级前或重要操作前先备一份）
+const backingUp = ref(false)
+async function backupNow() {
+  try {
+    await ElMessageBox.confirm('立即执行一次数据库备份？备份文件落在服务器备份目录，不影响正常使用。', '手动备份', { type: 'info' })
+  } catch { return }
+  backingUp.value = true
+  try {
+    const msg = await api.post('/dashboard/backup')
+    ElMessage.success(msg || '备份完成')
+  } catch (e) { ElMessage.error(e?.response?.data?.msg || e?.message || '备份失败') }
+  finally { backingUp.value = false }
+}
+async function rebuildStats() {
+  try {
+    await ElMessageBox.confirm('重建全部历史汇总数据？数据量大时可能耗时较久，期间统计类页面数字以重建结果为准。', '重建统计', { type: 'warning' })
+  } catch { return }
+  try {
+    ElMessage.success(await api.post('/dashboard/rebuild-stats') || '汇总数据重建完成')
+  } catch (e) { ElMessage.error(e?.response?.data?.msg || e?.message || '重建失败') }
+}
 
 const { cw: cwP, onHeaderDragend: onHeaderDragendP } = useColumnResize('dashboard_purchase')
 const { cw: cwS, onHeaderDragend: onHeaderDragendS } = useColumnResize('dashboard_sales')
@@ -319,6 +347,8 @@ onMounted(async () => {
 
 /* 欢迎区 */
 .welcome-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; }
+/* v11.7 运维通道按钮组 */
+.admin-ops { display: flex; gap: 8px; align-self: center; }
 .welcome-title { font-size: 24px; font-weight: 800; color: var(--pims-text); margin: 0 0 4px; letter-spacing: -0.5px; }
 .welcome-sub { margin: 0; font-size: 13px; color: var(--pims-text-secondary); }
 .date-badge { padding: 8px 16px; background: var(--pims-card-bg); border-radius: 12px; font-size: 13px; color: var(--pims-text-secondary); box-shadow: var(--pims-card-shadow); border: var(--pims-card-border); white-space: nowrap; }

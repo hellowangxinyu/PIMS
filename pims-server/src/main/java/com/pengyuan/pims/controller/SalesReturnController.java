@@ -41,13 +41,7 @@ public class SalesReturnController {
         return Result.ok(service.list(status));
     }
 
-    /** 退货单详情 */
-    @GetMapping("/{id}")
-    @SaCheckPermission(value = "sales:read")
-    public Result<ReturnOrder> get(@PathVariable Long id) {
-        return service.getById(id).map(Result::ok)
-                .orElseThrow(() -> new IllegalArgumentException("退货单不存在"));
-    }
+    // v11.7 清理：/sales-return/{id} 单条详情端点删除（前端列表自带全字段）
 
     /** v5.27：可参照退货的销售出库单列表（已确认且剩余可退量 > 0） */
     @GetMapping("/returnable-outbounds")

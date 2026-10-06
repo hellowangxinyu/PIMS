@@ -115,13 +115,7 @@ public class OutboundController {
         return Result.ok(service.confirmProduction(id, operator));
     }
 
-    /** 批量确认同一生产订单下的所有出库单 */
-    @PostMapping("/production/confirm-by-order")
-    @SaCheckPermission(value = "production:write")
-    public Result<List<ProductionOutbound>> confirmByOrder(@RequestParam String productionOrderNo) {
-        String operator = userService.currentOperatorName();
-        return Result.ok(service.confirmByOrder(productionOrderNo, operator));
-    }
+    // v11.7 清理：/production/confirm-by-order 批量确认端点删除（前端无入口，逐单确认即可）
 
     // ==================== 生产入库（参照生产订单） ====================
 
@@ -399,12 +393,7 @@ public class OutboundController {
                 financePartnerId, financePartnerName));
     }
 
-    @PostMapping("/other/{id}/confirm")
-    @SaCheckPermission(value = "inventory:write")
-    public Result<OtherOutbound> confirmOther(@PathVariable Long id) {
-        String operator = userService.currentOperatorName();
-        return Result.ok(service.confirmOther(id, operator));
-    }
+    // v11.7 清理：/other/{id}/confirm 与 /other-inbound/{id}/confirm 手动确认端点删除（其他出入库创建即生效/创建即提交质检，无手动确认环节；service 中的 throw 桩一并删除）
 
     // ==================== 其他入库 ====================
 
@@ -442,13 +431,6 @@ public class OutboundController {
                 unit, reason, operator, remark,
                 genFinance, financeAmount != null ? BigDecimal.valueOf(financeAmount) : null,
                 financePartnerId, financePartnerName));
-    }
-
-    @PostMapping("/other-inbound/{id}/confirm")
-    @SaCheckPermission(value = "inventory:write")
-    public Result<OtherInbound> confirmOtherInbound(@PathVariable Long id) {
-        String operator = userService.currentOperatorName();
-        return Result.ok(service.confirmOtherInbound(id, operator));
     }
 
     // ==================== 参照退货单出库（采购退货出库）====================

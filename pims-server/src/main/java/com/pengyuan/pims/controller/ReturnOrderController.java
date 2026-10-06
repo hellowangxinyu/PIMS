@@ -36,20 +36,7 @@ public class ReturnOrderController {
                 ? service.listByStatus(type, status) : service.listAll(type));
     }
 
-    /** 退货单详情 */
-    @GetMapping("/{id}")
-    @SaCheckPermission(value = "purchase:read")
-    public Result<ReturnOrder> get(@PathVariable Long id) {
-        return service.getById(id).map(Result::ok)
-                .orElseThrow(() -> new IllegalArgumentException("退货单不存在"));
-    }
-
-    /** 待审核列表（采购员工作台） */
-    @GetMapping("/pending")
-    @SaCheckPermission(value = "purchase:read")
-    public Result<List<ReturnOrder>> listPending() {
-        return Result.ok(service.listByStatus("PURCHASE_RETURN", "DRAFT"));
-    }
+    // v11.7 清理：/return-order/{id} 单条详情与 /pending 待审核列表端点删除（前端列表自带全字段、待审走列表页状态筛选；service.getById 存活供内部用）
 
     /** v5.27：可参照退货的到货单列表（仅合格入库且批号仍有库存的） */
     @GetMapping("/returnable-arrivals")

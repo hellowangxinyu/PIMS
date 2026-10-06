@@ -43,11 +43,12 @@
         <el-table-column label="最近跟进" width="105" align="center">
           <template #default="{ row }">{{ row.lastFollow || '—' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="220" align="center" v-if="hasPerm('crm:write')">
+        <el-table-column label="操作" width="270" align="center" v-if="hasPerm('crm:write')">
           <template #default="{ row }">
             <button class="op-btn op-btn-primary" @click="openDialog(row)">编辑</button>
             <button class="op-btn op-btn-success" @click="openFollow(row)">跟进</button>
             <button class="op-btn op-btn-warn" @click="openStage(row)">推进</button>
+            <button class="op-btn op-btn-danger" @click="delOpportunity(row)">删除</button>
           </template>
         </el-table-column>
       </p-table>
@@ -118,7 +119,9 @@
       <el-empty v-if="!followList.length" description="暂无跟进记录" :image-size="60" />
       <el-timeline v-else>
         <el-timeline-item v-for="f in followList" :key="f.id" :timestamp="f.followDate + ' · ' + (METHOD_LABEL[f.method] || f.method) + (f.nextDate ? ' · 下次 ' + f.nextDate : '')" placement="top">
-          <div style="font-weight:600;font-size:13px">{{ f.operator }}</div>
+          <div style="font-weight:600;font-size:13px">{{ f.operator }}
+            <button v-if="hasPerm('crm:write')" class="op-btn op-btn-danger" style="float:right;padding:1px 8px;font-size:11px" @click="delFollow(f)">删除</button>
+          </div>
           <div style="font-size:13px;color:#475569;line-height:1.7;white-space:pre-wrap">{{ f.content }}</div>
         </el-timeline-item>
       </el-timeline>
@@ -253,6 +256,33 @@ async function submitFollow() {
     fetch()
   } catch (e) { ElMessage.error(e?.response?.data?.msg || e?.message || '保存失败') }
   finally { loading.value = false }
+}
+
+/** v11.7 删除商机（级联删除跟进记录，后端 deleteOpportunity） */
+async function delOpportunity(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除商机「${row.title}」？其全部跟进记录将一并删除，删除后不可恢复。`,
+      '删除商机', { type: 'warning', confirmButtonText: '删除', confirmButtonClass: 'el-button--danger' })
+  } catch { return }
+  try {
+    await api.delete(`/crm/opportunity/${row.id}`)
+    ElMessage.success('商机已删除')
+    fetch()
+  } catch (e) { ElMessage.error(e?.response?.data?.msg || e?.message || '删除失败') }
+}
+
+/** v11.7 删除单条跟进记录 */
+async function delFollow(f) {
+  try {
+    await ElMessageBox.confirm(`确定删除 ${f.followDate} 的这条跟进记录？`, '删除跟进', { type: 'warning' })
+  } catch { return }
+  try {
+    await api.delete(`/crm/follow-up/${f.id}`)
+    ElMessage.success('跟进记录已删除')
+    loadFollows(followRow.value.id)
+    fetch()
+  } catch (e) { ElMessage.error(e?.response?.data?.msg || e?.message || '删除失败') }
 }
 
 const { page, pageSize, pagedRows, resetPage } = usePaging(filtered)

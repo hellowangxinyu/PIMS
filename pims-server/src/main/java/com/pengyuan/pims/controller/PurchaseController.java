@@ -121,15 +121,7 @@ public class PurchaseController {
 
     // ==================== 成品采购 ====================
 
-    @GetMapping("/finished-product-purchase")
-    @SaCheckPermission(value = "purchase:read")
-    public Result<?> listFinished() {
-        List<FinishedProductPurchase> list = service.listFinished();
-        if (!FieldFilter.hasPerm("purchase:price")) {
-            return Result.ok(FieldFilter.filterListFields(list, FieldFilter.PURCHASE_PRICE_FIELDS));
-        }
-        return Result.ok(list);
-    }
+    // v11.7 清理：GET /finished-product-purchase 平铺列表与 POST 单条创建端点删除（页面列表走 /search 分页、创建走 /batch 批量；service.listFinished/createFinished 一并删除）
 
     /**
      * 成品采购分页查询（支持状态过滤 + 多条件）
@@ -176,13 +168,6 @@ public class PurchaseController {
         }).orElse(Result.fail(500, "不存在"));
     }
 
-    @PostMapping("/finished-product-purchase")
-    @SaCheckPermission(value = "purchase:write")
-    public Result<FinishedProductPurchase> createFinished(@RequestBody FinishedProductPurchase fp) {
-        return Result.ok(service.createFinished(fp));
-    }
-
-    /** v5.0：成品采购批量创建（一张单据一个供应商多个成品，共享合同号） */
     @PostMapping("/finished-product-purchase/batch")
     @SaCheckPermission(value = "purchase:write")
     public Result<List<FinishedProductPurchase>> batchCreateFinished(@RequestBody Map<String, Object> body) {
@@ -256,24 +241,7 @@ public class PurchaseController {
         return Result.ok(java.util.Map.of("rows", rows.getContent(), "total", rows.getTotalElements()));
     }
 
-    @PostMapping("/purchase-arrival")
-    @SaCheckPermission(value = "purchase:write")
-    public Result<PurchaseArrival> createArrival(@RequestBody PurchaseArrival pa) {
-        pa.operator = userService.currentOperatorName();
-        return Result.ok(service.createArrival(pa));
-    }
-
-    @PostMapping("/purchase-arrival/{id}/audit")
-    @SaCheckPermission(value = {"purchase-arrival:audit", "purchase:audit"}, mode = cn.dev33.satoken.annotation.SaMode.OR)
-    public Result<PurchaseArrival> auditArrival(@PathVariable Long id) {
-        return Result.ok(service.auditArrival(id));
-    }
-
-    @PostMapping("/purchase-arrival/{id}/reverse-audit")
-    @SaCheckPermission(value = {"purchase-arrival:reverse-audit", "purchase:reverse-audit"}, mode = cn.dev33.satoken.annotation.SaMode.OR)
-    public Result<PurchaseArrival> reverseAuditArrival(@PathVariable Long id) {
-        return Result.ok(service.reverseAuditArrival(id));
-    }
+    // v11.7 清理：POST /purchase-arrival 旧建单 + audit/reverse-audit 旧审核链路删除（v11.0 起到货统一走 /purchase/arrival/record 录入即生效立应付；service.createArrival/auditArrival/reverseAuditArrival 一并删除）
 
     /** v11.0 到货后续调价：改含税单价并重算应付（已付款禁止，需填原因，锁期/质检/台账三联动） */
     @PutMapping("/purchase-arrival/{id}/price")

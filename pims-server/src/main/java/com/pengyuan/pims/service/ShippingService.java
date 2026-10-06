@@ -34,15 +34,7 @@ public class ShippingService {
     /** 全部运费记录（含筛选在 Controller 层做） */
     public List<ShippingLog> list() { return repo.findAllByOrderByCreateTimeDescIdDesc(); }
 
-    /** 按销售订单聚合的公司承担运费（订单列表/毛利归集用） */
-    public java.util.Map<String, BigDecimal> companyFreightByOrder() {
-        java.util.Map<String, BigDecimal> result = new java.util.HashMap<>();
-        for (Map<String, Object> row : jdbc.queryForList(
-                "SELECT sales_order_no AS o, SUM(freight) AS f FROM shipping_log WHERE borne = 'COMPANY' GROUP BY sales_order_no")) {
-            result.put(String.valueOf(row.get("o")), toBd(row.get("f")));
-        }
-        return result;
-    }
+    // v11.7 清理：companyFreightByOrder 已删除（注释所称订单列表/毛利归集实际走 ReportService 聚合，此处 0 调用）
 
     // v8.6（N3）：去 @Transactional——方法内 executeTx 已锁内包事务，外层注解=旧时序（先开事务后抢锁）
     public ShippingLog create(ShippingLog s) {

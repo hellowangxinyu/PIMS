@@ -89,10 +89,7 @@ public class InventoryService {
         return r;
     }
 
-    /** 兼容旧调用（全量，仅内部少量使用） */
-    public List<InventoryLedger> queryByWarehouse(String warehouseId) {
-        return ledgerRepo.findByWarehouseId(warehouseId);
-    }
+    // v11.7 清理：queryByWarehouse(String) 旧全量签名删除（注释所称"内部少量使用"经核实为 0 调用，分页版 queryByWarehousePaged 存活）
 
     /** v5.9：台账关键字分页搜索（品名/编码/批号 + 仓库过滤） */
     public org.springframework.data.domain.Page<InventoryLedger> searchLedger(String keyword, String warehouseId, org.springframework.data.domain.Pageable pageable) {
@@ -132,25 +129,7 @@ public class InventoryService {
         return result;
     }
 
-    /** 查芃远所有权总库存 */
-    public BigDecimal queryTotalOwned(String materialCode) {
-        return ledgerRepo.sumQtyByMaterialCode(materialCode);
-    }
-
-    /** 查物料的库存异动日志（v5.26：主表+归档表合并，归档后历史异动仍可查看） */
-    public List<InventoryMovement> queryMovements(String materialCode) {
-        return movementRepo.findByMaterialCodeIncludingArchive(materialCode);
-    }
-
-    /** 批次追溯（v4.8：主表+归档表合并，已归档历史批次仍可追溯） */
-    public List<InventoryMovement> queryBatchTrace(String materialCode, String batchNo) {
-        return movementRepo.findByMaterialCodeAndBatchNoIncludingArchive(materialCode, batchNo);
-    }
-
-    /** 低库存预警 */
-    public List<InventoryLedger> queryLowStock() {
-        return ledgerRepo.findLowStock();
-    }
+    // v11.7 清理：queryTotalOwned/queryMovements/queryBatchTrace/queryLowStock 已随 /inventory/total|movements|trace|low-stock 端点下线删除
 
     // ==================== 写操作（全部排队执行） ====================
 
@@ -618,105 +597,9 @@ public class InventoryService {
     }
 
     /**
-     * 生产领料出库，创建独立单据并扣减库存
-     * @param materialCode 物料编码
-     * @param materialName 物料名称
-     * @param batchNo 批次（可为null）
-     * @param warehouseId 出库仓库
-     * @param qty 出库数量
-     * @param operator 操作人
-     * @return 生产出库单据
+     * v11.7 清理：productionOutbound/queryProductionOutbounds/otherOutbound/queryOtherOutbounds 已删除——
+     * 出库统一走 OutboundService（创建独立单据+扣库存+质检驱动），这四个直连库存的旧通道 0 调用
      */
-    // v6.1.4（大件迁移）：executeTx 锁内包事务，提交后放锁（原 @Transactional+execute 锁先放、提交在后，并发窗口读旧快照/丢更新）
-    public ProductionOutbound productionOutbound(String materialCode, String materialName,
-                                                  String batchNo, String warehouseId,
-                                                  BigDecimal qty, String operator) {
-        // v5.24：单号生成+单据保存+库存扣减整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.executeTx(() -> {
-            // v5.24：按最大序号+1（count 会删除错位且并发撞号）
-            Integer maxSeq = prodOutRepo.findMaxSeq("PROD-OUT-" + LocalDate.now().toString().replace("-", "") + "-%");
-            String docNo = String.format("PROD-OUT-%s-%04d", LocalDate.now().toString().replace("-", ""),
-                    (maxSeq == null ? 0 : maxSeq) + 1);
-
-            // 执行库存扣减（WriteQueue 可重入，不会死锁）
-            outbound("PRODUCTION_OUT", docNo, materialCode, batchNo, warehouseId, qty, operator);
-
-            // 创建独立单据
-            ProductionOutbound doc = new ProductionOutbound();
-            doc.docNo = docNo;
-            doc.materialCode = materialCode;
-            doc.materialName = materialName;
-            doc.batchNo = batchNo;
-            doc.warehouseId = warehouseId;
-            doc.qty = qty;
-            doc.status = "CONFIRMED";
-            doc.createdBy = operator;
-            doc.createTime = LocalDateTime.now();
-            prodOutRepo.save(doc);
-
-            log.info("生产出库单据: {} 物料{} 数量{} 仓{}", docNo, materialCode, qty, warehouseId);
-            return doc;
-        });
-    }
-
-    /** 查询生产出库单据列表 */
-    public List<ProductionOutbound> queryProductionOutbounds() {
-        return prodOutRepo.findByOrderByCreateTimeDesc();
-    }
-
-    /**
-     * 其他出库，创建独立单据并扣减库存
-     * @param materialCode 物料编码
-     * @param materialName 物料名称
-     * @param batchNo 批次（可为null）
-     * @param warehouseId 出库仓库
-     * @param qty 出库数量
-     * @param reason 出库原因
-     * @param remark 备注
-     * @param operator 操作人
-     * @return 其他出库单据
-     */
-    // v6.1.4（大件迁移）：executeTx 锁内包事务，提交后放锁（原 @Transactional+execute 锁先放、提交在后，并发窗口读旧快照/丢更新）
-    public OtherOutbound otherOutbound(String materialCode, String materialName,
-                                       String batchNo, String warehouseId,
-                                       BigDecimal qty, String reason,
-                                       String remark, String operator) {
-        // v5.24：单号生成+单据保存+库存扣减整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.executeTx(() -> {
-            // v5.24：按最大序号+1（count 会删除错位且并发撞号）
-            Integer maxSeq = otherOutRepo.findMaxSeq("OTHER-OUT-" + LocalDate.now().toString().replace("-", "") + "-%");
-            String docNo = String.format("OTHER-OUT-%s-%04d", LocalDate.now().toString().replace("-", ""),
-                    (maxSeq == null ? 0 : maxSeq) + 1);
-
-            // 执行库存扣减（v5.23：报废/样品/退货放行过期批次，其他原因禁止）
-            boolean allowExpired = reason != null
-                    && (reason.equals("SCRAP") || reason.equals("SAMPLE") || reason.equals("RETURN"));
-            outbound("OTHER_OUT", docNo, materialCode, batchNo, warehouseId, qty, operator, allowExpired);
-
-            // 创建独立单据
-            OtherOutbound doc = new OtherOutbound();
-            doc.docNo = docNo;
-            doc.materialCode = materialCode;
-            doc.materialName = materialName;
-            doc.batchNo = batchNo;
-            doc.warehouseId = warehouseId;
-            doc.qty = qty;
-            doc.reason = reason;
-            doc.status = "CONFIRMED";
-            doc.createdBy = operator;
-            doc.remark = remark;
-            doc.createTime = LocalDateTime.now();
-            otherOutRepo.save(doc);
-
-            log.info("其他出库单据: {} 物料{} 数量{} 仓{} 原因{}", docNo, materialCode, qty, warehouseId, reason);
-            return doc;
-        });
-    }
-
-    /** 查询其他出库单据列表 */
-    public List<OtherOutbound> queryOtherOutbounds() {
-        return otherOutRepo.findByOrderByCreateTimeDesc();
-    }
 
     /**
      * 委外材料出库（仅变更物理仓，所有权总库存不减少）

@@ -6,6 +6,9 @@
         <span class="hint">流程：当月凭证全部记账 → 结转损益（生成结转凭证并记账）→ 结账锁定期间。已结账期间禁止一切凭证操作</span>
         <el-date-picker v-model="costingPeriod" type="month" value-format="YYYY-MM" :clearable="false" style="width:130px" />
         <el-button type="warning" plain @click="costingClose" v-if="hasPerm('finance:write') && costingMethod === 'MONTHLY_AVG'">存货成本计算（全月平均）</el-button>
+        <!-- v11.7 年结入口：后端 /voucher/year-end-close 此前无前端入口 -->
+        <el-date-picker v-model="yearEndYear" type="year" value-format="YYYY" :clearable="false" style="width:100px" />
+        <el-button type="danger" plain @click="yearEndClose" v-if="hasPerm('finance:audit')">年结</el-button>
         <el-button @click="fetch" :loading="loadingList">刷新</el-button>
       </div>
     </div>
@@ -60,6 +63,7 @@ const perms = ref([])
 const loadingList = ref(false)
 const costingPeriod = ref(monthLocal())
 const costingMethod = ref('SPECIFIC')   // v5.63 全月平均结账前置
+const yearEndYear = ref(String(new Date().getFullYear()))   // v11.7 年结年份
 
 function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
@@ -131,6 +135,27 @@ async function costingClose() {
     fetch()
   } catch (e) {
     ElMessage.error(e?.response?.data?.msg || e?.message || '计算失败')
+  }
+}
+
+/** v11.7 年结：结平本年利润→未分配利润 + 12 月月结（前置：1-11 月已结/12 月损益已结转） */
+async function yearEndClose() {
+  const y = yearEndYear.value
+  try {
+    await ElMessageBox.confirm(
+      `确定对 ${y} 年年结？将校验 1-11 月已全部结账（无凭证空月跳过）、12 月损益已结转，` +
+      `然后生成「本年利润→未分配利润」结转凭证并自动记账，最后锁定 ${y}-12 期间。年结后如需调整须从 12 月往前逐月反结账。继续？`,
+      `${y} 年结`, { type: 'warning' })
+  } catch { return }
+  try {
+    const r = await api.post(`/voucher/year-end-close?year=${encodeURIComponent(y)}`)
+    const transfer = r.transferVoucher
+      ? `本年利润 ${fmt(r.profitTransferred)} 已结转（凭证 ${r.transferVoucher}），`
+      : '本年利润已结平，'
+    ElMessage.success(`${y} 年结完成：${transfer}${r.decPeriod} 已锁定`)
+    fetch()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.msg || e?.message || '年结失败')
   }
 }
 

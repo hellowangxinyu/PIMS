@@ -15,10 +15,8 @@ public interface PurchaseArrivalRepository extends JpaRepository<PurchaseArrival
 
     /** v5.95.2 到货合格回填批号：单号+物料+数量精确定位到货行 */
     java.util.List<PurchaseArrival> findByRefOrderNoAndMaterialCodeAndQty(String refOrderNo, String materialCode, java.math.BigDecimal qty);
-    List<PurchaseArrival> findByTypeOrderByCreateTimeDesc(String type);
 
-    /** v5.9：按类型分页（到货列表） */
-    org.springframework.data.domain.Page<PurchaseArrival> findByTypeOrderByCreateTimeDesc(String type, org.springframework.data.domain.Pageable pageable);
+    // v11.7 清理：findByTypeOrderByCreateTimeDesc 两个重载删除（List 版随 listArrivalsByType 下线，Pageable 版 0 调用；列表走 searchByTypeAndKeyword/searchByKeyword）
 
     /** v5.9：按类型 + 关键字分页（到货明细搜索，关键字覆盖合同号/供应商/编码/品名） */
     @Query("SELECT a FROM PurchaseArrival a WHERE a.type = :type AND (:kw = '' OR a.refOrderNo LIKE %:kw% " +

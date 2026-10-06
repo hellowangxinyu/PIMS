@@ -169,10 +169,9 @@
 
 <script setup>
 import { statusType as globalStatusType } from '../utils/statusTag'
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
-import { printLabels } from '../utils/labelPrint'
 import { useBucketPrint } from '../composables/useBucketPrint'
 // v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
 import { downloadFile } from '../utils/download'
@@ -298,9 +297,9 @@ async function submit() {
 
 async function confirmOne(row) {
   try {
-    await ElMessageBox.confirm(`确认入库单 ${row.docNo}？\n确认后产品将入库增加库存。`, '确认入库', { type: 'warning' })
+    await ElMessageBox.confirm(`确认入库单 ${row.docNo}？\n确认后将提交质检，质检合格后自动入库。`, '提交质检', { type: 'warning' })
     await api.post(`/outbound/production-inbound/${row.id}/confirm`)
-    ElMessage.success('已确认，库存已增加')
+    ElMessage.success('已提交质检，请到「质量管理」判定，合格后自动入库')
     fetch()
     fetchActualCosts()
   } catch (e) { if (e !== 'cancel' && e !== 'close') {} }

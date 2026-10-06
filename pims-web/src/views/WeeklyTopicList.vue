@@ -54,11 +54,12 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" align="center" v-if="hasPerm('meeting:write')">
+        <el-table-column label="操作" width="200" align="center" v-if="hasPerm('meeting:write')">
           <template #default="{ row }">
             <button class="op-btn op-btn-primary" @click="openDialog(row)">编辑</button>
             <button v-if="!row.closedDate" class="op-btn op-btn-success" @click="close(row)">结案</button>
             <button v-else class="op-btn op-btn-warn" @click="close(row)">反结案</button>
+            <button class="op-btn op-btn-danger" @click="delTopic(row)">删除</button>
           </template>
         </el-table-column>
       </p-table>
@@ -178,6 +179,18 @@ async function close(row) {
     ElMessage.success(row.closedDate ? '已反结案' : '已结案')
     fetch()
   } catch (e) { ElMessage.error(e?.response?.data?.msg || e?.message || '操作失败') }
+}
+
+/** v11.7 删除议题（后端 /meeting/topic/{id} DELETE 此前无前端入口） */
+async function delTopic(row) {
+  try {
+    await ElMessageBox.confirm(`确定删除议题「${row.content?.slice(0, 30)}${row.content?.length > 30 ? '…' : ''}」？删除后不可恢复。`, '删除议题', { type: 'warning' })
+  } catch { return }
+  try {
+    await api.delete(`/meeting/topic/${row.id}`)
+    ElMessage.success('议题已删除')
+    fetch()
+  } catch (e) { ElMessage.error(e?.response?.data?.msg || e?.message || '删除失败') }
 }
 
 function doImport() { fileRef.value?.click() }

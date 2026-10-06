@@ -112,12 +112,4 @@ export function buildLossLetterHtml(trace, template) {
 </html>`
 }
 
-export function printLossLetter(trace, template) {
-  const win = window.open('', '_blank')
-  if (!win) return false
-  win.document.write(buildLossLetterHtml(trace, template))
-  win.document.close()
-  win.focus()
-  setTimeout(() => { win.print(); win.close() }, 200)
-  return true
-}
+// v11.7 清理：printLossLetter 包装函数删除（0 引用——SupplierQualityTraceList 直接用 buildLossLetterHtml 自行打印）

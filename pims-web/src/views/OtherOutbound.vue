@@ -102,7 +102,7 @@
 
 <script setup>
 import { statusType as globalStatusType } from '../utils/statusTag'
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 

@@ -20,9 +20,7 @@ public class WarehouseZoneService {
         return repo.findByWarehouseIdAndEnabledTrueOrderBySortOrderAsc(warehouseId);
     }
 
-    public List<WarehouseZone> listAllByWarehouse(Long warehouseId) {
-        return repo.findByWarehouseIdOrderBySortOrderAsc(warehouseId);
-    }
+    // v11.7 清理：listAllByWarehouse（含停用）已删除，其仓库方法 findByWarehouseIdOrderBySortOrderAsc 一并删除
 
     /** v5.38：全部分库（隔离分库查找用） */
     public List<WarehouseZone> listAll() { return repo.findAll(); }

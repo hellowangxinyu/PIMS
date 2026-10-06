@@ -324,36 +324,7 @@ public class SalesOrderService {
         return order;
     }
 
-    /** 确认发货（出库） */
-    @Transactional
-    public void confirmShip(Long orderId, String operator) {
-        SalesOrder order = orderRepo.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("销售订单不存在"));
-        if ("DRAFT".equals(order.status)) throw new IllegalArgumentException("订单尚未确认，不能直接发货");
-        if ("SHIPPED".equals(order.status)) throw new IllegalArgumentException("订单已发货完成，无需重复发货");
-        if ("CLOSED".equals(order.status)) throw new IllegalArgumentException("订单已结束，不能发货");
-        List<SalesOrderItem> items = itemRepo.findByOrderId(orderId);
-        for (SalesOrderItem item : items) {
-            // 防漏账：无价明细随单发货后应收无法计价，必须先维护单价
-            if (item.unitPrice == null || item.unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("明细 " + item.materialName + " 单价未维护（≤0），请先编辑订单维护价格再发货");
-            }
-        }
-        for (SalesOrderItem item : items) {
-            BigDecimal shipped = item.shippedQty == null ? BigDecimal.ZERO : item.shippedQty;
-            if (shipped.compareTo(item.qty) < 0) {
-                BigDecimal remain = item.qty.subtract(shipped);
-                inventoryService.outbound("SALES_OUT", order.orderNo,
-                        item.materialCode, null, order.sourceWarehouseId,
-                        remain, operator);
-                item.shippedQty = item.qty;
-                itemRepo.save(item);
-            }
-        }
-        order.status = "SHIPPED";
-        order.updateTime = java.time.LocalDateTime.now();
-        orderRepo.save(order);
-    }
+    // v11.7 清理：confirmShip 已随 /sales-order/{id}/ship 端点下线删除（v6.1.6 发货统一走出库单流程）
 
     /**
      * v5.27：销售订单一键转生产订单

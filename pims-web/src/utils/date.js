@@ -16,13 +16,6 @@ export function monthLocal() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-/** N 天前的本地日期 yyyy-MM-dd（近30天快捷键等场景） */
-export function daysAgoLocal(n) {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
 
 /** 毫秒时间戳 → 本地日期 yyyy-MM-dd（替代 new Date(ms).toISOString()——UTC 坑） */
 export function msToDateLocal(ms) {
@@ -30,10 +23,7 @@ export function msToDateLocal(ms) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-/** Date 对象 → 本地日期 yyyy-MM-dd（替代 d.toISOString().slice(0,10)） */
-export function dateToLocal(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+// v11.7 清理：daysAgoLocal/dateToLocal 死导出删除（0 引用；近 N 天场景页面各自用 todayLocal 推算）
 
 /** N 个月前的本月 yyyy-MM（折旧/工资默认期间用） */
 export function monthsAgoLocal(n) {

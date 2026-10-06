@@ -41,8 +41,8 @@ public class RoleService {
             "process:read","process:write",
             "production:read","production:write",
             "purchase:read","purchase:write","purchase:audit","purchase:reverse-audit","purchase:price",
-            "sales:read","sales:write","sales:audit","sales:reverse-audit",
-            "outsource:read","outsource:write","outsource:audit","outsource:reverse-audit",
+            "sales:read","sales:write",
+            "outsource:read","outsource:write",
             "finance:read","finance:write","finance:audit","finance:reverse-audit","finance:amount",
             "meeting:read","meeting:write",
             "crm:read","crm:write",
@@ -109,8 +109,7 @@ public class RoleService {
             )),
             module("purchase-arrival", "采购到货", List.of(
                 leaf("purchase-arrival:read", "查看"), leaf("purchase-arrival:write", "编辑"),
-                leaf("purchase-arrival:delete", "删除"), leaf("purchase-arrival:audit", "审核"),
-                leaf("purchase-arrival:reverse-audit", "反审核")
+                leaf("purchase-arrival:delete", "删除")
             )),
             module("purchase-return", "采购退货", List.of(
                 leaf("purchase-return:read", "查看"), leaf("purchase-return:write", "编辑"), leaf("purchase-return:delete", "删除")
@@ -409,11 +408,7 @@ public class RoleService {
         });
     }
 
-    /** 查询所有可用权限码（前端勾选用） */
-    public List<String> getAllPermissions() { return ALL_PERMISSIONS; }
-
-    /** 查询权限树结构（前端 el-tree 层级选择用） */
-    public List<Map<String, Object>> getPermissionTree() { return buildPermissionTree(); }
+    // v11.7 清理：getAllPermissions/getPermissionTree 已随 /role/permissions/all|tree 端点下线删除（前端统一走 /permissions/matrix）
 
     // ============ 权限加载（供 StpInterfaceImpl 调用） ============
 

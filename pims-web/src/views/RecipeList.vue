@@ -888,15 +888,6 @@ function onNodeMatChange(code) {
   const m = materials.value.find(m => m.code === code)
   if (m) { nodeForm.value.materialName = m.name || ''; nodeForm.value.spec = m.brand || ''; nodeForm.value.category = m.category || ''; nodeForm.value.subCategory = m.subCategory || '' }
 }
-// v5.35：选择油尾物料
-function onNodeTailChange(code) {
-  const t = tailingOptions.value.find(t => t.materialCode === code)
-  if (t) {
-    nodeForm.value.materialName = t.materialName || ''
-    nodeForm.value.category = 'C'
-    nodeForm.value.subCategory = ''
-  }
-}
 function onNodeRecipeChange(id) {
   const r = recipeList.value.find(r => r.id === id)
   if (r) {
@@ -1268,81 +1259,6 @@ function renderStepDesc(desc) {
     const node = treeData.value[parseInt(n) - 1]
     return node ? n : m   // 有对应明细→显示序号；无（越界）保留原文
   })
-}
-function printProcessSheet() {
-  if (!current.value) { ElMessage.warning('请先选择配方'); return }
-  if (!processTpl.value || !processTpl.value.stages || !processTpl.value.stages.length) {
-    ElMessage.warning('当前配方未绑定工艺路线'); return
-  }
-  printing.value = true
-  api.post('/print-count', { docType: 'RECIPE', docNo: current.value.recipeNo }).then(n => { current.value.printCount = n }).catch(() => {})
-  const v = currentVersion.value
-  const tpl = processTpl.value
-  const now = new Date()
-  const pad = x => String(x).padStart(2, '0')
-  const nowStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes())
-  const typeName = current.value.recipeType === 'GRINDING' ? '制浆（研磨）' : '制漆（调色）'
-  const matRows = treeData.value.map((m, i) =>
-    '<tr><td class="center">' + (i + 1) + '</td><td>' + escHtml(m.materialCode || '') + '</td><td>' + escHtml(m.materialName || '-') + '</td><td class="center">' + escHtml(categoryLabel(m.category)) + (m.subCategory ? '/' + escHtml(subLabel(m.subCategory)) : '') + '</td><td class="num">' + (m.qty || '') + '</td><td class="center">' + escHtml(m.unit || '') + '</td></tr>'
-  ).join('')
-  const stageHtml = tpl.stages.map(stg => {
-    const steps = (stg.steps || []).map(stp =>
-      '<div class="p-step"><b>' + escHtml(stp.stepCode || '') + '</b>. ' + escHtml(renderStepDesc(stp.description)) + (stp.params ? ' <span class="p-param">[' + escHtml(stp.params) + ']</span>' : '') + '</div>'
-    ).join('')
-    const qcs = (stg.qcItems || []).map(qc => {
-      const times = qc.testTimes || 1
-      let rows = ''
-      for (let i = 0; i < times; i++) {
-        rows += '<tr><td class="center">' + (i + 1) + '</td><td>' + escHtml(qc.name || '') + '</td><td class="center">' + escHtml(qc.standard || '') + '</td><td></td><td></td></tr>'
-      }
-      return '<table class="qc-table"><thead><tr><th style="width:40px">序号</th><th style="width:90px">检测项</th><th style="width:90px">标准</th><th>实测值</th><th style="width:80px">检测人</th></tr></thead><tbody>' + rows + '</tbody></table>'
-    }).join('')
-    return '<div class="p-stage"><div class="p-stage-h"><span class="p-no">' + escHtml(stg.stageNo || '') + '</span><b>' + escHtml(stg.stageName || '') + '</b>' + (stg.roleHint ? '<span class="p-role">（' + escHtml(stg.roleHint) + '）</span>' : '') + '</div>' + steps + qcs + '</div>'
-  }).join('')
-  const html = [
-    '<!DOCTYPE html><html><head><meta charset="utf-8"><title>工艺指导单</title><style>',
-    'body{font-family:"Microsoft YaHei","SimSun",sans-serif;color:#111;margin:24px 30px;}',
-    'h1{text-align:center;font-size:20px;margin:0 0 4px;}',
-    '.sub{text-align:center;font-size:12px;color:#555;margin-bottom:14px;}',
-    '.info{width:100%;border-collapse:collapse;margin-bottom:14px;}',
-    '.info td{border:1px solid #888;padding:5px 10px;font-size:13px;}',
-    '.info .k{width:90px;color:#666;background:#f5f5f5;}',
-    'table.mats{width:100%;border-collapse:collapse;margin-bottom:16px;}',
-    'table.mats th,table.mats td{border:1px solid #888;padding:4px 8px;font-size:12px;}',
-    'table.mats th{background:#f0f0f0;}',
-    '.num{text-align:right;}.center{text-align:center;}',
-    '.p-stage{border:1px solid #aaa;border-radius:4px;padding:10px 12px;margin-bottom:12px;}',
-    '.p-stage-h{font-size:14px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px dashed #ccc;}',
-    '.p-stage-h .p-no{display:inline-block;background:#4a6785;color:#fff;border-radius:3px;padding:1px 8px;margin-right:8px;font-size:12px;}',
-    '.p-role{color:#64748b;font-weight:400;font-size:12px;}',
-    '.p-step{font-size:13px;line-height:1.7;}',
-    '.p-param{color:#4a6785;font-size:12px;}',
-    '.qc-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;}',
-    '.qc-table th,.qc-table td{border:1px solid #999;padding:3px 6px;}',
-    '.qc-table th{background:#f5f5f5;}',
-    '.sign{display:flex;justify-content:space-between;margin-top:40px;font-size:13px;}',
-    '.sign span{border-top:1px solid #888;padding-top:6px;min-width:160px;text-align:center;display:inline-block;}',
-    '@media print{body{margin:8px 12px;}}',
-    '</style></head><body>',
-    '<h1>' + typeName + '工艺指导单</h1>',
-    '<div class="sub">打印时间：' + nowStr + '</div>',
-    '<table class="info">',
-    '<tr><td class="k">配方编号</td><td>' + escHtml(current.value.recipeNo) + '</td><td class="k">品名</td><td>' + escHtml(current.value.productName) + '</td></tr>',
-    '<tr><td class="k">版本</td><td>' + escHtml(v ? v.versionNo : '-') + (v ? '（' + vStatusLabel(v.status) + '）' : '') + '</td><td class="k">标准批量</td><td>' + (v ? v.batchQty : '-') + ' ' + escHtml(v ? (v.unit || 'kg') : 'kg') + '</td></tr>',
-    '</table>',
-    '<table class="mats"><thead><tr><th style="width:40px">序号</th><th style="width:110px">物料编码</th><th>品名</th><th style="width:120px">分类</th><th style="width:80px">用量</th><th style="width:50px">单位</th></tr></thead><tbody>',
-    matRows,
-    '</tbody></table>',
-    stageHtml,
-    '<div class="sign"><span>制单人：</span><span>操作人：</span><span>审核人：</span></div>',
-    '</body></html>'
-  ].join('')
-  const win = window.open('', '_blank')
-  if (!win) { ElMessage.warning('浏览器拦截了弹窗，请允许后重试'); printing.value = false; return }
-  win.document.write(html)
-  win.document.close()
-  win.focus()
-  setTimeout(() => { win.print(); printing.value = false }, 300)
 }
 
 function escHtml(s) {

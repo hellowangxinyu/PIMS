@@ -852,36 +852,7 @@ public class OutboundService {
         });
     }
 
-    /**
-     * 批量确认同一生产订单下的所有出库单据
-     */
-    // v6.1.4（大件迁移）：executeTx 锁内包事务，提交后放锁（原 @Transactional+execute 锁先放、提交在后，并发窗口读旧快照/丢更新）
-    public List<ProductionOutbound> confirmByOrder(String productionOrderNo, String operator) {
-        // v5.24：单号生成+单据保存+库存变动整体排队（WriteQueue 全局锁），防并发撞号
-        return writeQueue.executeTx(() -> {
-            List<ProductionOutbound> docs = prodRepo.findByProductionOrderNoAndStatus(productionOrderNo, "DRAFT");
-            if (docs.isEmpty())
-                throw new IllegalArgumentException("无待确认的出库单据");
-            for (ProductionOutbound doc : docs) {
-                // v5.27：只有已排产的订单才允许出库
-                requireScheduled(doc.productionOrderNo);
-                requireBatchNo(doc.batchNo, doc.materialCode);
-                if (doc.cost == null) {
-                    fillBatchCost(doc.qty, doc.materialCode, doc.batchNo, doc.warehouseId, pc -> {
-                        doc.unitPrice = pc[0];
-                        doc.cost = pc[1];
-                    });
-                }
-                inventoryService.outbound("PRODUCTION_OUT", doc.docNo, doc.materialCode,
-                        doc.batchNo, doc.warehouseId, doc.locationId, doc.qty, operator);
-                doc.status = "CONFIRMED";
-                doc.updateTime = LocalDateTime.now();
-                prodRepo.save(doc);
-            }
-            log.info("生产出库批量确认: 订单={} 共{}项", productionOrderNo, docs.size());
-            return docs;
-        });
-    }
+    // v11.7 清理：confirmByOrder 批量确认已随 /outbound/production/confirm-by-order 端点下线删除
 
     // ==================== 可参照订单列表（过滤已完工/已出库/已入库的订单） ====================
 
@@ -1700,11 +1671,7 @@ public class OutboundService {
         });
     }
 
-    // v6.1.4（大件迁移）：executeTx 锁内包事务，提交后放锁（原 @Transactional+execute 锁先放、提交在后，并发窗口读旧快照/丢更新）
-    public OtherOutbound confirmOther(Long id, String operator) {
-        // 其他出库已改为"创建即提交质检"，QC判定合格后自动扣减库存，无需独立确认
-        throw new IllegalArgumentException("其他出库由质检判定驱动扣减库存，不支持手动确认");   // v6.1.7：业务拒绝用 IllegalArgument 透出
-    }
+    // v11.7 清理：confirmOther/confirmOtherInbound 两个 throw 桩已随同名手动确认端点下线删除（其他出入库由质检判定驱动）
 
     // ==================== 其他入库 ====================
 
@@ -1756,12 +1723,6 @@ public class OutboundService {
             log.info("其他入库单据创建并提交质检: {}", docNo);
             return doc;
         });
-    }
-
-    // v6.1.4（大件迁移）：executeTx 锁内包事务，提交后放锁（原 @Transactional+execute 锁先放、提交在后，并发窗口读旧快照/丢更新）
-    public OtherInbound confirmOtherInbound(Long id, String operator) {
-        // 其他入库已改为"创建即提交质检"，QC判定合格后自动入库，无需独立确认
-        throw new IllegalArgumentException("其他入库由质检判定驱动入库，不支持手动确认");   // v6.1.7：同上
     }
 
     // ==================== 参照退货单出库（采购退货出库）====================

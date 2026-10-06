@@ -24,32 +24,13 @@ public class WarehouseLocationService {
         this.zoneRepo = zoneRepo;
     }
 
-    /**
-     * 获取某仓库下所有启用库位（跨分库）。
-     * v5.38：默认排除隔离分库（隔离区/油尾区）的库位——正常业务页面的库位下拉永不见隔离库位，
-     * 前端不再需要各自记得过滤（散弹收口）；需要隔离库位的场景（质检判定选位/油尾入库）走 listByZone 或含隔离重载。
-     */
-    public List<WarehouseLocation> listByWarehouse(Long warehouseId) {
-        return listByWarehouse(warehouseId, false);
-    }
-
-    /** includeIsolated=true 时包含隔离分库库位（隔离货管理场景专用） */
-    public List<WarehouseLocation> listByWarehouse(Long warehouseId, boolean includeIsolated) {
-        List<Long> zoneIds = zoneRepo.findByWarehouseIdAndEnabledTrueOrderBySortOrderAsc(warehouseId)
-                .stream()
-                .filter(z -> includeIsolated || z.zoneType == null || z.zoneType.isBlank())
-                .map(z -> z.id).collect(Collectors.toList());
-        if (zoneIds.isEmpty()) return Collections.emptyList();
-        return repo.findByZoneIdInAndEnabledTrueOrderBySortOrderAsc(zoneIds);
-    }
+    // v11.7 清理：listByWarehouse 两个重载已随 /warehouse/{id}/locations 端点下线删除（库位下拉统一走 listByZone）
 
     public List<WarehouseLocation> listByZone(Long zoneId) {
         return repo.findByZoneIdAndEnabledTrueOrderBySortOrderAsc(zoneId);
     }
 
-    public List<WarehouseLocation> listAllByZone(Long zoneId) {
-        return repo.findByZoneIdOrderBySortOrderAsc(zoneId);
-    }
+    // v11.7 清理：listAllByZone（含停用）已删除，其仓库方法 findByZoneIdOrderBySortOrderAsc 一并删除
 
     public Optional<WarehouseLocation> getById(Long id) { return repo.findById(id); }
 

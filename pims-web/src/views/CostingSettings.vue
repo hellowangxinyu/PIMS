@@ -91,7 +91,6 @@ const checking = ref(false)
 const monthly = ref(null)
 
 function hasPerm(c) { return perms.value.includes(c) }
-function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
 function labelOf(v) { return METHODS.find(m => m.value === v)?.label || v || '—' }
 function fmtTime(t) {
   if (!t) return ''

@@ -26,19 +26,7 @@ public class RoleController {
         return service.getRole(id).map(Result::ok).orElse(Result.fail(500, "角色不存在"));
     }
 
-    /** 所有可配置的权限码（前端勾选用） */
-    @GetMapping("/permissions/all")
-    @SaCheckPermission(value = "user:read")
-    public Result<List<String>> allPermissions() {
-        return Result.ok(service.getAllPermissions());
-    }
-
-    /** 权限树结构（前端 el-tree 层级选择用） */
-    @GetMapping("/permissions/tree")
-    @SaCheckPermission(value = "user:read")
-    public Result<?> permissionTree() {
-        return Result.ok(service.getPermissionTree());
-    }
+    // v11.7 清理：/permissions/all 平铺码与 /permissions/tree 树接口删除（角色页统一走 /permissions/matrix 矩阵接口；service.getAllPermissions/getPermissionTree 一并删除）
 
     /** v5.68 权限矩阵（表格化勾选用）：行=模块、列=操作+字段权限 */
     @GetMapping("/permissions/matrix")

@@ -28,6 +28,12 @@ List<AccountsReceivable> findByCustomerId(Long customerId);
             "WHERE a.customer_id IS NOT NULL GROUP BY a.customer_id ORDER BY MIN(a.id)", nativeQuery = true)
     List<Object[]> totalByCustomer();
 
+    /** v11.7 应收总表：超期应收（已过账期未收余额）按客户聚合（口径同应付 overdueBySupplier） */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT a.customerId, COALESCE(SUM(a.amount - COALESCE(a.receivedAmount, 0)), 0) " +
+            "FROM AccountsReceivable a WHERE a.status <> 'PAID' AND a.dueDate < :today GROUP BY a.customerId")
+    java.util.List<Object[]> overdueByCustomer(@org.springframework.data.repository.query.Param("today") java.time.LocalDate today);
+
     /** 按客户查询未结清应收单（按创建时间升序，用于收款 FIFO 冲减） */
     List<AccountsReceivable> findByCustomerIdAndStatusNotOrderByCreateTimeAsc(Long customerId, String status);
 

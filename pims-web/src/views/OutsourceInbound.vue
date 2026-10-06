@@ -169,10 +169,9 @@
 
 <script setup>
 import { statusType as globalStatusType } from '../utils/statusTag'
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
-import { printLabels } from '../utils/labelPrint'
 import { useBucketPrint } from '../composables/useBucketPrint'
 // v9.6 导出当前筛选（下载工具绕过 JSON 拦截器）
 import { downloadFile } from '../utils/download'

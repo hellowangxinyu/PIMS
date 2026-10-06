@@ -87,17 +87,7 @@ public class InventoryController {
         return Result.ok(enrichQcInfo(service.queryByMaterial(code)));
     }
 
-    @GetMapping("/warehouse/{warehouseId}")
-    @SaCheckPermission(value = "inventory:read")
-    public Result<?> byWarehouse(@PathVariable String warehouseId,
-                                 @RequestParam(required = false) String keyword,
-                                 @RequestParam(defaultValue = "1") int page,
-                                 @RequestParam(defaultValue = "200") int size) {
-        // v7.1：默认分页 200 行（原全表返回；不传分页参数的老调用方也自动受上限保护）
-        var r = service.queryByWarehousePaged(warehouseId, keyword, page, Math.min(size, 1000));
-        r.put("rows", enrichQcInfo((List<InventoryLedger>) r.get("rows")));
-        return Result.ok(r);
-    }
+    // v11.7 清理：/inventory/warehouse/{id} 旧按仓查询端点已删除（前端统一走 /inventory 与仓库分库筛选）
 
     /** 库存批次选项（按物料+仓库查询，按批号聚合可用量，供退货出库等选批号，v5.4） */
     @GetMapping("/batch")
@@ -321,30 +311,7 @@ public class InventoryController {
         }
     }
 
-    @GetMapping("/total/{materialCode}")
-    @SaCheckPermission(value = "inventory:read")
-    public Result<BigDecimal> totalOwned(@PathVariable String materialCode) {
-        return Result.ok(service.queryTotalOwned(materialCode));
-    }
-
-    @GetMapping("/movements/{materialCode}")
-    @SaCheckPermission(value = "inventory:read")
-    public Result<List<InventoryMovement>> movements(@PathVariable String materialCode) {
-        return Result.ok(service.queryMovements(materialCode));
-    }
-
-    @GetMapping("/trace")
-    @SaCheckPermission(value = "inventory:read")
-    public Result<List<InventoryMovement>> trace(
-            @RequestParam String materialCode, @RequestParam String batchNo) {
-        return Result.ok(service.queryBatchTrace(materialCode, batchNo));
-    }
-
-    @GetMapping("/low-stock")
-    @SaCheckPermission(value = "inventory:read")
-    public Result<List<InventoryLedger>> lowStock() {
-        return Result.ok(service.queryLowStock());
-    }
+    // v11.7 清理：/total/{code}、/movements/{code}、/trace、/low-stock 四个旧查询端点删除（前端无调用：低库存看 /report/low-stock，追溯走台账页；对应 service 查询方法一并删除）
 
     // ==================== 导出（v5.23） ====================
 

@@ -26,10 +26,7 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 
     // ==================== v5.27 拉黑：管理列表 ====================
     // 管理列表显示"正常 + 已拉黑"（排除纯删除的），拉黑的可解除；下拉选择仍只走 enabled=true 的
-
-    /** 管理列表：全部非删除供应商（enabled 或 blacklisted） */
-    @Query("SELECT s FROM Supplier s WHERE s.enabled = true OR s.blacklisted = true ORDER BY s.createTime DESC")
-    List<Supplier> findAllActiveOrBlacklisted();
+    // v11.7 清理：findAllActiveOrBlacklisted 已随 SupplierService.listAllManage 删除（管理列表走分页搜索）
 
     /** 管理列表按类型：正常 + 已拉黑 */
     @Query("SELECT s FROM Supplier s WHERE s.type = ?1 AND (s.enabled = true OR s.blacklisted = true) ORDER BY s.createTime DESC")

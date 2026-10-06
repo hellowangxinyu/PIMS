@@ -43,7 +43,6 @@ const loading = ref(false)
 const exporting = ref(false)
 const period = ref(monthLocal())
 
-function hasPerm(c) { return perms.value.includes(c) }
 function hasAmountPerm(m) { return perms.value.includes(m + ':amount') || perms.value.includes('finance:amount') }
 function nz(v) { return Number(v || 0) !== 0 ? fmtAmt(v) : '' }
 

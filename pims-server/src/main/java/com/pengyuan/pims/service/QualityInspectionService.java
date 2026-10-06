@@ -235,17 +235,7 @@ public class QualityInspectionService {
         return java.time.LocalDate.parse(day).plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
-    public List<QualityInspection> listAll() {
-        return qcRepo.findByOrderByCreateTimeDesc();
-    }
-
-    public List<QualityInspection> listByType(String type) {
-        return qcRepo.findByTypeOrderByCreateTimeDesc(type);
-    }
-
-    public List<QualityInspection> listPending(String type) {
-        return qcRepo.findByTypeAndStatusOrderByCreateTimeDesc(type, "PENDING");
-    }
+    // v11.7 清理：listAll/listByType/listPending 已随 /qc、/qc/pending 端点下线删除（统一走 search 分页）
 
     /**
      * 质检单分页查询（支持类型 + 状态 + 多条件 + 按创建时间倒序）
@@ -674,15 +664,7 @@ public class QualityInspectionService {
         }
     }
 
-    /**
-     * v5.32：按质检单号取检测项（库存页展开查看批次检测明细）。
-     * 历史单无快照返回空数组；不触发补建（已判定单不可变）。
-     */
-    public List<QualityInspectionItem> getItemsByNo(String inspectionNo) {
-        QualityInspection qc = qcRepo.findByInspectionNo(inspectionNo)
-                .orElseThrow(() -> new IllegalArgumentException("质检单不存在: " + inspectionNo));
-        return inspectionItemRepo.findByInspectionIdOrderBySortOrderAscIdAsc(qc.id);
-    }
+    // v11.7 清理：getItemsByNo 已随 /qc/items-by-no/{no} 端点下线删除（走 getByNo 完整信息接口）
 
     /**
      * v5.32：按质检单号取质检单完整信息+检测项（库存页点击检测结果弹窗查看质检报告）。
