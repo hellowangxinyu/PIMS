@@ -50,6 +50,20 @@ public class GlobalExceptionHandler {
         return Result.fail(400, "请求体格式错误，请检查发送的数据");
     }
 
+    /** v11.8（FT-06）：缺少必填请求参数返回 400 并点名缺哪个（原落通用 500"系统异常"，不利排障） */
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<?> handleMissingParam(org.springframework.web.bind.MissingServletRequestParameterException e) {
+        return Result.fail(400, "缺少必填参数: " + e.getParameterName());
+    }
+
+    /** v11.8（FT-06）：缺 multipart 文件（如银行流水导入未带 file）同口径返回 400 */
+    @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<?> handleMissingPart(org.springframework.web.multipart.support.MissingServletRequestPartException e) {
+        return Result.fail(400, "缺少必填参数: " + e.getRequestPartName());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<?> handleValidation(MethodArgumentNotValidException e) {
