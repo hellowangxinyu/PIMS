@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 /**
  * 质检模板（v5.32：按物料大类区分检测内容）
  * apply_category 对应 material_category 字典：A助剂/P颜料/F填料/R树脂/S溶剂/B半成品/C成品。
- * 同类别可建多套，仅 is_default=1 且启用的模板在质检单创建时自动快照。
+ * 同类别可建多套，仅 is_default = TRUE 且启用的模板在质检单创建时自动快照。
  */
 @Entity
 @Table(name = "qc_template")

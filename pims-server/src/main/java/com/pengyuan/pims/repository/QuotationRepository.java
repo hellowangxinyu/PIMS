@@ -17,6 +17,6 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     List<Quotation> findByCustomerIdAndStatusOrderByCreateTimeDesc(Long customerId, String status);
 
     /** v5.24 口径：取指定前缀最大单号序号（防并发撞号 + 删除不错位） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(quote_no, -4) AS INTEGER)) FROM quotation WHERE quote_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(quote_no, LENGTH(quote_no)-3, 4) AS INTEGER)) FROM quotation WHERE LOWER(quote_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 }

@@ -14,15 +14,15 @@ public interface PaymentReceiptRepository extends JpaRepository<PaymentReceipt, 
 
     /** 月度收款合计（近N个月） */
     @Query(value = "SELECT strftime('%Y-%m', create_time/1000, 'unixepoch', '+8 hours') AS period, COALESCE(SUM(amount), 0) " +
-            "FROM payment_receipt WHERE create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) GROUP BY period ORDER BY period", nativeQuery = true)
+            "FROM payment_receipt WHERE create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) GROUP BY period ORDER BY period", nativeQuery = true)
     List<Object[]> monthlyAmountSince(String sinceDate);
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM payment_receipt WHERE doc_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM payment_receipt WHERE LOWER(doc_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
     /** v7.6 应收周转：某日零点前累计收款（按客户），与累计立账相减得期初/期末应收余额 */
     @Query(value = "SELECT customer_id, COALESCE(SUM(amount),0) FROM payment_receipt " +
-            "WHERE customer_id IS NOT NULL AND create_time < 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "WHERE customer_id IS NOT NULL AND create_time < 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY customer_id", nativeQuery = true)
     List<Object[]> cumReceivedByCustomer(String dateExclusive);
 

@@ -16,12 +16,12 @@ public interface StatInventoryDailyRepository extends JpaRepository<StatInventor
 
     /** 按月聚合：查某月所有物料的出入库汇总 */
     @Query(value = "SELECT stat_date, material_code, warehouse_id, in_qty, out_qty, in_amount " +
-            "FROM stat_inventory_daily WHERE stat_date LIKE ?1 || '%' ORDER BY stat_date DESC", nativeQuery = true)
+            "FROM stat_inventory_daily WHERE LOWER(stat_date) LIKE LOWER(?1) || '%' ORDER BY stat_date DESC", nativeQuery = true)
     List<StatInventoryDaily> findByMonth(String month);
 
     /** 查某物料某月汇总（聚合） */
     @Query(value = "SELECT COALESCE(SUM(in_qty),0), COALESCE(SUM(out_qty),0), COALESCE(SUM(in_amount),0) " +
-            "FROM stat_inventory_daily WHERE material_code = ?1 AND stat_date LIKE ?2 || '%'", nativeQuery = true)
+            "FROM stat_inventory_daily WHERE material_code = ?1 AND LOWER(stat_date) LIKE LOWER(?2) || '%'", nativeQuery = true)
     Object[] sumByMaterialAndMonth(String materialCode, String month);
 
     /** 按月汇总全部物料的出入库量 */

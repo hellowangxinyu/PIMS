@@ -116,10 +116,10 @@ public class PurchaseService {
         Specification<RawMaterialPurchase> spec = (root, query, cb) -> {
             List<Predicate> ps = new ArrayList<>();
             if (status != null && !status.isBlank()) ps.add(cb.equal(root.get("status"), status));
-            if (orderNo != null && !orderNo.isBlank()) ps.add(cb.like(root.get("orderNo"), "%" + orderNo + "%"));
-            if (supplierName != null && !supplierName.isBlank()) ps.add(cb.like(root.get("supplierName"), "%" + supplierName + "%"));
-            if (materialCode != null && !materialCode.isBlank()) ps.add(cb.like(root.get("materialCode"), "%" + materialCode + "%"));
-            if (materialName != null && !materialName.isBlank()) ps.add(cb.like(root.get("materialName"), "%" + materialName + "%"));
+            if (orderNo != null && !orderNo.isBlank()) ps.add(cb.like(cb.lower(root.get("orderNo")), "%" + orderNo.toLowerCase() + "%"));
+            if (supplierName != null && !supplierName.isBlank()) ps.add(cb.like(cb.lower(root.get("supplierName")), "%" + supplierName.toLowerCase() + "%"));
+            if (materialCode != null && !materialCode.isBlank()) ps.add(cb.like(cb.lower(root.get("materialCode")), "%" + materialCode.toLowerCase() + "%"));
+            if (materialName != null && !materialName.isBlank()) ps.add(cb.like(cb.lower(root.get("materialName")), "%" + materialName.toLowerCase() + "%"));
             if (startDate != null) ps.add(cb.greaterThanOrEqualTo(root.get("purchaseDate"), startDate));
             if (endDate != null) ps.add(cb.lessThanOrEqualTo(root.get("purchaseDate"), endDate));
             return cb.and(ps.toArray(new Predicate[0]));
@@ -349,10 +349,10 @@ public class PurchaseService {
         Specification<FinishedProductPurchase> spec = (root, query, cb) -> {
             List<Predicate> ps = new ArrayList<>();
             if (status != null && !status.isBlank()) ps.add(cb.equal(root.get("status"), status));
-            if (orderNo != null && !orderNo.isBlank()) ps.add(cb.like(root.get("orderNo"), "%" + orderNo + "%"));
-            if (supplierName != null && !supplierName.isBlank()) ps.add(cb.like(root.get("supplierName"), "%" + supplierName + "%"));
-            if (materialCode != null && !materialCode.isBlank()) ps.add(cb.like(root.get("materialCode"), "%" + materialCode + "%"));
-            if (materialName != null && !materialName.isBlank()) ps.add(cb.like(root.get("materialName"), "%" + materialName + "%"));
+            if (orderNo != null && !orderNo.isBlank()) ps.add(cb.like(cb.lower(root.get("orderNo")), "%" + orderNo.toLowerCase() + "%"));
+            if (supplierName != null && !supplierName.isBlank()) ps.add(cb.like(cb.lower(root.get("supplierName")), "%" + supplierName.toLowerCase() + "%"));
+            if (materialCode != null && !materialCode.isBlank()) ps.add(cb.like(cb.lower(root.get("materialCode")), "%" + materialCode.toLowerCase() + "%"));
+            if (materialName != null && !materialName.isBlank()) ps.add(cb.like(cb.lower(root.get("materialName")), "%" + materialName.toLowerCase() + "%"));
             if (startDate != null) ps.add(cb.greaterThanOrEqualTo(root.get("purchaseDate"), startDate));
             if (endDate != null) ps.add(cb.lessThanOrEqualTo(root.get("purchaseDate"), endDate));
             return cb.and(ps.toArray(new Predicate[0]));
@@ -970,7 +970,7 @@ public class PurchaseService {
     /** v11.0：价税分离全局税率（与 QualityInspectionService.taxRatePercent 同 SQL 同源） */
     private java.math.BigDecimal taxRatePercent() {
         try {
-            var rows = jdbc.queryForList("SELECT value FROM dict_item WHERE type = 'tax_rate' AND enabled = 1 ORDER BY sort_order ASC LIMIT 1");
+            var rows = jdbc.queryForList("SELECT value FROM dict_item WHERE type = 'tax_rate' AND enabled = TRUE ORDER BY sort_order ASC LIMIT 1");
             if (!rows.isEmpty()) return new java.math.BigDecimal(String.valueOf(rows.get(0).get("value")));
         } catch (Exception ignored) { }
         return new java.math.BigDecimal("13");

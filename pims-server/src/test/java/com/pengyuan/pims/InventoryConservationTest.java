@@ -22,9 +22,9 @@ class InventoryConservationTest extends Support {
         jdbc.update("DELETE FROM inventory_ledger WHERE material_code = 'T-CONSV'");
         Integer wc = jdbc.queryForObject("SELECT COUNT(*) FROM warehouse", Integer.class);
         if (wc == null || wc == 0) {
-            jdbc.update("INSERT INTO warehouse (id, code, name, enabled) VALUES (1, 'TWH', '测试仓', 1)");
-            jdbc.update("INSERT INTO warehouse_zone (id, warehouse_id, code, name, enabled) VALUES (1, 1, 'TZN', '测试分库', 1)");
-            jdbc.update("INSERT INTO warehouse_location (id, zone_id, code, name, enabled) VALUES (1, 1, 'T-01', '测试库位', 1)");
+            jdbc.update("INSERT INTO warehouse (id, code, name, enabled) VALUES (1, 'TWH', '测试仓', TRUE)");
+            jdbc.update("INSERT INTO warehouse_zone (id, warehouse_id, code, name, enabled) VALUES (1, 1, 'TZN', '测试分库', TRUE)");
+            jdbc.update("INSERT INTO warehouse_location (id, zone_id, code, name, enabled) VALUES (1, 1, 'T-01', '测试库位', TRUE)");
         }
     }
 

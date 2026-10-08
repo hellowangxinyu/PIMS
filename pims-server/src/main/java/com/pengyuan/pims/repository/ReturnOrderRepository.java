@@ -32,7 +32,7 @@ List<ReturnOrder> findByStatusOrderByCreateTimeDesc(String status);
     List<ReturnOrder> findByTypeAndRefSalesOutboundNo(String type, String refSalesOutboundNo);
 
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM return_order WHERE doc_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM return_order WHERE LOWER(doc_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
     // ==================== v9.4 报表退货冲减（审计口径缺陷：退货只冲应收不冲报表，收入虚高） ====================
@@ -45,7 +45,7 @@ List<ReturnOrder> findByStatusOrderByCreateTimeDesc(String status);
             "COALESCE(SUM(-r.qty), 0) " +
             "FROM return_order r " +
             "WHERE r.type = 'SALES_RETURN' AND r.status = 'DONE' " +
-            "AND r.create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "AND r.create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY period", nativeQuery = true)
     java.util.List<Object[]> monthlySalesReturnSince(String sinceDate);
 
@@ -53,7 +53,7 @@ List<ReturnOrder> findByStatusOrderByCreateTimeDesc(String status);
     @org.springframework.data.jpa.repository.Query(value = "SELECT r.customer_name, COALESCE(SUM(-COALESCE(r.return_amount, r.qty * r.unit_price, 0)), 0) " +
             "FROM return_order r " +
             "WHERE r.type = 'SALES_RETURN' AND r.status = 'DONE' AND r.customer_name IS NOT NULL " +
-            "AND r.create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "AND r.create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY r.customer_name", nativeQuery = true)
     java.util.List<Object[]> customerReturnRankSince(String sinceDate);
 
@@ -61,7 +61,7 @@ List<ReturnOrder> findByStatusOrderByCreateTimeDesc(String status);
     @org.springframework.data.jpa.repository.Query(value = "SELECT r.material_name, COALESCE(SUM(-COALESCE(r.return_amount, r.qty * r.unit_price, 0)), 0) " +
             "FROM return_order r " +
             "WHERE r.type = 'SALES_RETURN' AND r.status = 'DONE' AND r.material_name IS NOT NULL " +
-            "AND r.create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "AND r.create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY r.material_name", nativeQuery = true)
     java.util.List<Object[]> materialReturnRankSince(String sinceDate);
 

@@ -17,6 +17,6 @@ public interface SupplierQualityTraceRepository extends JpaRepository<SupplierQu
     List<SupplierQualityTrace> findBySupplierIdAndStatusOrderByCreateTimeDescIdDesc(Long supplierId, String status);
 
     /** 取指定前缀最大单号序号（防并发撞号 + 删除不错位），照 CustomerComplaintRepository 口径 */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(trace_no, -4) AS INTEGER)) FROM supplier_quality_trace WHERE trace_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(trace_no, LENGTH(trace_no)-3, 4) AS INTEGER)) FROM supplier_quality_trace WHERE LOWER(trace_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 }

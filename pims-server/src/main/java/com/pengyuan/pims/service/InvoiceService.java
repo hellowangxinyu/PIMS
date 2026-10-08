@@ -59,6 +59,10 @@ public class InvoiceService {
             if (inv.docNo != null && !inv.docNo.isBlank() && repo.existsByDocNo(inv.docNo)) {
                 throw new IllegalArgumentException("发票单号 " + inv.docNo + " 已存在");   // v6.1.5 查重入锁
             }
+            // v11.8（FT-05）：发票号业务查重（仅拦在账的正常票；已红冲 FLUSHED 的票号不占用）
+            if (repo.existsByInvoiceNoAndStatus(inv.invoiceNo, "NORMAL")) {
+                throw new IllegalArgumentException("发票号 " + inv.invoiceNo + " 已存在（在账），请勿重复录入");
+            }
             if (inv.docNo == null || inv.docNo.isBlank()) {
                 Integer maxSeq = repo.findMaxSeq("INV-" + LocalDate.now().toString().replace("-", "") + "-%");
                 inv.docNo = String.format("INV-%s-%04d", LocalDate.now().toString().replace("-", ""), (maxSeq == null ? 0 : maxSeq) + 1);
@@ -76,6 +80,10 @@ public class InvoiceService {
         Invoice inv = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("发票不存在"));
         if (!"NORMAL".equals(inv.status)) throw new IllegalArgumentException("已红冲发票不可编辑");
         assertNoVoucher(inv.docNo, "修改");
+        // v11.8（FT-05）：改成已存在的在账发票号同样拦截（排除自身）
+        if (!in.invoiceNo.equals(inv.invoiceNo) && repo.existsByInvoiceNoAndStatusAndIdNot(in.invoiceNo, "NORMAL", id)) {
+            throw new IllegalArgumentException("发票号 " + in.invoiceNo + " 已存在（在账），请勿重复录入");
+        }
         inv.invoiceNo = in.invoiceNo;
         inv.partnerId = in.partnerId;
         inv.partnerName = in.partnerName;
@@ -115,6 +123,10 @@ public class InvoiceService {
     /** 红冲：生成负数对冲发票，原单标记 FLUSHED */
     // v8.1（P0-7）：去 @Transactional，execute→executeTx（锁内包事务）
     public Invoice redFlush(Long id, String redInvoiceNo, String reason) {
+        // v11.8（FT-04）：红字发票号必填——原缺校验可生成发票号为空的负数对冲单，影响发票台账对照
+        if (redInvoiceNo == null || redInvoiceNo.isBlank()) {
+            throw new IllegalArgumentException("红字发票号不能为空");
+        }
         Invoice origin = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("发票不存在"));
         if (!"NORMAL".equals(origin.status)) throw new IllegalArgumentException("该发票已红冲");
         // v6.1.1：红字负数单不可再红冲（红字单 status=NORMAL 可被无限链式对冲，套娃生成正数单）

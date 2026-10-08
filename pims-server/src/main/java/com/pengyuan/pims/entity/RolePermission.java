@@ -16,6 +16,6 @@ public class RolePermission {
     @Column(nullable = false, length = 30)
     public String roleCode;      // 关联 sys_role.code
 
-    @Column(nullable = false, length = 30)
+    @Column(nullable = false, length = 60)
     public String permCode;      // 权限码，如 supplier:read
 }

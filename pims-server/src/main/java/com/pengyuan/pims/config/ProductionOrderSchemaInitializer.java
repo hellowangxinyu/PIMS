@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -26,10 +28,10 @@ public class ProductionOrderSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            var cols = jdbc.queryForList("PRAGMA table_info(production_order)");
+            var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "production_order");
             boolean has = cols.stream().anyMatch(c -> "sales_order_no".equals(c.get("name")));
             if (!has) {
-                jdbc.execute("ALTER TABLE production_order ADD COLUMN sales_order_no VARCHAR(20)");
+                SqlDdl.exec(jdbc, "ALTER TABLE production_order ADD COLUMN sales_order_no VARCHAR(20)");
                 log.info("生产订单表结构：新增 sales_order_no 列（来源销售订单）");
             }
         } catch (Exception e) {
@@ -39,10 +41,10 @@ public class ProductionOrderSchemaInitializer implements CommandLineRunner {
 
         // v5.27：委外订单同字段（销售订单一键转委外）
         try {
-            var ooCols = jdbc.queryForList("PRAGMA table_info(outsource_order)");
+            var ooCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "outsource_order");
             boolean hasOo = ooCols.stream().anyMatch(c -> "sales_order_no".equals(c.get("name")));
             if (!hasOo) {
-                jdbc.execute("ALTER TABLE outsource_order ADD COLUMN sales_order_no VARCHAR(20)");
+                SqlDdl.exec(jdbc, "ALTER TABLE outsource_order ADD COLUMN sales_order_no VARCHAR(20)");
                 log.info("委外订单表结构：新增 sales_order_no 列（来源销售订单）");
             }
         } catch (Exception e) {
@@ -52,20 +54,20 @@ public class ProductionOrderSchemaInitializer implements CommandLineRunner {
 
         // v5.27：排产顺序号（排产时分配，排产中心按此排序）
         try {
-            var moCols = jdbc.queryForList("PRAGMA table_info(production_order)");
+            var moCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "production_order");
             boolean hasSeq = moCols.stream().anyMatch(c -> "schedule_seq".equals(c.get("name")));
             if (!hasSeq) {
-                jdbc.execute("ALTER TABLE production_order ADD COLUMN schedule_seq INTEGER");
+                SqlDdl.exec(jdbc, "ALTER TABLE production_order ADD COLUMN schedule_seq INTEGER");
                 log.info("生产订单表结构：新增 schedule_seq 列（排产顺序）");
             }
         } catch (Exception e) {
             log.warn("生产订单表结构：schedule_seq 加列失败: {}", e.getMessage());
         }
         try {
-            var ooCols = jdbc.queryForList("PRAGMA table_info(outsource_order)");
+            var ooCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "outsource_order");
             boolean hasSeq = ooCols.stream().anyMatch(c -> "schedule_seq".equals(c.get("name")));
             if (!hasSeq) {
-                jdbc.execute("ALTER TABLE outsource_order ADD COLUMN schedule_seq INTEGER");
+                SqlDdl.exec(jdbc, "ALTER TABLE outsource_order ADD COLUMN schedule_seq INTEGER");
                 log.info("委外订单表结构：新增 schedule_seq 列（排产顺序）");
             }
         } catch (Exception e) {

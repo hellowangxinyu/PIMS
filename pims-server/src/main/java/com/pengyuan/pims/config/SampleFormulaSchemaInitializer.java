@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -30,28 +32,28 @@ public class SampleFormulaSchemaInitializer implements CommandLineRunner {
         try {
             // v7.7.2 关联打样（复样参考）：指向历史打样单 id，打样员录配方时可参考/带入其配方
             try {
-                boolean hasRef = jdbc.queryForList("PRAGMA table_info(sample_request)").stream()
+                boolean hasRef = com.pengyuan.pims.common.DbMeta.columns(jdbc, "sample_request").stream()
                         .anyMatch(c -> "ref_sample_id".equalsIgnoreCase(String.valueOf(c.get("name"))));
-                if (!hasRef) jdbc.execute("ALTER TABLE sample_request ADD COLUMN ref_sample_id BIGINT");
+                if (!hasRef) SqlDdl.exec(jdbc, "ALTER TABLE sample_request ADD COLUMN ref_sample_id BIGINT");
             } catch (Exception ex) { log.warn("sample_request 补 ref_sample_id 失败: {}", ex.getMessage()); }
             // v7.7.3 打样尺寸：NORMAL 常规 / A4（打样寄样为铁片样板，数量单位=张）
             try {
-                boolean hasSize = jdbc.queryForList("PRAGMA table_info(sample_request)").stream()
+                boolean hasSize = com.pengyuan.pims.common.DbMeta.columns(jdbc, "sample_request").stream()
                         .anyMatch(c -> "sample_size".equalsIgnoreCase(String.valueOf(c.get("name"))));
-                if (!hasSize) jdbc.execute("ALTER TABLE sample_request ADD COLUMN sample_size VARCHAR(10) DEFAULT 'NORMAL'");
+                if (!hasSize) SqlDdl.exec(jdbc, "ALTER TABLE sample_request ADD COLUMN sample_size VARCHAR(10) DEFAULT 'NORMAL'");
             } catch (Exception ex) { log.warn("sample_request 补 sample_size 失败: {}", ex.getMessage()); }
             for (String col : new String[]{"assignee VARCHAR(50)", "assign_time TIMESTAMP", "receive_time TIMESTAMP"}) {
                 String name = col.split(" ")[0];
-                boolean has = jdbc.queryForList("PRAGMA table_info(sample_request)").stream()
+                boolean has = com.pengyuan.pims.common.DbMeta.columns(jdbc, "sample_request").stream()
                         .anyMatch(c -> name.equalsIgnoreCase(String.valueOf(c.get("name"))));
-                if (!has) jdbc.execute("ALTER TABLE sample_request ADD COLUMN " + col);
+                if (!has) SqlDdl.exec(jdbc, "ALTER TABLE sample_request ADD COLUMN " + col);
             }
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_sample_assignee ON sample_request(assignee, status)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_sample_assignee ON sample_request(assignee, status)");
             log.info("sample_request 派发列就绪");
         } catch (Exception e) { log.warn("sample_request 补列失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS sample_formula (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     formula_no VARCHAR(20) NOT NULL UNIQUE,
@@ -74,7 +76,7 @@ public class SampleFormulaSchemaInitializer implements CommandLineRunner {
         } catch (Exception e) { log.warn("sample_formula 建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS sample_formula_item (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     formula_id BIGINT NOT NULL,
@@ -87,12 +89,12 @@ public class SampleFormulaSchemaInitializer implements CommandLineRunner {
                     sort_order INTEGER DEFAULT 0
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_sample_formula_item ON sample_formula_item(formula_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_sample_formula_item ON sample_formula_item(formula_id)");
             log.info("打样配方明细表 sample_formula_item 就绪");
         } catch (Exception e) { log.warn("sample_formula_item 建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS sample_formula_history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     formula_id BIGINT NOT NULL,
@@ -101,7 +103,7 @@ public class SampleFormulaSchemaInitializer implements CommandLineRunner {
                     create_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_sample_formula_his ON sample_formula_history(formula_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_sample_formula_his ON sample_formula_history(formula_id)");
             log.info("打样配方快照表 sample_formula_history 就绪");
         } catch (Exception e) { log.warn("sample_formula_history 建表失败: {}", e.getMessage()); }
     }

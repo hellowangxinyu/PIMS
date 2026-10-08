@@ -535,7 +535,7 @@ public class AiService {
             // v6.1：敏感表不进枚举（防模型构造拖库查询）
             if (java.util.Arrays.asList(SENSITIVE_TABLES).contains(tableName)
                     || tableName.matches("operation_log_\\d{6}")) continue;
-            List<Map<String, Object>> cols = jdbc.queryForList("PRAGMA table_info(" + tableName + ")");
+            List<Map<String, Object>> cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, tableName);
             List<String> colNames = cols.stream().map(c -> String.valueOf(c.get("name"))).toList();
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("table", tableName);

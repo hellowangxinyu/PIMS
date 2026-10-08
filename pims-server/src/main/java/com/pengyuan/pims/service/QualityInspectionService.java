@@ -266,12 +266,12 @@ public class QualityInspectionService {
             if (category != null && !category.isBlank()) {
                 ps.add(root.get("materialCategory").in((Object[]) category.split(",")));
             }
-            if (inspectionNo != null && !inspectionNo.isBlank()) ps.add(cb.like(root.get("inspectionNo"), "%" + inspectionNo + "%"));
-            if (refDocNo != null && !refDocNo.isBlank()) ps.add(cb.like(root.get("refDocNo"), "%" + refDocNo + "%"));
-            if (materialCode != null && !materialCode.isBlank()) ps.add(cb.like(root.get("materialCode"), "%" + materialCode + "%"));
-            if (materialName != null && !materialName.isBlank()) ps.add(cb.like(root.get("materialName"), "%" + materialName + "%"));
-            if (batchNo != null && !batchNo.isBlank()) ps.add(cb.like(root.get("batchNo"), "%" + batchNo + "%"));
-            if (inspector != null && !inspector.isBlank()) ps.add(cb.like(root.get("inspector"), "%" + inspector + "%"));
+            if (inspectionNo != null && !inspectionNo.isBlank()) ps.add(cb.like(cb.lower(root.get("inspectionNo")), "%" + inspectionNo.toLowerCase() + "%"));
+            if (refDocNo != null && !refDocNo.isBlank()) ps.add(cb.like(cb.lower(root.get("refDocNo")), "%" + refDocNo.toLowerCase() + "%"));
+            if (materialCode != null && !materialCode.isBlank()) ps.add(cb.like(cb.lower(root.get("materialCode")), "%" + materialCode.toLowerCase() + "%"));
+            if (materialName != null && !materialName.isBlank()) ps.add(cb.like(cb.lower(root.get("materialName")), "%" + materialName.toLowerCase() + "%"));
+            if (batchNo != null && !batchNo.isBlank()) ps.add(cb.like(cb.lower(root.get("batchNo")), "%" + batchNo.toLowerCase() + "%"));
+            if (inspector != null && !inspector.isBlank()) ps.add(cb.like(cb.lower(root.get("inspector")), "%" + inspector.toLowerCase() + "%"));
             if (startDate != null) ps.add(cb.greaterThanOrEqualTo(root.get("inspectDate"), startDate));
             if (endDate != null) ps.add(cb.lessThanOrEqualTo(root.get("inspectDate"), endDate));
             return cb.and(ps.toArray(new Predicate[0]));
@@ -873,7 +873,7 @@ public class QualityInspectionService {
     /** v8.2：数据字典 tax_rate 税率百分数（默认 13，与前端 utils/tax 同源口径） */
     private java.math.BigDecimal taxRatePercent() {
         try {
-            var rows = jdbc.queryForList("SELECT value FROM dict_item WHERE type = 'tax_rate' AND enabled = 1 ORDER BY sort_order ASC LIMIT 1");
+            var rows = jdbc.queryForList("SELECT value FROM dict_item WHERE type = 'tax_rate' AND enabled = TRUE ORDER BY sort_order ASC LIMIT 1");
             if (!rows.isEmpty()) return new java.math.BigDecimal(String.valueOf(rows.get(0).get("value")));
         } catch (Exception ignored) { }
         return new java.math.BigDecimal("13");

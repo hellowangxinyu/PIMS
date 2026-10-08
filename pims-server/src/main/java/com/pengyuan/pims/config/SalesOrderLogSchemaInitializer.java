@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -20,7 +22,7 @@ public class SalesOrderLogSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS sales_order_change_log (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     order_id BIGINT NOT NULL,
@@ -30,7 +32,7 @@ public class SalesOrderLogSchemaInitializer implements CommandLineRunner {
                     create_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_socl_order ON sales_order_change_log(order_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_socl_order ON sales_order_change_log(order_id)");
             log.info("销售订单变更留痕表 sales_order_change_log 就绪");
         } catch (Exception e) { log.warn("sales_order_change_log 建表失败: {}", e.getMessage()); }
     }

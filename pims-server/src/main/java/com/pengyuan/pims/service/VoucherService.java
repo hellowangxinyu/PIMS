@@ -337,7 +337,7 @@ public class VoucherService {
                 JOIN voucher v ON ve.voucher_id = v.id
                 JOIN account_subject s ON s.code = ve.subject_code
                 WHERE v.status = 'POSTED' AND v.period >= ? AND v.period <= ? AND s.category = 'PL'
-                GROUP BY ve.subject_code
+                GROUP BY ve.subject_code, s.name, s.direction
                 """, yearStart, period);
 
         BigDecimal profit = BigDecimal.ZERO;
@@ -654,7 +654,7 @@ public class VoucherService {
     }
 
     private void checkPeriod(String period) {
-        if (period == null || !period.matches("\\d{4}-\\d{2}")) throw new IllegalArgumentException("期间格式应为 YYYY-MM");
+        com.pengyuan.pims.common.PeriodValidator.requireValid(period, "期间");
     }
 
     private String periodOf(LocalDate date) {

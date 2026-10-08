@@ -34,7 +34,7 @@ public interface AccountsPayableRepository extends JpaRepository<AccountsPayable
 
     /** 按月统计应付金额（按创建时间分组）；v5.55 裸列毫秒比较走索引（参数 yyyy-MM-dd 折算东八区当日零点） */
     @Query(value = "SELECT strftime('%Y-%m', create_time/1000, 'unixepoch', '+8 hours') AS period, COALESCE(SUM(amount),0), COALESCE(SUM(paid_amount),0) " +
-            "FROM accounts_payable WHERE create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) GROUP BY period ORDER BY period", nativeQuery = true)
+            "FROM accounts_payable WHERE create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) GROUP BY period ORDER BY period", nativeQuery = true)
     List<Object[]> monthlyApSince(String sinceDate);
 
     /** 账龄明细（未结清，v5.9 替代 findAll+内存过滤）：join 供应商档案取名称 */
@@ -43,17 +43,17 @@ public interface AccountsPayableRepository extends JpaRepository<AccountsPayable
             "WHERE a.status != 'PAID' AND a.amount > COALESCE(a.paid_amount, 0)", nativeQuery = true)
     List<Object[]> agingList();
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM accounts_payable WHERE doc_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM accounts_payable WHERE LOWER(doc_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
     // v7.6 应付周转：期间立账 / 累计立账（参数 yyyy-MM-dd，SQL 端折东八区零点毫秒，同 monthlyApSince 口径）
     @Query(value = "SELECT supplier_id, COALESCE(SUM(amount),0) FROM accounts_payable " +
-            "WHERE supplier_id IS NOT NULL AND create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
-            "AND create_time < 1000 * (CAST(strftime('%s', ?2) AS INTEGER) - 28800) GROUP BY supplier_id", nativeQuery = true)
+            "WHERE supplier_id IS NOT NULL AND create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
+            "AND create_time < 1000 * (CAST(strftime('%s', ?2) AS BIGINT) - 28800) GROUP BY supplier_id", nativeQuery = true)
     List<Object[]> billedBySupplier(String startDate, String endDateExclusive);
 
     @Query(value = "SELECT supplier_id, COALESCE(SUM(amount),0) FROM accounts_payable " +
-            "WHERE supplier_id IS NOT NULL AND create_time < 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "WHERE supplier_id IS NOT NULL AND create_time < 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY supplier_id", nativeQuery = true)
     List<Object[]> cumBilledBySupplier(String dateExclusive);
 

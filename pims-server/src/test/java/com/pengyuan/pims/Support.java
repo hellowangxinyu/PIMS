@@ -1,39 +1,43 @@
 package com.pengyuan.pims;
 
+import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.DynamicPropertyRegistry;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 /**
- * v8.8 测试基础设施：每个测试类独立临时 SQLite 库 + JPA 建表（ddl-auto=create-drop）。
- * 事实（v8.9 三次复查纠正）：@SpringBootTest 下 CommandLineRunner 会执行——36 个初始化器在测试库
- * 完整跑一遍且幂等（InitializerRunsTest 固化此行为）。实体表由 ddl-auto=create-drop 先建，
- * 初始化器随后补建非实体表与种子。业务直接调 Service（绕过 Sa-Token 登录态）。
+ * v8.8 测试基础设施；v11.9 PG 迁移：切真实 PostgreSQL 嵌入式实例（zonky，首次运行自动下载 PG 二进制）。
+ * 测的就是生产路径——33 个 SchemaInitializer（DDL 走 SqlDdl 翻译）+ PG 触发器 + 时间转换器
+ * 全部在真实 PG 上执行。事实：@SpringBootTest 下 CommandLineRunner 会执行且幂等
+ * （InitializerRunsTest 固化此行为）。业务直接调 Service（绕过 Sa-Token 登录态）。
  */
 @SpringBootTest
 @ActiveProfiles("test")
 public abstract class Support {
 
-    static Path testDb;
+    static final EmbeddedPostgres PG;
 
     static {
         try {
-            testDb = Files.createTempDirectory("pims-test").resolve("test.db");
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
+            PG = EmbeddedPostgres.start();
+        } catch (Exception e) {
+            throw new IllegalStateException("嵌入式 PostgreSQL 启动失败: " + e.getMessage(), e);
         }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try { PG.close(); } catch (Exception ignored) { }
+        }));
     }
 
     @DynamicPropertySource
     static void datasource(DynamicPropertyRegistry reg) {
-        String url = "jdbc:sqlite:" + testDb.toString().replace("\\", "/")
-                + "?journal_mode=WAL&busy_timeout=5000&synchronous=OFF&foreign_keys=ON";
-        reg.add("spring.datasource.url", () -> url);
+        reg.add("spring.datasource.url", () -> "jdbc:postgresql://localhost:" + PG.getPort() + "/postgres");
+        reg.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+        reg.add("spring.datasource.username", () -> "postgres");
+        reg.add("spring.datasource.password", () -> "");
+        reg.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
         reg.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         reg.add("spring.datasource.hikari.maximum-pool-size", () -> "5");
     }

@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -25,7 +27,7 @@ public class CostingSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS sys_config (
                     key_name TEXT PRIMARY KEY,
                     value_text TEXT
@@ -35,7 +37,7 @@ public class CostingSchemaInitializer implements CommandLineRunner {
         } catch (Exception e) { log.warn("sys_config 建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS costing_method_log (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     old_value VARCHAR(20),
@@ -49,7 +51,7 @@ public class CostingSchemaInitializer implements CommandLineRunner {
         } catch (Exception e) { log.warn("costing_method_log 建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS costing_monthly_price (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     period VARCHAR(10) NOT NULL,
@@ -59,7 +61,7 @@ public class CostingSchemaInitializer implements CommandLineRunner {
                     UNIQUE(period, material_code)
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_costing_monthly_period ON costing_monthly_price(period)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_costing_monthly_period ON costing_monthly_price(period)");
             log.info("全月平均价格快照表 costing_monthly_price 就绪");
         } catch (Exception e) { log.warn("costing_monthly_price 建表失败: {}", e.getMessage()); }
 

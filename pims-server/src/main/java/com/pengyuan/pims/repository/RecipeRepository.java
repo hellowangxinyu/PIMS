@@ -18,7 +18,7 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
     /** 按品名查配方（名称唯一性校验用；返回 List 以兼容历史同名数据，避免 Optional 多结果报错） */
     List<Recipe> findByProductName(String productName);
 
-    @Query("SELECT r FROM Recipe r WHERE (:keyword IS NULL OR r.productName LIKE %:keyword% OR r.recipeNo LIKE %:keyword%) " +
+    @Query("SELECT r FROM Recipe r WHERE (:keyword IS NULL OR LOWER(r.productName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.recipeNo) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND (:category IS NULL OR r.category = :category) ORDER BY r.createTime DESC")
     List<Recipe> search(String keyword, String category);
 

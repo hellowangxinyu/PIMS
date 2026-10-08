@@ -32,7 +32,7 @@ public class FinanceReportService {
     // ===== 月度利润试算 =====
 
     public Map<String, Object> profitTrial(String month) {
-        if (month == null || !month.matches("\\d{4}-\\d{2}")) throw new IllegalArgumentException("月份格式应为 YYYY-MM");
+        com.pengyuan.pims.common.PeriodValidator.requireValid(month, "月份");
 
         BigDecimal revenueGross = sumOrZero("SELECT SUM(amount) FROM accounts_receivable WHERE " + monthOf("create_time"), month, month);
         BigDecimal cogs = sumOrZero("SELECT SUM(cost) FROM sales_outbound WHERE status = 'CONFIRMED' AND " + monthOf("create_time"), month, month);
@@ -102,11 +102,11 @@ public class FinanceReportService {
     /** 近 12 个月收入/成本/净利走势 */
     private List<Map<String, Object>> trend() {
         // 近 11 个月首月零点毫秒（常量表达式，裸列比较可走索引）
-        String sinceMs = "1000 * (CAST(strftime('%s', strftime('%Y-%m','now','+8 hours','-11 months') || '-01') AS INTEGER) - 28800)";
+        String sinceMs = "1000 * (CAST(strftime('%s', strftime('%Y-%m','now','+8 hours','-11 months') || '-01') AS BIGINT) - 28800)";
         Map<String, Object> rev = monthSum("SELECT " + tsMonth("create_time") + " AS m, SUM(amount) AS v FROM accounts_receivable WHERE create_time >= " + sinceMs + " GROUP BY m");
         Map<String, Object> cogsMap = monthSum("SELECT " + tsMonth("create_time") + " AS m, SUM(cost) AS v FROM sales_outbound WHERE status='CONFIRMED' AND create_time >= " + sinceMs + " GROUP BY m");
         Map<String, Object> expMap = monthSum("SELECT m, SUM(v) AS v FROM (SELECT " + tsMonth("create_time") + " AS m, amount AS v FROM expense WHERE direction='EXPENSE' AND create_time >= " + sinceMs +
-                " UNION ALL SELECT " + tsMonth("create_time") + " AS m, -amount AS v FROM expense WHERE direction='INCOME' AND create_time >= " + sinceMs + ") GROUP BY m");
+                " UNION ALL SELECT " + tsMonth("create_time") + " AS m, -amount AS v FROM expense WHERE direction='INCOME' AND create_time >= " + sinceMs + ") AS t GROUP BY m");  // PG 迁移 v11.9：FROM 子查询必须带别名
 
         java.util.TreeSet<String> months = new java.util.TreeSet<>();
         months.addAll(rev.keySet()); months.addAll(cogsMap.keySet()); months.addAll(expMap.keySet());
@@ -275,32 +275,32 @@ public class FinanceReportService {
 
     /** ?=yyyy-MM-dd：列 >= 东八区当日零点毫秒（strftime 对绑定参数常量折叠，可走索引） */
     private static String dayStart(String col) {
-        return col + " >= 1000 * (CAST(strftime('%s', ?) AS INTEGER) - 28800)";
+        return col + " >= 1000 * (CAST(strftime('%s', ?) AS BIGINT) - 28800)";
     }
 
     /** ?=yyyy-MM-dd：列 < 东八区当日零点毫秒（期初口径） */
     private static String dayBefore(String col) {
-        return col + " < 1000 * (CAST(strftime('%s', ?) AS INTEGER) - 28800)";
+        return col + " < 1000 * (CAST(strftime('%s', ?) AS BIGINT) - 28800)";
     }
 
     /** ?=yyyy-MM-dd（期间末天，含当天）：列 < 次日零点毫秒 */
     private static String dayThrough(String col) {
-        return col + " < 1000 * (CAST(strftime('%s', ?) AS INTEGER) + 86400 - 28800)";
+        return col + " < 1000 * (CAST(strftime('%s', ?) AS BIGINT) + 86400 - 28800)";
     }
 
     /** 两个 ? 均为 yyyy-MM：列在当月 [月初, 次月初) 毫秒范围内 */
     /** v8.6（N2）：字典 tax_rate 税率百分数（默认 13，与入库价税分离同源） */
     private BigDecimal taxRatePercent() {
         try {
-            var rows = jdbc.queryForList("SELECT value FROM dict_item WHERE type = 'tax_rate' AND enabled = 1 ORDER BY sort_order ASC LIMIT 1");
+            var rows = jdbc.queryForList("SELECT value FROM dict_item WHERE type = 'tax_rate' AND enabled = TRUE ORDER BY sort_order ASC LIMIT 1");
             if (!rows.isEmpty()) return new BigDecimal(String.valueOf(rows.get(0).get("value")));
         } catch (Exception ignored) { }
         return new BigDecimal("13");
     }
 
     private static String monthOf(String col) {
-        return col + " >= 1000 * (CAST(strftime('%s', ? || '-01') AS INTEGER) - 28800)" +
-                " AND " + col + " < 1000 * (CAST(strftime('%s', ? || '-01', '+1 month') AS INTEGER) - 28800)";
+        return col + " >= 1000 * (CAST(strftime('%s', ? || '-01') AS BIGINT) - 28800)" +
+                " AND " + col + " < 1000 * (CAST(strftime('%s', ? || '-01', '+1 month') AS BIGINT) - 28800)";
     }
 
     private Map<String, Object> monthSum(String sql) {

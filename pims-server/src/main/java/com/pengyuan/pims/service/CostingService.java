@@ -202,7 +202,7 @@ public class CostingService {
      */
     // v6.1.4（大件迁移）：executeTx 锁内包事务，提交后放锁（原 @Transactional+execute 锁先放、提交在后，并发窗口读旧快照/丢更新）
     public Map<String, Object> monthlyClose(String period, String operator) {
-        if (period == null || !period.matches("\\d{4}-\\d{2}")) throw new IllegalArgumentException("期间格式应为 YYYY-MM");
+        com.pengyuan.pims.common.PeriodValidator.requireValid(period, "期间");
         if (periodRepo.findByPeriod(period).filter(p -> Boolean.TRUE.equals(p.closed)).isPresent()) {
             throw new IllegalArgumentException(period + " 已结账，不能重算存货成本");
         }

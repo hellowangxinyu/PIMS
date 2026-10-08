@@ -31,12 +31,12 @@ public interface ProductionInboundRepository extends JpaRepository<ProductionInb
     List<ProductionInbound> findConfirmedSince(LocalDateTime sinceTime);
 
     /** v5.9：关键字分页搜索（docNo/productName/batchNo 模糊匹配） */
-    @Query("SELECT o FROM ProductionInbound o WHERE (:kw = '' OR o.docNo LIKE %:kw% OR o.productName LIKE %:kw% OR o.batchNo LIKE %:kw%) ORDER BY o.createTime DESC")
+    @Query("SELECT o FROM ProductionInbound o WHERE (:kw = '' OR LOWER(o.docNo) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(o.productName) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(o.batchNo) LIKE LOWER(CONCAT('%', :kw, '%'))) ORDER BY o.createTime DESC")
     org.springframework.data.domain.Page<ProductionInbound> searchByKeyword(
             @org.springframework.data.repository.query.Param("kw") String kw,
             org.springframework.data.domain.Pageable pageable);
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM production_inbound WHERE doc_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM production_inbound WHERE LOWER(doc_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
 }

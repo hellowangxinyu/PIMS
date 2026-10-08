@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -22,7 +24,7 @@ public class TaskSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS task (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     doc_no VARCHAR(25) NOT NULL UNIQUE,
@@ -41,13 +43,13 @@ public class TaskSchemaInitializer implements CommandLineRunner {
                     update_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_task_status ON task(status)");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_task_owner ON task(owner)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_task_status ON task(status)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_task_owner ON task(owner)");
             log.info("任务督办表 task 就绪");
         } catch (Exception e) { log.warn("task 建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS task_progress (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     task_id BIGINT NOT NULL,
@@ -57,7 +59,7 @@ public class TaskSchemaInitializer implements CommandLineRunner {
                     create_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_task_progress_task ON task_progress(task_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_task_progress_task ON task_progress(task_id)");
             log.info("任务进度表 task_progress 就绪");
         } catch (Exception e) { log.warn("task_progress 建表失败: {}", e.getMessage()); }
     }

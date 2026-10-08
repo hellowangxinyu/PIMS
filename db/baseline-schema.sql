@@ -1435,7 +1435,7 @@
 
     create table sys_role_permission (
         id integer,
-        perm_code varchar(30) not null,
+        perm_code varchar(60) not null,
         role_code varchar(30) not null,
         primary key (id)
     );

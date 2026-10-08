@@ -50,11 +50,18 @@
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
 
-        <!-- SQLite JDBC -->
+        <!-- SQLite JDBC（默认嵌入式库；PG 迁移期双库并存，稳定后移除） -->
         <dependency>
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
             <version>${sqlite.version}</version>
+        </dependency>
+
+        <!-- PostgreSQL JDBC（PG 迁移 v11.9：生产切 PG 后由环境变量 PIMS_DB_URL 启用） -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Hibernate SQLite Dialect -->
@@ -103,6 +110,14 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- PG 迁移 v11.9：真实 PostgreSQL 嵌入式测试库（替代 SQLite 内存库，测的就是生产路径） -->
+        <dependency>
+            <groupId>io.zonky.test</groupId>
+            <artifactId>embedded-postgres</artifactId>
+            <version>2.0.7</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

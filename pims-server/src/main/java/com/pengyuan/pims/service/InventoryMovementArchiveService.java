@@ -70,7 +70,7 @@ public class InventoryMovementArchiveService {
                 )
                 """);
             // v6.1.6：存量归档表补列（新建表已含）
-            var archCols = jdbc.queryForList("PRAGMA table_info(inventory_movement_archive)");
+            var archCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "inventory_movement_archive");
             if (!archCols.isEmpty() && archCols.stream().noneMatch(c -> "location_id".equals(c.get("name")))) {
                 jdbc.execute("ALTER TABLE inventory_movement_archive ADD COLUMN location_id varchar(20)");
             }

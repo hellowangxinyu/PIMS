@@ -47,6 +47,10 @@ public class BackupService {
 
     /** 执行一次备份（定时触发；也可手动调用）。返回备份文件名，失败抛异常。 */
     public String backupNow() {
+        // PG 迁移 v11.9：PG 无 VACUUM INTO，走外部 pg_dump（PG 与应用的部署约定：同机且 pg_dump 在 PATH）
+        if (com.pengyuan.pims.common.SqlDdl.isPostgreSQL(jdbc)) {
+            return backupNowPg();
+        }
         String date = LocalDate.now().toString();
         File dir = new File("backups");
         if (!dir.exists() && !dir.mkdirs()) {
@@ -114,9 +118,87 @@ public class BackupService {
         }
     }
 
+    /** PG 版备份：pg_dump 自定义格式（压缩+可 pg_restore），同样临时文件+原子改名+保留期清理 */
+    private String backupNowPg() {
+        String date = LocalDate.now().toString();
+        File dir = new File("backups");
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new IllegalStateException("备份目录创建失败: " + dir.getAbsolutePath());
+        }
+        long usable = dir.getUsableSpace();
+        if (usable < 200L * 1024 * 1024) {
+            throw new IllegalStateException(String.format(
+                    "磁盘剩余空间不足（可用 %.1fMB，备份至少需 200MB），请先清理 backups 目录或扩容",
+                    usable / 1048576.0));
+        }
+        String filename = "pims-db-" + date + ".dump";
+        File target = new File(dir, filename);
+        if (target.exists()) {
+            return filename;  // 当天已备份（幂等）
+        }
+        long start = System.currentTimeMillis();
+        File tmp = new File(dir, filename + ".tmp");
+        if (tmp.exists()) tmp.delete();
+        try {
+            // 数据库连接信息从环境变量取（与 application.yml 同一来源）
+            String url = System.getenv().getOrDefault("PIMS_DB_URL", "jdbc:postgresql://127.0.0.1:5432/pims");
+            java.net.URI uri = java.net.URI.create(url.replace("jdbc:", ""));
+            String host = uri.getHost() == null ? "127.0.0.1" : uri.getHost();
+            int port = uri.getPort() < 0 ? 5432 : uri.getPort();
+            String db = uri.getPath() == null ? "pims" : uri.getPath().replace("/", "");
+            ProcessBuilder pb = new ProcessBuilder("pg_dump", "-Fc", "-h", host, "-p", String.valueOf(port),
+                    "-U", System.getenv().getOrDefault("PIMS_DB_USER", "pims"), "-f", tmp.getAbsolutePath(), db);
+            pb.environment().put("PGPASSWORD", System.getenv().getOrDefault("PIMS_DB_PASSWORD", ""));
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String out = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            int code = p.waitFor();
+            if (code != 0) {
+                throw new IllegalStateException("pg_dump 失败(" + code + "): " + out);
+            }
+            if (tmp.length() < 1024) {
+                throw new IllegalStateException("pg_dump 产物异常过小: " + tmp.length() + "B");
+            }
+            if (!tmp.renameTo(target)) {
+                throw new IllegalStateException("备份改名失败（tmp→正式名）: " + tmp.getAbsolutePath());
+            }
+        } catch (RuntimeException e) {
+            tmp.delete();
+            throw e;
+        } catch (Exception e) {
+            tmp.delete();
+            throw new IllegalStateException("PG 备份执行失败: " + e.getMessage(), e);
+        }
+        long size = target.length();
+        recordMeta(filename, size);
+        cleanExpiredPg();
+        log.info("PostgreSQL 自动备份完成: {} ({}KB, 耗时{}ms)", filename, size / 1024, System.currentTimeMillis() - start);
+        return filename;
+    }
+
+    /** PG 版过期清理（.dump 后缀） */
+    private void cleanExpiredPg() {
+        try {
+            File dir = new File("backups");
+            File[] files = dir.listFiles((d, n) -> n.matches("pims-db-\\d{4}-\\d{2}-\\d{2}\\.dump"));
+            if (files == null) return;
+            LocalDate cutoff = LocalDate.now().minusDays(RETAIN_DAYS);
+            int removed = 0;
+            for (File f : files) {
+                String d = f.getName().replace("pims-db-", "").replace(".dump", "");
+                try {
+                    if (LocalDate.parse(d).isBefore(cutoff) && f.delete()) removed++;
+                } catch (Exception ignored) { }
+            }
+            if (removed > 0) log.info("过期备份清理: 删除 {} 个（保留 {} 天）", removed, RETAIN_DAYS);
+        } catch (Exception e) {
+            log.warn("备份清理失败: {}", e.getMessage());
+        }
+    }
+
     private void recordMeta(String filename, long size) {
         try {
-            jdbc.execute("CREATE TABLE IF NOT EXISTS backup_meta (id INTEGER PRIMARY KEY AUTOINCREMENT, filename VARCHAR(100), size_bytes BIGINT, backup_time TIMESTAMP)");
+            com.pengyuan.pims.common.SqlDdl.exec(jdbc, "CREATE TABLE IF NOT EXISTS backup_meta (id INTEGER PRIMARY KEY AUTOINCREMENT, filename VARCHAR(100), size_bytes BIGINT, backup_time TIMESTAMP)");
             jdbc.update("INSERT INTO backup_meta (filename, size_bytes, backup_time) VALUES (?, ?, ?)",
                     filename, size, System.currentTimeMillis());
         } catch (Exception e) {

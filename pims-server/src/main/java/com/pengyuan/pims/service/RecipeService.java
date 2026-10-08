@@ -884,7 +884,7 @@ public class RecipeService {
                     SELECT material_code, unit_price,
                            ROW_NUMBER() OVER (PARTITION BY material_code ORDER BY create_time DESC, id DESC) AS rn
                     FROM raw_material_purchase WHERE material_code IS NOT NULL AND unit_price IS NOT NULL
-                ) WHERE rn = 1
+                ) AS t WHERE rn = 1
                 """)) {
             priceMap.putIfAbsent(String.valueOf(row.get("code")), toBigDecimal(row.get("p")));
         }
@@ -893,7 +893,7 @@ public class RecipeService {
                     SELECT material_code, unit_price,
                            ROW_NUMBER() OVER (PARTITION BY material_code ORDER BY create_time DESC, id DESC) AS rn
                     FROM finished_product_purchase WHERE material_code IS NOT NULL AND unit_price IS NOT NULL
-                ) WHERE rn = 1
+                ) AS t WHERE rn = 1
                 """)) {
             priceMap.putIfAbsent(String.valueOf(row.get("code")), toBigDecimal(row.get("p")));
         }

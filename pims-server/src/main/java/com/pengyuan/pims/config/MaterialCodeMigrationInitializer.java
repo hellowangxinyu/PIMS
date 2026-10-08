@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -59,9 +61,11 @@ public class MaterialCodeMigrationInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
+        // PG 迁移 v11.9：一次性历史迁移（编码重排/备份），PG 数据由迁移脚本整体搬入（已是迁移后状态），跳过
+        if (SqlDdl.isPostgreSQL(jdbc)) return;
         // v5.43 编码回收池：删除无引用物料时数字码入池，新建物料优先复用（数字全局单次使用原则不变）
         try {
-            jdbc.execute("CREATE TABLE IF NOT EXISTS released_code_seq (seq INTEGER PRIMARY KEY)");
+            SqlDdl.exec(jdbc, "CREATE TABLE IF NOT EXISTS released_code_seq (seq INTEGER PRIMARY KEY)");
         } catch (Exception e) { log.warn("回收池建表失败: {}", e.getMessage()); }
         try {
             Integer legacyCount = jdbc.queryForObject(
@@ -121,7 +125,7 @@ public class MaterialCodeMigrationInitializer implements CommandLineRunner {
                     String category = String.valueOf(sub.charAt(0));
                     String name = MISSING_SUBCAT_NAMES.getOrDefault(sub, sub + "类物料");
                     jdbc.update("INSERT INTO coding_rule (category, category_code, sub_category, sub_category_code, number_start, current_seq, enabled, create_time) " +
-                                    "VALUES (?, ?, ?, ?, 0, ?, 1, ?)",
+                                    "VALUES (?, ?, ?, ?, 0, ?, TRUE, ?)",
                             CATEGORY_NAMES.getOrDefault(category, category), category, name, sub, e.getValue(), System.currentTimeMillis());
                     log.info("编码规则补录: {} {}（{}）序号起点 {}", name, sub, category, e.getValue());
                 } else {
@@ -131,7 +135,7 @@ public class MaterialCodeMigrationInitializer implements CommandLineRunner {
             }
 
             // 4. material.code 唯一索引（防呆：数据库层杜绝重复码）
-            jdbc.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_material_code ON material(code)");
+            SqlDdl.exec(jdbc, "CREATE UNIQUE INDEX IF NOT EXISTS idx_material_code ON material(code)");
 
             log.info("编码迁移完成: 物料 {} 个（含补码 {} 个），引用行更新 {} 行，规则重置 {} 个小类，唯一索引就绪",
                     migrated, renamedFromGarbage, totalRefs, seqBySub.size());
@@ -150,8 +154,8 @@ public class MaterialCodeMigrationInitializer implements CommandLineRunner {
                 var already = jdbc.queryForList(
                         "SELECT name FROM sqlite_master WHERE name = 'migration_code_backup_done'");
                 if (already.isEmpty()) {
-                    jdbc.execute("VACUUM INTO '" + backup + "'");
-                    jdbc.execute("CREATE TABLE migration_code_backup_done (ts INTEGER)");
+                    SqlDdl.exec(jdbc, "VACUUM INTO '" + backup + "'");
+                    SqlDdl.exec(jdbc, "CREATE TABLE migration_code_backup_done (ts INTEGER)");
                     jdbc.update("INSERT INTO migration_code_backup_done VALUES (?)", System.currentTimeMillis());
                     log.info("迁移前全库备份完成: {}", backup);
                 }

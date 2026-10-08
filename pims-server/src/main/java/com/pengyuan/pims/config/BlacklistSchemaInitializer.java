@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -27,10 +29,10 @@ public class BlacklistSchemaInitializer implements CommandLineRunner {
     public void run(String... args) {
         for (String table : new String[]{"supplier", "customer"}) {
             try {
-                var cols = jdbc.queryForList("PRAGMA table_info(" + table + ")");
+                var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, table);
                 boolean hasBlacklisted = cols.stream().anyMatch(c -> "blacklisted".equals(c.get("name")));
                 if (!hasBlacklisted) {
-                    jdbc.execute("ALTER TABLE " + table + " ADD COLUMN blacklisted BOOLEAN DEFAULT 0");
+                    SqlDdl.exec(jdbc, "ALTER TABLE " + table + " ADD COLUMN blacklisted BOOLEAN DEFAULT 0");
                     log.info("拉黑表结构：{} 新增 blacklisted 列", table);
                 }
             } catch (Exception e) {
@@ -41,7 +43,7 @@ public class BlacklistSchemaInitializer implements CommandLineRunner {
 
         // v5.27：客户合同信息列（法定代表人/开户银行/银行账号/税号，打印销售合同时直接取用）
         try {
-            var custCols = jdbc.queryForList("PRAGMA table_info(customer)");
+            var custCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "customer");
             String[][] contractCols = {
                     {"legal_person", "VARCHAR(50)"},
                     {"bank_name", "VARCHAR(100)"},
@@ -51,7 +53,7 @@ public class BlacklistSchemaInitializer implements CommandLineRunner {
             for (String[] col : contractCols) {
                 boolean has = custCols.stream().anyMatch(c -> col[0].equals(c.get("name")));
                 if (!has) {
-                    jdbc.execute("ALTER TABLE customer ADD COLUMN " + col[0] + " " + col[1]);
+                    SqlDdl.exec(jdbc, "ALTER TABLE customer ADD COLUMN " + col[0] + " " + col[1]);
                     log.info("客户表结构：新增 {} 列（合同需方信息）", col[0]);
                 }
             }

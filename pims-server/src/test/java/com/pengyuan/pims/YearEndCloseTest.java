@@ -30,7 +30,7 @@ class YearEndCloseTest extends Support {
                 {"1001", "库存现金", "DR", "ASSET"}, {"2101", "应付账款", "CR", "LIAB"},
                 {"6001", "主营业务收入", "CR", "PL"}, {"6401", "主营业务成本", "DR", "PL"},
                 {"3104", "本年利润", "CR", "EQ"}, {"3105", "利润分配", "CR", "EQ"}}) {
-            jdbc.update("INSERT OR IGNORE INTO account_subject (code, name, direction, category, status) VALUES (?,?,?,?, 'ENABLED')", s[0], s[1], s[2], s[3]);
+            jdbc.update("INSERT INTO account_subject (code, name, direction, category, status) VALUES (?,?,?,?, 'ENABLED') ON CONFLICT (code) DO NOTHING", s[0], s[1], s[2], s[3]);
         }
     }
 

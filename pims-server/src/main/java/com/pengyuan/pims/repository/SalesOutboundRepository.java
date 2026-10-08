@@ -24,7 +24,7 @@ public interface SalesOutboundRepository extends JpaRepository<SalesOutbound, Lo
             "FROM sales_outbound so " +
             "LEFT JOIN sales_order o ON so.sales_order_no = o.order_no " +
             "LEFT JOIN sales_order_item si ON si.order_id = o.id AND si.material_code = so.material_code " +
-            "WHERE so.status = 'CONFIRMED' AND so.create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "WHERE so.status = 'CONFIRMED' AND so.create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY period) t " +
             "LEFT JOIN (SELECT strftime('%Y-%m', ship_date) AS period, SUM(freight) AS freight " +
             "FROM shipping_log WHERE borne = 'COMPANY' AND ship_date >= ?1 GROUP BY strftime('%Y-%m', ship_date)) f " +
@@ -38,7 +38,7 @@ public interface SalesOutboundRepository extends JpaRepository<SalesOutbound, Lo
             "LEFT JOIN sales_order o ON so.sales_order_no = o.order_no " +
             "LEFT JOIN sales_order_item si ON si.order_id = o.id AND si.material_code = so.material_code " +
             "WHERE so.status = 'CONFIRMED' AND so.customer_name IS NOT NULL " +
-            "AND so.create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "AND so.create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY so.customer_name) t " +
             "LEFT JOIN (SELECT o2.customer_name AS customer_name, SUM(l.freight) AS freight " +
             "FROM shipping_log l JOIN sales_order o2 ON l.sales_order_no = o2.order_no " +
@@ -52,7 +52,7 @@ public interface SalesOutboundRepository extends JpaRepository<SalesOutbound, Lo
             "LEFT JOIN sales_order o ON so.sales_order_no = o.order_no " +
             "LEFT JOIN sales_order_item si ON si.order_id = o.id AND si.material_code = so.material_code " +
             "WHERE so.status = 'CONFIRMED' AND so.material_name IS NOT NULL " +
-            "AND so.create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "AND so.create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY so.material_name ORDER BY income DESC LIMIT 10", nativeQuery = true)
     List<Object[]> materialRankSince(String sinceDate);
 
@@ -62,17 +62,17 @@ public interface SalesOutboundRepository extends JpaRepository<SalesOutbound, Lo
             "LEFT JOIN sales_order o ON so.sales_order_no = o.order_no " +
             "LEFT JOIN sales_order_item si ON si.order_id = o.id AND si.material_code = so.material_code " +
             "WHERE so.status = 'CONFIRMED' AND so.created_by IS NOT NULL " +
-            "AND so.create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "AND so.create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY so.created_by ORDER BY income DESC LIMIT 10", nativeQuery = true)
     List<Object[]> salesmanRankSince(String sinceDate);
 
     /** v5.9：关键字分页搜索（docNo/materialCode/materialName/batchNo 模糊匹配） */
-    @Query("SELECT o FROM SalesOutbound o WHERE (:kw = '' OR o.docNo LIKE %:kw% OR o.materialCode LIKE %:kw% OR o.materialName LIKE %:kw% OR o.batchNo LIKE %:kw%) ORDER BY o.createTime DESC")
+    @Query("SELECT o FROM SalesOutbound o WHERE (:kw = '' OR LOWER(o.docNo) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(o.materialCode) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(o.materialName) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(o.batchNo) LIKE LOWER(CONCAT('%', :kw, '%'))) ORDER BY o.createTime DESC")
     org.springframework.data.domain.Page<SalesOutbound> searchByKeyword(
             @org.springframework.data.repository.query.Param("kw") String kw,
             org.springframework.data.domain.Pageable pageable);
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM sales_outbound WHERE doc_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM sales_outbound WHERE LOWER(doc_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
 }

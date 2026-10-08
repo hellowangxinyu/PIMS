@@ -204,7 +204,7 @@ public class InventoryController {
                   UNION ALL SELECT material_code, qty FROM production_outbound WHERE status='CONFIRMED' AND create_time >= ?
                   UNION ALL SELECT material_code, qty FROM outsource_material_outbound WHERE status IN ('CONFIRMED','SIGNED') AND create_time >= ?
                   UNION ALL SELECT material_code, qty FROM other_outbound WHERE status='CONFIRMED' AND (reason IS NULL OR reason <> 'REWORK') AND create_time >= ?
-                ) GROUP BY material_code
+                ) AS t GROUP BY material_code
                 """;
         Map<String, Object> out = new java.util.HashMap<>();
         for (var r : jdbc.queryForList(outSql, since, since, since, since)) {

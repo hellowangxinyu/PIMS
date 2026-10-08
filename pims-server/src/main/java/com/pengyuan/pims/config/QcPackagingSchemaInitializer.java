@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -33,7 +35,7 @@ public class QcPackagingSchemaInitializer implements CommandLineRunner {
         addColumn("recipe", "packaging_standard_id", "BIGINT");
         // 3) 包装标准档案表
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                     CREATE TABLE IF NOT EXISTS packaging_standard (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         name VARCHAR(100) NOT NULL,
@@ -53,13 +55,14 @@ public class QcPackagingSchemaInitializer implements CommandLineRunner {
                 String[][] ds = {{"铁桶", "IRON_DRUM"}, {"塑料桶", "PLASTIC_DRUM"}, {"吨桶", "IBC"}, {"编织袋", "BAG"}, {"托盘", "PALLET"}, {"其他", "OTHER"}};
                 int sort = 1;
                 for (String[] d : ds) {
-                    jdbc.update("INSERT INTO dict_item (type,label,value,sort_order,enabled,create_time) VALUES ('packaging_type',?,?,?,1,?)",
-                            d[0], d[1], sort++);
+                    // v11.9 顺带修复历史潜在 bug：create_time 占位符从未传参（该分支因字典已存在从未触发）
+                    jdbc.update("INSERT INTO dict_item (type,label,value,sort_order,enabled,create_time) VALUES ('packaging_type',?,?,?,TRUE,?)",
+                            d[0], d[1], sort++, System.currentTimeMillis());
                 }
                 log.info("包装标准：packaging_type 字典已初始化");
             }
             // v5.82 组合包装明细表（一套包装 = 桶+袋+托盘等多个物料）
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                     CREATE TABLE IF NOT EXISTS packaging_standard_item (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         packaging_id INTEGER NOT NULL,
@@ -70,7 +73,7 @@ public class QcPackagingSchemaInitializer implements CommandLineRunner {
                         unit_price DECIMAL(14,2) NOT NULL DEFAULT 0,
                         sort_order INTEGER DEFAULT 1
                     )""");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_psi_packaging ON packaging_standard_item(packaging_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_psi_packaging ON packaging_standard_item(packaging_id)");
             log.info("包装标准表就绪（含组合明细）");
         } catch (Exception e) {
             log.warn("包装标准表创建跳过: {}", e.getMessage());
@@ -79,10 +82,10 @@ public class QcPackagingSchemaInitializer implements CommandLineRunner {
 
     private void addColumn(String table, String col, String type) {
         try {
-            var cols = jdbc.queryForList("PRAGMA table_info(" + table + ")");
+            var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, table);
             boolean has = cols.stream().anyMatch(c -> col.equals(c.get("name")));
             if (!has) {
-                jdbc.execute("ALTER TABLE " + table + " ADD COLUMN " + col + " " + type);
+                SqlDdl.exec(jdbc, "ALTER TABLE " + table + " ADD COLUMN " + col + " " + type);
                 log.info("{} 新增 {} 列", table, col);
             }
         } catch (Exception e) {

@@ -521,7 +521,7 @@ public class VoucherReportService {
                 JOIN account_subject s ON s.code = ve.subject_code
                 WHERE v.status = 'POSTED' AND v.period >= ? AND v.period <= ? AND s.category = 'PL'
                   AND COALESCE(v.source, 'MANUAL') != 'TRANSFER'
-                GROUP BY ve.subject_code
+                GROUP BY ve.subject_code, s.name, s.direction
                 """, from, to)) {
             result.put(String.valueOf(row.get("code")), new BigDecimal[]{toBd(row.get("d")), toBd(row.get("c"))});
         }
@@ -607,7 +607,7 @@ public class VoucherReportService {
     private BigDecimal netDebit(BigDecimal[] dc) { return dc[0].subtract(dc[1]); }
 
     private void checkPeriod(String period) {
-        if (period == null || !period.matches("\\d{4}-\\d{2}")) throw new IllegalArgumentException("期间格式应为 YYYY-MM");
+        com.pengyuan.pims.common.PeriodValidator.requireValid(period, "期间");
     }
 
     /** sqlite-jdbc 聚合返回 Integer/Long/Double/ByteArray，统一转 BigDecimal（踩坑记录） */

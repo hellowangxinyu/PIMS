@@ -19,12 +19,12 @@ public interface OutsourceMaterialOutboundRepository extends JpaRepository<Outso
     List<Object[]> sumCostGroupByOutsourceOrderNo();
 
     /** v5.9：关键字分页搜索（docNo/materialCode/batchNo 模糊匹配） */
-    @Query("SELECT o FROM OutsourceMaterialOutbound o WHERE (:kw = '' OR o.docNo LIKE %:kw% OR o.materialCode LIKE %:kw% OR o.batchNo LIKE %:kw%) ORDER BY o.createTime DESC")
+    @Query("SELECT o FROM OutsourceMaterialOutbound o WHERE (:kw = '' OR LOWER(o.docNo) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(o.materialCode) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(o.batchNo) LIKE LOWER(CONCAT('%', :kw, '%'))) ORDER BY o.createTime DESC")
     org.springframework.data.domain.Page<OutsourceMaterialOutbound> searchByKeyword(
             @org.springframework.data.repository.query.Param("kw") String kw,
             org.springframework.data.domain.Pageable pageable);
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM outsource_material_outbound WHERE doc_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM outsource_material_outbound WHERE LOWER(doc_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
 }

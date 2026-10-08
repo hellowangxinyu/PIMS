@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -48,6 +50,8 @@ public class CodeSeqMigrationInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
+        // PG 迁移 v11.9：一次性历史迁移（编码重排/备份），PG 数据由迁移脚本整体搬入（已是迁移后状态），跳过
+        if (SqlDdl.isPostgreSQL(jdbc)) return;
         try {
             // 幂等标志（v5.42 连续号重排，与 v5.41 跳号重排各自独立标志）
             var done = jdbc.queryForList("SELECT name FROM sqlite_master WHERE name = 'migration_code_seq_done'");
@@ -105,7 +109,7 @@ public class CodeSeqMigrationInitializer implements CommandLineRunner {
                         r.get("mx"), System.currentTimeMillis(), r.get("sub"));
             }
 
-            jdbc.execute("CREATE TABLE migration_code_seq_done (ts INTEGER, materials INTEGER, refs INTEGER)");
+            SqlDdl.exec(jdbc, "CREATE TABLE migration_code_seq_done (ts INTEGER, materials INTEGER, refs INTEGER)");
             jdbc.update("INSERT INTO migration_code_seq_done VALUES (?, ?, ?)", System.currentTimeMillis(), codeMap.size(), totalRefs);
             log.info("连续号重排完成: 物料 {} 个（数字 1-{} 全局连续单次使用），引用行更新 {} 行，规则游标重置 {} 个小类",
                     codeMap.size(), idx, totalRefs, subs.size());

@@ -21,7 +21,7 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
     /** 查重：名称+类型完全一致 */
     boolean existsByNameAndType(String name, String type);
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(code, -4) AS INTEGER)) FROM supplier WHERE code LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(code, LENGTH(code)-3, 4) AS INTEGER)) FROM supplier WHERE LOWER(code) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
     // ==================== v5.27 拉黑：管理列表 ====================

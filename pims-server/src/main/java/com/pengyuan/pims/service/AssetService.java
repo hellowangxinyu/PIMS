@@ -140,6 +140,12 @@ public class AssetService {
     // 并发同期计提不再双过查重；不再用外层 @Transactional（等价旧时序）
     public Map<String, Object> depreciate(String period) {
         checkPeriod(period);
+        // v11.8（FT-01）：计提期间不得晚于当前月——原仅校验格式/结账状态，传 2099-01 可成功计提
+        // 并出票（系统凭证豁免未来日期校验），造成折旧费用跨期虚增；跳月补提仍允许（#N 补提设计）
+        String currentMonth = java.time.LocalDate.now().toString().substring(0, 7);
+        if (period.compareTo(currentMonth) > 0) {
+            throw new IllegalArgumentException("计提期间 " + period + " 晚于当前月 " + currentMonth + "，不能对未来期间计提折旧");
+        }
         checkPeriodOpen(period);
         String defaultSubject = mapped("biz:depreciation:default", "6602.05");
 
@@ -290,6 +296,6 @@ public class AssetService {
     }
 
     private void checkPeriod(String period) {
-        if (period == null || !period.matches("\\d{4}-\\d{2}")) throw new IllegalArgumentException("期间格式应为 YYYY-MM");
+        com.pengyuan.pims.common.PeriodValidator.requireValid(period, "期间");
     }
 }

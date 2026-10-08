@@ -42,25 +42,25 @@ List<QualityInspection> findByStatusOrderByCreateTimeDesc(String status);
 
     /** 月度质检单数与判定分布（近N个月） */
     @Query(value = "SELECT strftime('%Y-%m', create_time/1000, 'unixepoch', '+8 hours') AS period, status, COUNT(*) " +
-            "FROM quality_inspection WHERE create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "FROM quality_inspection WHERE create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY period, status ORDER BY period", nativeQuery = true)
     List<Object[]> monthlyResultSince(String sinceDate);
 
     /** 不合格（退货）物料TOP10 */
     @Query(value = "SELECT material_name, COUNT(*) FROM quality_inspection " +
             "WHERE status = 'REJECT' AND material_name IS NOT NULL " +
-            "AND create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "AND create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY material_name ORDER BY COUNT(*) DESC LIMIT 10", nativeQuery = true)
     List<Object[]> rejectMaterialTop(String sinceDate);
 
     /** 质检明细（近N个月，v5.9 替代 findAll+内存过滤；inspect_date 毫秒由 Java 转字符串——SQLite date() 结果列有 JDBC 类型推断坑） */
     @Query(value = "SELECT inspection_no, ref_doc_type, ref_doc_no, material_name, material_code, batch_no, " +
             "material_category, qty, status, inspector, inspect_date, result_remark " +
-            "FROM quality_inspection WHERE create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "FROM quality_inspection WHERE create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "ORDER BY create_time DESC", nativeQuery = true)
     List<Object[]> detailSince(String sinceDate);
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(inspection_no, -4) AS INTEGER)) FROM quality_inspection WHERE inspection_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(inspection_no, LENGTH(inspection_no)-3, 4) AS INTEGER)) FROM quality_inspection WHERE LOWER(inspection_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
 }

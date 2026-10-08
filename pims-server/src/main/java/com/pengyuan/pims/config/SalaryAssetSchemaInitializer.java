@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -106,9 +108,9 @@ public class SalaryAssetSchemaInitializer implements CommandLineRunner {
             """);
 
         try {
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_salary_item_sheet ON salary_item(sheet_id)");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_asset_dep_period ON asset_depreciation(period)");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_asset_dep_asset ON asset_depreciation(asset_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_salary_item_sheet ON salary_item(sheet_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_asset_dep_period ON asset_depreciation(period)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_asset_dep_asset ON asset_depreciation(asset_id)");
         } catch (Exception e) { log.warn("工资资产索引创建失败: {}", e.getMessage()); }
 
         ensureDicts();
@@ -117,7 +119,7 @@ public class SalaryAssetSchemaInitializer implements CommandLineRunner {
 
     private void table(String label, String ddl) {
         try {
-            jdbc.execute(ddl);
+            SqlDdl.exec(jdbc, ddl);
             log.info("{} 就绪", label);
         } catch (Exception e) { log.warn("{}建表失败: {}", label, e.getMessage()); }
     }
@@ -141,7 +143,7 @@ public class SalaryAssetSchemaInitializer implements CommandLineRunner {
         for (String[] s : seeds) {
             var exists = jdbc.queryForList("SELECT id FROM dict_item WHERE type = ? AND value = ?", s[0], s[2]);
             if (exists.isEmpty()) {
-                jdbc.update("INSERT INTO dict_item (type, label, value, sort_order, enabled, create_time) VALUES (?,?,?,?,1,?)",
+                jdbc.update("INSERT INTO dict_item (type, label, value, sort_order, enabled, create_time) VALUES (?,?,?,?,TRUE,?)",
                         s[0], s[1], s[2], Integer.parseInt(s[3]), System.currentTimeMillis());
                 added++;
             }

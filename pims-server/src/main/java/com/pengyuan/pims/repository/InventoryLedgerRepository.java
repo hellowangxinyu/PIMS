@@ -47,7 +47,7 @@ public interface InventoryLedgerRepository extends JpaRepository<InventoryLedger
     List<String> findAllBatchNos();
 
     /** v5.7：取指定日期前缀的最大批号序号（服务重启后恢复当日序号，保证批号不重复） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(batch_no, INSTR(batch_no,'-')+1) AS INTEGER)) FROM inventory_ledger WHERE batch_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(batch_no, INSTR(batch_no,'-')+1) AS INTEGER)) FROM inventory_ledger WHERE LOWER(batch_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxBatchSeq(String prefix);
 
     /** 按物料+物理仓查库存（批次选择用，v5.4） */
@@ -132,7 +132,7 @@ public interface InventoryLedgerRepository extends JpaRepository<InventoryLedger
     List<Object[]> dormantTop20();
 
     /** v5.9：台账关键字分页搜索（品名/编码/批号 + 仓库过滤；v5.30 全局视图排除质检不合格行；v5.37 保留 EXPIRED 供台账追踪） */
-    @Query("SELECT l FROM InventoryLedger l WHERE (:kw = '' OR l.materialCode LIKE %:kw% OR l.materialName LIKE %:kw% OR l.batchNo LIKE %:kw%) " +
+    @Query("SELECT l FROM InventoryLedger l WHERE (:kw = '' OR LOWER(l.materialCode) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(l.materialName) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(l.batchNo) LIKE LOWER(CONCAT('%', :kw, '%'))) " +
             "AND (:wh = '' OR l.warehouseId = :wh) " +
             "AND (:wh <> '' OR l.qcStatus IS NULL OR l.qcStatus NOT IN ('REJECT','TAILING')) " +
             "ORDER BY l.materialCode, l.batchNo")
@@ -143,7 +143,7 @@ public interface InventoryLedgerRepository extends JpaRepository<InventoryLedger
 
     /** v5.59 质量追溯选批次：关键字搜台账（编码/品名/批号）。与 searchByKeyword 不同——不过滤仓库、
      *  不排除质检不合格/油尾行：品控追溯的对象批次恰恰常是 REJECT/EXPIRED 的 */
-    @Query("SELECT l FROM InventoryLedger l WHERE (:kw = '' OR l.materialCode LIKE %:kw% OR l.materialName LIKE %:kw% OR l.batchNo LIKE %:kw%) " +
+    @Query("SELECT l FROM InventoryLedger l WHERE (:kw = '' OR LOWER(l.materialCode) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(l.materialName) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(l.batchNo) LIKE LOWER(CONCAT('%', :kw, '%'))) " +
             "ORDER BY l.materialCode, l.batchNo")
     org.springframework.data.domain.Page<InventoryLedger> searchForQualityTrace(
             @org.springframework.data.repository.query.Param("kw") String kw,
@@ -160,13 +160,13 @@ public interface InventoryLedgerRepository extends JpaRepository<InventoryLedger
             "COALESCE(SUM(l.amount), SUM(l.qty*l.unit_price)), MAX(l.inbound_date), " +
             "COALESCE(MAX(m.category),''), COALESCE(MAX(m.sub_category),'') " +
             "FROM inventory_ledger l LEFT JOIN material m ON m.code = l.material_code " +
-            "WHERE (:kw = '' OR l.material_code LIKE %:kw% OR l.material_name LIKE %:kw%) " +
+            "WHERE (:kw = '' OR LOWER(l.material_code) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(l.material_name) LIKE LOWER(CONCAT('%', :kw, '%'))) " +
             "AND (:wh = '' OR l.warehouse_id = :wh) " +
             "AND (:zone = '' OR l.location_id IN (SELECT CAST(wl.id AS TEXT) FROM warehouse_location wl WHERE wl.zone_id = CAST(:zone AS INTEGER)) OR (l.location_id IS NULL AND :zone = '-')) " +
             "AND (:wh <> '' OR l.qc_status IS NULL OR l.qc_status NOT IN ('REJECT','TAILING','EXPIRED')) " +
             "GROUP BY l.material_code HAVING SUM(l.qty) > 0 ORDER BY l.material_code",
             countQuery = "SELECT COUNT(*) FROM (SELECT 1 FROM inventory_ledger l " +
-                    "WHERE (:kw = '' OR l.material_code LIKE %:kw% OR l.material_name LIKE %:kw%) " +
+                    "WHERE (:kw = '' OR LOWER(l.material_code) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(l.material_name) LIKE LOWER(CONCAT('%', :kw, '%'))) " +
                     "AND (:wh = '' OR l.warehouse_id = :wh) " +
                     "AND (:zone = '' OR l.location_id IN (SELECT CAST(wl.id AS TEXT) FROM warehouse_location wl WHERE wl.zone_id = CAST(:zone AS INTEGER)) OR (l.location_id IS NULL AND :zone = '-')) " +
                     "AND (:wh <> '' OR l.qc_status IS NULL OR l.qc_status NOT IN ('REJECT','TAILING','EXPIRED')) " +
@@ -188,13 +188,13 @@ public interface InventoryLedgerRepository extends JpaRepository<InventoryLedger
             "COALESCE(MAX(l.qc_inspection_no),''), COALESCE(MAX(l.qc_result),''), COALESCE(MAX(l.qc_inspector),''), MAX(l.qc_date), " +
             "COALESCE(MAX(m.category),''), COALESCE(MAX(m.sub_category),'') " +
             "FROM inventory_ledger l LEFT JOIN material m ON m.code = l.material_code " +
-            "WHERE (:kw = '' OR l.material_code LIKE %:kw% OR l.material_name LIKE %:kw% OR l.batch_no LIKE %:kw%) " +
+            "WHERE (:kw = '' OR LOWER(l.material_code) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(l.material_name) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(l.batch_no) LIKE LOWER(CONCAT('%', :kw, '%'))) " +
             "AND (:wh = '' OR l.warehouse_id = :wh) " +
             "AND (:zone = '' OR l.location_id IN (SELECT CAST(wl.id AS TEXT) FROM warehouse_location wl WHERE wl.zone_id = CAST(:zone AS INTEGER)) OR (l.location_id IS NULL AND :zone = '-')) " +
             "AND (:wh <> '' OR l.qc_status IS NULL OR l.qc_status NOT IN ('REJECT','TAILING','EXPIRED')) " +
             "GROUP BY l.material_code, l.batch_no HAVING SUM(l.qty) > 0 ORDER BY l.material_code, l.batch_no",
             countQuery = "SELECT COUNT(*) FROM (SELECT 1 FROM inventory_ledger l " +
-                    "WHERE (:kw = '' OR l.material_code LIKE %:kw% OR l.material_name LIKE %:kw% OR l.batch_no LIKE %:kw%) " +
+                    "WHERE (:kw = '' OR LOWER(l.material_code) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(l.material_name) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(l.batch_no) LIKE LOWER(CONCAT('%', :kw, '%'))) " +
                     "AND (:wh = '' OR l.warehouse_id = :wh) " +
                     "AND (:zone = '' OR l.location_id IN (SELECT CAST(wl.id AS TEXT) FROM warehouse_location wl WHERE wl.zone_id = CAST(:zone AS INTEGER)) OR (l.location_id IS NULL AND :zone = '-')) " +
                     "AND (:wh <> '' OR l.qc_status IS NULL OR l.qc_status NOT IN ('REJECT','TAILING','EXPIRED')) " +

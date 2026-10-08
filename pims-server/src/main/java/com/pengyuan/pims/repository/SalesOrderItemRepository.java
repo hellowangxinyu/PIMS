@@ -27,7 +27,7 @@ public interface SalesOrderItemRepository extends JpaRepository<SalesOrderItem, 
             "o.order_no AS order_no, o.order_date AS order_date, " +
             "ROW_NUMBER() OVER (PARTITION BY si.material_code ORDER BY o.create_time DESC) rn " +
             "FROM sales_order_item si JOIN sales_order o ON si.order_id = o.id " +
-            "WHERE o.customer_id = ?1 AND o.status != 'DRAFT') WHERE rn = 1 ORDER BY material_code", nativeQuery = true)
+            "WHERE o.customer_id = ?1 AND o.status != 'DRAFT') AS t WHERE rn = 1 ORDER BY material_code", nativeQuery = true)
     List<Object[]> latestPriceList(Long customerId);
 
     /** 销售订单执行清单：订单+明细+发货/退货数量（完成率在前端计算；日期列返回毫秒，由 Java 转字符串——SQLite date() 结果列会触发 JDBC 类型推断错误） */

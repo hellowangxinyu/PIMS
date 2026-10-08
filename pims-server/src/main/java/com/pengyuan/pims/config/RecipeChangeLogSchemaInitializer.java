@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -18,7 +20,7 @@ public class RecipeChangeLogSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS recipe_change_log (
                     id integer PRIMARY KEY AUTOINCREMENT,
                     recipe_id BIGINT,
@@ -32,10 +34,10 @@ public class RecipeChangeLogSchemaInitializer implements CommandLineRunner {
                     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_recipe_change_log ON recipe_change_log(recipe_id, create_time)");
-            var cols = jdbc.queryForList("PRAGMA table_info(recipe_version)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_recipe_change_log ON recipe_change_log(recipe_id, create_time)");
+            var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "recipe_version");
             if (!cols.stream().anyMatch(c -> "effective_date".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE recipe_version ADD COLUMN effective_date DATE");
+                SqlDdl.exec(jdbc, "ALTER TABLE recipe_version ADD COLUMN effective_date DATE");
                 log.info("配方版本：新增 effective_date 列");
             }
             log.info("配方变更日志表 recipe_change_log 就绪");
