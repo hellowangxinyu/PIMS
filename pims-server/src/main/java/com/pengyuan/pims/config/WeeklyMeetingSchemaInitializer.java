@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -24,7 +26,7 @@ public class WeeklyMeetingSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS weekly_topic (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     owner VARCHAR(50) NOT NULL,
@@ -38,13 +40,13 @@ public class WeeklyMeetingSchemaInitializer implements CommandLineRunner {
                     update_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_weekly_topic_plan ON weekly_topic(plan_date)");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_weekly_topic_closed ON weekly_topic(closed_date)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_weekly_topic_plan ON weekly_topic(plan_date)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_weekly_topic_closed ON weekly_topic(closed_date)");
             log.info("每周议题表 weekly_topic 就绪");
         } catch (Exception e) { log.warn("weekly_topic 建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS rd_progress (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     raise_date DATE,
@@ -60,7 +62,7 @@ public class WeeklyMeetingSchemaInitializer implements CommandLineRunner {
                     update_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_rd_progress_closed ON rd_progress(closed_date)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_rd_progress_closed ON rd_progress(closed_date)");
             log.info("研发进度表 rd_progress 就绪");
         } catch (Exception e) { log.warn("rd_progress 建表失败: {}", e.getMessage()); }
 
@@ -71,7 +73,7 @@ public class WeeklyMeetingSchemaInitializer implements CommandLineRunner {
             var exists = jdbc.queryForList(
                     "SELECT id FROM dict_item WHERE type='weekly_topic_category' AND label=?", seeds[i][0]);
             if (exists.isEmpty()) {
-                jdbc.update("INSERT INTO dict_item (type, label, value, sort_order, enabled, create_time) VALUES (?,?,?,?,1,?)",
+                jdbc.update("INSERT INTO dict_item (type, label, value, sort_order, enabled, create_time) VALUES (?,?,?,?,TRUE,?)",
                         "weekly_topic_category", seeds[i][0], seeds[i][0], i + 1, System.currentTimeMillis());
                 added++;
             }

@@ -10,7 +10,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     /** 查重：名称完全一致 */
     boolean existsByName(String name);
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(code, -4) AS INTEGER)) FROM customer WHERE code LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(code, LENGTH(code)-3, 4) AS INTEGER)) FROM customer WHERE LOWER(code) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
     // ==================== v5.27 拉黑：下拉选择仅启用 ====================
@@ -22,7 +22,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     List<Customer> findAllActiveOrBlacklisted();
 
     /** v5.27：管理列表搜索（同样排除已删除） */
-    @Query("SELECT c FROM Customer c WHERE (c.enabled = true OR c.blacklisted = true) AND c.name LIKE %:kw%")
+    @Query("SELECT c FROM Customer c WHERE (c.enabled = true OR c.blacklisted = true) AND LOWER(c.name) LIKE LOWER(CONCAT('%', :kw, '%'))")
     List<Customer> findByNameContainingActiveOrBlacklisted(@org.springframework.data.repository.query.Param("kw") String kw);
 
     /** v5.43.2 工作台统计口径：只数启用中的（排除禁用测试残留） */

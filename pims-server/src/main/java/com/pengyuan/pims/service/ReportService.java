@@ -185,7 +185,7 @@ private Map<String, Object> doPurchaseReport(int months) {
                   UNION ALL SELECT material_code, qty FROM production_outbound WHERE status='CONFIRMED' AND create_time >= ?
                   UNION ALL SELECT material_code, qty FROM outsource_material_outbound WHERE status IN ('CONFIRMED','SIGNED') AND create_time >= ?
                   UNION ALL SELECT material_code, qty FROM other_outbound WHERE status='CONFIRMED' AND (reason IS NULL OR reason <> 'REWORK') AND create_time >= ?
-                ) GROUP BY material_code
+                ) AS t GROUP BY material_code
                 """;
             for (var row : jdbc.queryForList(outSql, since, since, since, since)) {
                 outQty.put(String.valueOf(row.get("code")), toBigDecimal(row.get("q")));

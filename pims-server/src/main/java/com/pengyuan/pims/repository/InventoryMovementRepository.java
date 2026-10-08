@@ -21,7 +21,7 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
             String materialCode, String batchNo);
 
     /** v5.7：取指定日期前缀的最大批号序号（与台账合并计算，保证批号全局不重复） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(batch_no, INSTR(batch_no,'-')+1) AS INTEGER)) FROM inventory_movement WHERE batch_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(batch_no, INSTR(batch_no,'-')+1) AS INTEGER)) FROM inventory_movement WHERE LOWER(batch_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxBatchSeq(String prefix);
 
     /** v4.8：按物料+批次查异动（主表 + 归档表合并，2 年前已归档的批次仍可追溯） */

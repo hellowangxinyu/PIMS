@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -18,7 +20,7 @@ import java.util.Map;
  * 1. warehouse_zone 补 zone_type 列（null=普通 / UNQUALIFIED / TAILING）
  * 2. 旧隔离仓的分库（隔离区/油尾区）改挂宿主仓并打 zone_type（库位只挂 zone_id，自动跟随）
  * 3. 台账 warehouse_id '旧隔离仓id' → '宿主仓id'（locationId 不变，唯一键不冲突——迁移前校验撞键）
- * 4. 旧隔离仓 enabled=0 保留（历史单据引用），不得删除
+ * 4. 旧隔离仓 enabled = FALSE 保留（历史单据引用），不得删除
  *
  * 隔离判断锚点从「仓库 type」下移到「库位→分库 type」（台账行 locationId 恒有效：
  * 调拨只操作无库位行、隔离货由质检/油尾单据化入库时带隔离库位）。
@@ -35,9 +37,9 @@ public class ZoneMigrationSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            var cols = jdbc.queryForList("PRAGMA table_info(warehouse_zone)");
+            var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "warehouse_zone");
             if (!cols.stream().anyMatch(c -> "zone_type".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE warehouse_zone ADD COLUMN zone_type VARCHAR(20)");
+                SqlDdl.exec(jdbc, "ALTER TABLE warehouse_zone ADD COLUMN zone_type VARCHAR(20)");
                 log.info("分库表补 zone_type 列完成");
             }
         } catch (Exception e) { log.warn("warehouse_zone 补列失败: {}", e.getMessage()); }
@@ -49,16 +51,16 @@ public class ZoneMigrationSchemaInitializer implements CommandLineRunner {
         // 统一转为 UNQUALIFIED_RAW；同仓已有 RAW 且自身无台账的空库直接禁用，避免重复分库
         try {
             var leftovers = jdbc.queryForList(
-                    "SELECT z.id, z.warehouse_id, z.name FROM warehouse_zone z WHERE z.zone_type = 'UNQUALIFIED' AND z.enabled = 1");
+                    "SELECT z.id, z.warehouse_id, z.name FROM warehouse_zone z WHERE z.zone_type = 'UNQUALIFIED' AND z.enabled = TRUE");
             for (var z : leftovers) {
                 Long zid = ((Number) z.get("id")).longValue();
                 Long whId = ((Number) z.get("warehouse_id")).longValue();
                 var hasRaw = jdbc.queryForList(
-                        "SELECT id FROM warehouse_zone WHERE warehouse_id = ? AND zone_type = 'UNQUALIFIED_RAW' AND enabled = 1 AND id <> ?", whId, zid);
+                        "SELECT id FROM warehouse_zone WHERE warehouse_id = ? AND zone_type = 'UNQUALIFIED_RAW' AND enabled = TRUE AND id <> ?", whId, zid);
                 var hasStock = jdbc.queryForList(
                         "SELECT id FROM inventory_ledger WHERE location_id IN (SELECT id FROM warehouse_location WHERE zone_id = ?) AND qty > 0 LIMIT 1", zid);
                 if (!hasRaw.isEmpty() && hasStock.isEmpty()) {
-                    jdbc.update("UPDATE warehouse_zone SET enabled = 0, update_time = ? WHERE id = ?", System.currentTimeMillis(), zid);
+                    jdbc.update("UPDATE warehouse_zone SET enabled = FALSE, update_time = ? WHERE id = ?", System.currentTimeMillis(), zid);
                     log.info("遗留不合格品分库「{}」为空库且同仓已有原材料不合格品库，已禁用", z.get("name"));
                 } else {
                     jdbc.update("UPDATE warehouse_zone SET zone_type = 'UNQUALIFIED_RAW', update_time = ? WHERE id = ?", System.currentTimeMillis(), zid);
@@ -82,9 +84,9 @@ public class ZoneMigrationSchemaInitializer implements CommandLineRunner {
         // v5.46：流水表补库位列（新流水精确到库位；历史流水保留不动）+ 清理零量无库位遗留行
         for (String t : new String[]{"inventory_movement", "inventory_movement_archive"}) {
             try {
-                var cols = jdbc.queryForList("PRAGMA table_info(" + t + ")");
+                var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, t);
                 if (!cols.isEmpty() && !cols.stream().anyMatch(c -> "location_id".equals(c.get("name")))) {
-                    jdbc.execute("ALTER TABLE " + t + " ADD COLUMN location_id VARCHAR(20)");
+                    SqlDdl.exec(jdbc, "ALTER TABLE " + t + " ADD COLUMN location_id VARCHAR(20)");
                     log.info("{} 补 location_id 列完成", t);
                 }
             } catch (Exception e) { log.warn("{} 补列失败: {}", t, e.getMessage()); }
@@ -96,9 +98,9 @@ public class ZoneMigrationSchemaInitializer implements CommandLineRunner {
 
         // v5.38.2：油尾退回单补入库目标仓列（体系路由用）
         try {
-            var roCols = jdbc.queryForList("PRAGMA table_info(return_order)");
+            var roCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "return_order");
             if (!roCols.stream().anyMatch(c -> "warehouse_id".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE return_order ADD COLUMN warehouse_id VARCHAR(20)");
+                SqlDdl.exec(jdbc, "ALTER TABLE return_order ADD COLUMN warehouse_id VARCHAR(20)");
                 log.info("return_order 补 warehouse_id 列完成");
             }
         } catch (Exception e) { log.warn("return_order 补列失败: {}", e.getMessage()); }
@@ -113,7 +115,7 @@ public class ZoneMigrationSchemaInitializer implements CommandLineRunner {
             String oldId = String.valueOf(whs.get(0).get("id"));
 
             List<Map<String, Object>> hosts = jdbc.queryForList(
-                    "SELECT id FROM warehouse WHERE code = 'WH-OWN-PY' AND enabled = 1");
+                    "SELECT id FROM warehouse WHERE code = 'WH-OWN-PY' AND enabled = TRUE");
             if (hosts.isEmpty()) {
                 log.warn("{} 迁移跳过：宿主仓 WH-OWN-PY 不存在", whCode);
                 return;
@@ -159,6 +161,6 @@ public class ZoneMigrationSchemaInitializer implements CommandLineRunner {
     }
 
     private void ensureDisabled(String oldId) {
-        jdbc.update("UPDATE warehouse SET enabled = 0 WHERE id = ? AND enabled = 1", Long.valueOf(oldId));
+        jdbc.update("UPDATE warehouse SET enabled = FALSE WHERE id = ? AND enabled = TRUE", Long.valueOf(oldId));
     }
 }

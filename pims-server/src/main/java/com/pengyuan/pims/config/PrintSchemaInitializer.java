@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -38,10 +40,10 @@ public class PrintSchemaInitializer implements CommandLineRunner {
             String table = t[0];
             String noCol = t[1];
             try {
-                var cols = jdbc.queryForList("PRAGMA table_info(" + table + ")");
+                var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, table);
                 boolean hasPrintCount = cols.stream().anyMatch(c -> "print_count".equals(c.get("name")));
                 if (!hasPrintCount) {
-                    jdbc.execute("ALTER TABLE " + table + " ADD COLUMN print_count INTEGER NOT NULL DEFAULT 0");
+                    SqlDdl.exec(jdbc, "ALTER TABLE " + table + " ADD COLUMN print_count INTEGER NOT NULL DEFAULT 0");
                     log.info("打印计数表结构：{} 新增 print_count 列", table);
                 }
             } catch (Exception e) {

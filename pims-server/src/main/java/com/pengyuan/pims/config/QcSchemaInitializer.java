@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import com.pengyuan.pims.service.QualityInspectionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +32,7 @@ public class QcSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         // 创建质检单表
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS quality_inspection (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 inspection_no VARCHAR(30) NOT NULL UNIQUE,
@@ -58,60 +60,60 @@ public class QcSchemaInitializer implements CommandLineRunner {
         """);
 
         // material 表新增 shelf_life_days 列
-        var materialCols = jdbc.queryForList("PRAGMA table_info(material)");
+        var materialCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "material");
         boolean hasShelfLife = materialCols.stream().anyMatch(m -> "shelf_life_days".equals(m.get("name")));
         if (!hasShelfLife) {
-            jdbc.execute("ALTER TABLE material ADD COLUMN shelf_life_days INTEGER");
+            SqlDdl.exec(jdbc, "ALTER TABLE material ADD COLUMN shelf_life_days INTEGER");
             log.info("质检表结构：material 新增 shelf_life_days 列");
         }
 
         // material 表新增 brand_owner 列（v4.5：成品物料品牌归属，自产默认"芃远"，外购为成品供应商名称）
         boolean hasBrandOwner = materialCols.stream().anyMatch(m -> "brand_owner".equals(m.get("name")));
         if (!hasBrandOwner) {
-            jdbc.execute("ALTER TABLE material ADD COLUMN brand_owner VARCHAR(100)");
+            SqlDdl.exec(jdbc, "ALTER TABLE material ADD COLUMN brand_owner VARCHAR(100)");
             // 已有成品物料默认填"芃远"
-            jdbc.execute("UPDATE material SET brand_owner = '芃远' WHERE category = 'C' AND (brand_owner IS NULL OR brand_owner = '')");
+            SqlDdl.exec(jdbc, "UPDATE material SET brand_owner = '芃远' WHERE category = 'C' AND (brand_owner IS NULL OR brand_owner = '')");
             log.info("表结构：material 新增 brand_owner 列，已有成品物料默认填「芃远」");
         }
 
         // material 表新增 alternative_codes 列（v5.1：平替物料编码，逗号分隔，仅原材料；配方树中可直接切换）
         boolean hasAlternativeCodes = materialCols.stream().anyMatch(m -> "alternative_codes".equals(m.get("name")));
         if (!hasAlternativeCodes) {
-            jdbc.execute("ALTER TABLE material ADD COLUMN alternative_codes VARCHAR(500)");
+            SqlDdl.exec(jdbc, "ALTER TABLE material ADD COLUMN alternative_codes VARCHAR(500)");
             log.info("表结构：material 新增 alternative_codes 列（平替物料）");
         }
 
         // inventory_ledger 表新增 produce_date / expiry_date / inbound_date 列
-        var ledgerCols = jdbc.queryForList("PRAGMA table_info(inventory_ledger)");
+        var ledgerCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "inventory_ledger");
         boolean hasProduceDate = ledgerCols.stream().anyMatch(m -> "produce_date".equals(m.get("name")));
         if (!hasProduceDate) {
-            jdbc.execute("ALTER TABLE inventory_ledger ADD COLUMN produce_date DATE");
-            jdbc.execute("ALTER TABLE inventory_ledger ADD COLUMN expiry_date DATE");
+            SqlDdl.exec(jdbc, "ALTER TABLE inventory_ledger ADD COLUMN produce_date DATE");
+            SqlDdl.exec(jdbc, "ALTER TABLE inventory_ledger ADD COLUMN expiry_date DATE");
             log.info("质检表结构：inventory_ledger 新增 produce_date / expiry_date 列");
         }
         boolean hasInboundDate = ledgerCols.stream().anyMatch(m -> "inbound_date".equals(m.get("name")));
         if (!hasInboundDate) {
-            jdbc.execute("ALTER TABLE inventory_ledger ADD COLUMN inbound_date DATE");
+            SqlDdl.exec(jdbc, "ALTER TABLE inventory_ledger ADD COLUMN inbound_date DATE");
             log.info("质检表结构：inventory_ledger 新增 inbound_date 列");
         }
 
         // inventory_ledger 表新增质检信息持久化列（qc_status / qc_inspection_no / qc_result / qc_inspector / qc_date）
         boolean hasQcStatus = ledgerCols.stream().anyMatch(m -> "qc_status".equals(m.get("name")));
         if (!hasQcStatus) {
-            jdbc.execute("ALTER TABLE inventory_ledger ADD COLUMN qc_status VARCHAR(20)");
-            jdbc.execute("ALTER TABLE inventory_ledger ADD COLUMN qc_inspection_no VARCHAR(30)");
-            jdbc.execute("ALTER TABLE inventory_ledger ADD COLUMN qc_result VARCHAR(500)");
-            jdbc.execute("ALTER TABLE inventory_ledger ADD COLUMN qc_inspector VARCHAR(50)");
-            jdbc.execute("ALTER TABLE inventory_ledger ADD COLUMN qc_date DATE");
+            SqlDdl.exec(jdbc, "ALTER TABLE inventory_ledger ADD COLUMN qc_status VARCHAR(20)");
+            SqlDdl.exec(jdbc, "ALTER TABLE inventory_ledger ADD COLUMN qc_inspection_no VARCHAR(30)");
+            SqlDdl.exec(jdbc, "ALTER TABLE inventory_ledger ADD COLUMN qc_result VARCHAR(500)");
+            SqlDdl.exec(jdbc, "ALTER TABLE inventory_ledger ADD COLUMN qc_inspector VARCHAR(50)");
+            SqlDdl.exec(jdbc, "ALTER TABLE inventory_ledger ADD COLUMN qc_date DATE");
             log.info("质检表结构：inventory_ledger 新增 qc_status / qc_inspection_no / qc_result / qc_inspector / qc_date 列");
         }
 
         // v6.1.2：quality_inspection 新增 arrival_id 列——质检单与到货单精确关联
         // （同订单同物料分批到货各生成一张质检单，反审核按 arrivalId 隔离，不误删他批待检单）
-        boolean hasArrivalId = jdbc.queryForList("PRAGMA table_info(quality_inspection)")
+        boolean hasArrivalId = com.pengyuan.pims.common.DbMeta.columns(jdbc, "quality_inspection")
                 .stream().anyMatch(m -> "arrival_id".equals(m.get("name")));
         if (!hasArrivalId) {
-            jdbc.execute("ALTER TABLE quality_inspection ADD COLUMN arrival_id BIGINT");
+            SqlDdl.exec(jdbc, "ALTER TABLE quality_inspection ADD COLUMN arrival_id BIGINT");
             // 历史回填：INCOMING 单按 订单号+物料 关联最新一张已审核到货单（近似关联，好于 NULL）
             jdbc.update("""
                 UPDATE quality_inspection SET arrival_id =
@@ -125,10 +127,10 @@ public class QcSchemaInitializer implements CommandLineRunner {
         }
 
         // quality_inspection 新增 material_category 列（v5.0：材料/半成品/成品分类 Tab 用）
-        var qcCols = jdbc.queryForList("PRAGMA table_info(quality_inspection)");
+        var qcCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "quality_inspection");
         boolean hasMaterialCategory = qcCols.stream().anyMatch(m -> "material_category".equals(m.get("name")));
         if (!hasMaterialCategory) {
-            jdbc.execute("ALTER TABLE quality_inspection ADD COLUMN material_category VARCHAR(5)");
+            SqlDdl.exec(jdbc, "ALTER TABLE quality_inspection ADD COLUMN material_category VARCHAR(5)");
             // 历史回填：优先按物料主档匹配；匹配不到按编码首字符推断（编码规则：首字符即大类 A/P/F/R/S/B/C）
             jdbc.update("""
                 UPDATE quality_inspection SET material_category =
@@ -197,13 +199,13 @@ public class QcSchemaInitializer implements CommandLineRunner {
     private void migrateFinanceSchema() {
         // 1. outsource_order 表新增 supplier_id / processing_fee 列
         try {
-            var ooCols = jdbc.queryForList("PRAGMA table_info(outsource_order)");
+            var ooCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "outsource_order");
             if (!ooCols.stream().anyMatch(c -> "supplier_id".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE outsource_order ADD COLUMN supplier_id BIGINT");
+                SqlDdl.exec(jdbc, "ALTER TABLE outsource_order ADD COLUMN supplier_id BIGINT");
                 log.info("财务表结构：outsource_order 新增 supplier_id 列");
             }
             if (!ooCols.stream().anyMatch(c -> "processing_fee".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE outsource_order ADD COLUMN processing_fee DECIMAL(12,2)");
+                SqlDdl.exec(jdbc, "ALTER TABLE outsource_order ADD COLUMN processing_fee DECIMAL(12,2)");
                 log.info("财务表结构：outsource_order 新增 processing_fee 列");
             }
         } catch (Exception e) {
@@ -212,9 +214,9 @@ public class QcSchemaInitializer implements CommandLineRunner {
 
         // 2. accounts_payable 表新增 outsource_order_no 列
         try {
-            var apCols = jdbc.queryForList("PRAGMA table_info(accounts_payable)");
+            var apCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "accounts_payable");
             if (!apCols.stream().anyMatch(c -> "outsource_order_no".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE accounts_payable ADD COLUMN outsource_order_no VARCHAR(20)");
+                SqlDdl.exec(jdbc, "ALTER TABLE accounts_payable ADD COLUMN outsource_order_no VARCHAR(20)");
                 log.info("财务表结构：accounts_payable 新增 outsource_order_no 列");
             }
         } catch (Exception e) {
@@ -223,7 +225,7 @@ public class QcSchemaInitializer implements CommandLineRunner {
 
         // 3. 创建 payment_receipt 表（收款单）
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS payment_receipt (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     doc_no VARCHAR(20) NOT NULL UNIQUE,
@@ -246,7 +248,7 @@ public class QcSchemaInitializer implements CommandLineRunner {
 
         // 4. 创建 payment_disbursement 表（付款单）
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS payment_disbursement (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     doc_no VARCHAR(20) NOT NULL UNIQUE,
@@ -269,13 +271,13 @@ public class QcSchemaInitializer implements CommandLineRunner {
 
         // 5. other_inbound 表新增财务字段
         try {
-            var oiCols = jdbc.queryForList("PRAGMA table_info(other_inbound)");
+            var oiCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "other_inbound");
             if (!oiCols.stream().anyMatch(c -> "gen_finance".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE other_inbound ADD COLUMN gen_finance BOOLEAN DEFAULT 0");
-                jdbc.execute("ALTER TABLE other_inbound ADD COLUMN finance_amount DECIMAL(14,2)");
-                jdbc.execute("ALTER TABLE other_inbound ADD COLUMN finance_partner_id BIGINT");
-                jdbc.execute("ALTER TABLE other_inbound ADD COLUMN finance_partner_name VARCHAR(50)");
-                jdbc.execute("ALTER TABLE other_inbound ADD COLUMN finance_doc_no VARCHAR(20)");
+                SqlDdl.exec(jdbc, "ALTER TABLE other_inbound ADD COLUMN gen_finance BOOLEAN DEFAULT 0");
+                SqlDdl.exec(jdbc, "ALTER TABLE other_inbound ADD COLUMN finance_amount DECIMAL(14,2)");
+                SqlDdl.exec(jdbc, "ALTER TABLE other_inbound ADD COLUMN finance_partner_id BIGINT");
+                SqlDdl.exec(jdbc, "ALTER TABLE other_inbound ADD COLUMN finance_partner_name VARCHAR(50)");
+                SqlDdl.exec(jdbc, "ALTER TABLE other_inbound ADD COLUMN finance_doc_no VARCHAR(20)");
                 log.info("财务表结构：other_inbound 新增财务字段");
             }
         } catch (Exception e) {
@@ -284,13 +286,13 @@ public class QcSchemaInitializer implements CommandLineRunner {
 
         // 6. other_outbound 表新增财务字段
         try {
-            var ooCols = jdbc.queryForList("PRAGMA table_info(other_outbound)");
+            var ooCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "other_outbound");
             if (!ooCols.stream().anyMatch(c -> "gen_finance".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE other_outbound ADD COLUMN gen_finance BOOLEAN DEFAULT 0");
-                jdbc.execute("ALTER TABLE other_outbound ADD COLUMN finance_amount DECIMAL(14,2)");
-                jdbc.execute("ALTER TABLE other_outbound ADD COLUMN finance_partner_id BIGINT");
-                jdbc.execute("ALTER TABLE other_outbound ADD COLUMN finance_partner_name VARCHAR(50)");
-                jdbc.execute("ALTER TABLE other_outbound ADD COLUMN finance_doc_no VARCHAR(20)");
+                SqlDdl.exec(jdbc, "ALTER TABLE other_outbound ADD COLUMN gen_finance BOOLEAN DEFAULT 0");
+                SqlDdl.exec(jdbc, "ALTER TABLE other_outbound ADD COLUMN finance_amount DECIMAL(14,2)");
+                SqlDdl.exec(jdbc, "ALTER TABLE other_outbound ADD COLUMN finance_partner_id BIGINT");
+                SqlDdl.exec(jdbc, "ALTER TABLE other_outbound ADD COLUMN finance_partner_name VARCHAR(50)");
+                SqlDdl.exec(jdbc, "ALTER TABLE other_outbound ADD COLUMN finance_doc_no VARCHAR(20)");
                 log.info("财务表结构：other_outbound 新增财务字段");
             }
         } catch (Exception e) {
@@ -363,7 +365,7 @@ public class QcSchemaInitializer implements CommandLineRunner {
             // 生成AP记录
             // v8.4（D5）：COUNT+1 改 MAX+1——删行后必然重号（与 ApArrivalSchemaInitializer 统一）
             Integer apMax = jdbc.queryForObject(
-                    "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM accounts_payable WHERE doc_no LIKE ?",
+                    "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM accounts_payable WHERE LOWER(doc_no) LIKE LOWER(?)",
                     Integer.class, "AP-" + java.time.LocalDate.now().getYear() + "-%");
             String docNo = String.format("AP-%d-%04d", java.time.LocalDate.now().getYear(),
                     (apMax == null ? 0 : apMax) + 1);

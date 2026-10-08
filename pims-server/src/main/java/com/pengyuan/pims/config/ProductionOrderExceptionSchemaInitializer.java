@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -25,7 +27,7 @@ public class ProductionOrderExceptionSchemaInitializer implements CommandLineRun
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute(
+            SqlDdl.exec(jdbc, 
                 "CREATE TABLE IF NOT EXISTS production_order_exception (" +
                 "  id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 "  order_no VARCHAR(20) NOT NULL UNIQUE," +

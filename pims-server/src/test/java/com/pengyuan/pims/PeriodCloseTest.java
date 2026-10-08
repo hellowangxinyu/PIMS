@@ -49,7 +49,7 @@ class PeriodCloseTest extends Support {
         for (String[] s : new String[][]{
                 {"1001", "库存现金", "DR", "ASSET"}, {"2101", "应付账款", "CR", "LIAB"},
                 {"6001", "主营业务收入", "CR", "PL"}, {"6401", "主营业务成本", "DR", "PL"}}) {
-            jdbc.update("INSERT OR IGNORE INTO account_subject (code, name, direction, category, status) VALUES (?,?,?,?, 'ENABLED')", s[0], s[1], s[2], s[3]);
+            jdbc.update("INSERT INTO account_subject (code, name, direction, category, status) VALUES (?,?,?,?, 'ENABLED') ON CONFLICT (code) DO NOTHING", s[0], s[1], s[2], s[3]);
         }
         // 2026-08 一张已记账凭证（收入）
         makePostedVoucher(LocalDate.of(2026, 8, 10), "100", "100", "1001", "6001");
@@ -99,13 +99,13 @@ class PeriodCloseTest extends Support {
         // 基础仓/分库/库位（入库须指定库位，铁律）
         Integer wc = jdbc.queryForObject("SELECT COUNT(*) FROM warehouse", Integer.class);
         if (wc == null || wc == 0) {
-            jdbc.update("INSERT INTO warehouse (id, code, name, enabled) VALUES (1, 'TWH', '测试仓', 1)");
-            jdbc.update("INSERT INTO warehouse_zone (id, warehouse_id, code, name, enabled) VALUES (1, 1, 'TZN', '测试分库', 1)");
-            jdbc.update("INSERT INTO warehouse_location (id, zone_id, code, name, enabled) VALUES (1, 1, 'T-01', '测试库位', 1)");
+            jdbc.update("INSERT INTO warehouse (id, code, name, enabled) VALUES (1, 'TWH', '测试仓', TRUE)");
+            jdbc.update("INSERT INTO warehouse_zone (id, warehouse_id, code, name, enabled) VALUES (1, 1, 'TZN', '测试分库', TRUE)");
+            jdbc.update("INSERT INTO warehouse_location (id, zone_id, code, name, enabled) VALUES (1, 1, 'T-01', '测试库位', TRUE)");
         }
         jdbc.update("DELETE FROM inventory_ledger WHERE material_code = 'T-LOCK'");
         String cur = java.time.LocalDate.now().toString().substring(0, 7);
-        jdbc.update("INSERT INTO account_period (period, closed) VALUES (?, 1)", cur);
+        jdbc.update("INSERT INTO account_period (period, closed) VALUES (?, TRUE)", cur);
         try {
             IllegalArgumentException e1 = assertThrows(IllegalArgumentException.class, () ->
                     inventoryService.purchaseInbound("OTHER_IN", "T-LOCK-1", "T-LOCK", "锁期测试料",

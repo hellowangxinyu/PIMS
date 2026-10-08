@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -18,7 +20,7 @@ public class BankReconciliationSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS bank_account (
                     id integer PRIMARY KEY AUTOINCREMENT,
                     name VARCHAR(50) NOT NULL,
@@ -29,7 +31,7 @@ public class BankReconciliationSchemaInitializer implements CommandLineRunner {
                     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
                 """);
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS bank_statement (
                     id integer PRIMARY KEY AUTOINCREMENT,
                     account_id BIGINT NOT NULL,
@@ -45,8 +47,8 @@ public class BankReconciliationSchemaInitializer implements CommandLineRunner {
                     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_bank_stmt_account_date ON bank_statement(account_id, tx_date)");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_bank_stmt_status ON bank_statement(account_id, status)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_bank_stmt_account_date ON bank_statement(account_id, tx_date)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_bank_stmt_status ON bank_statement(account_id, status)");
             log.info("出纳对账表就绪：bank_account / bank_statement");
         } catch (Exception e) {
             log.warn("出纳对账建表失败: {}", e.getMessage());

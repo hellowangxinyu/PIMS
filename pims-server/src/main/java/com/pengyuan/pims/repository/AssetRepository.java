@@ -14,6 +14,6 @@ public interface AssetRepository extends JpaRepository<Asset, Long> {
     List<Asset> findByStatusOrderByIdAsc(String status);
 
     /** 取指定前缀最大单号序号（FA-YYYY-NNNN） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM asset WHERE doc_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM asset WHERE LOWER(doc_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 }

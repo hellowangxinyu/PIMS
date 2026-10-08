@@ -289,6 +289,6 @@ public class SalaryService {
     private BigDecimal nvl(BigDecimal v) { return v == null ? BigDecimal.ZERO : v; }
 
     private void checkPeriod(String period) {
-        if (period == null || !period.matches("\\d{4}-\\d{2}")) throw new IllegalArgumentException("期间格式应为 YYYY-MM");
+        com.pengyuan.pims.common.PeriodValidator.requireValid(period, "期间");
     }
 }

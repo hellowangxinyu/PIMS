@@ -20,6 +20,11 @@ public final class BaselineInit {
     private BaselineInit() {}
 
     public static void initIfNeeded() {
+        // PG 迁移 v11.9：基线导入是 SQLite 全新部署的引导路径（PG 由 SchemaInitializer 自动建表），跳过
+        if (System.getenv("PIMS_DB_URL") != null && !System.getenv("PIMS_DB_URL").startsWith("jdbc:sqlite")) {
+            System.out.println("[init-db] PG 环境由 SchemaInitializer 自动建表，跳过 SQLite 基线导入");
+            return;
+        }
         String url = "jdbc:sqlite:data/pims.db";
         try (Connection c = DriverManager.getConnection(url)) {
             // 库里已有核心表 → 跳过（幂等）

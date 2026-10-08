@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 
 /**
  * 账务期间（v5.61 总账体系）—— 结账状态记录
- * 只有结过账的期间才有行；closed=1 表示已结账（该期间禁止一切凭证写操作）。
+ * 只有结过账的期间才有行；closed = TRUE 表示已结账（该期间禁止一切凭证写操作）。
  * 反结账仅允许从最近已结期间逐月往前。
  */
 @Entity @Table(name = "account_period")

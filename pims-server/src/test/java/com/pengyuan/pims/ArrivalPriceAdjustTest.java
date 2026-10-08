@@ -24,7 +24,7 @@ class ArrivalPriceAdjustTest extends Support {
         jdbc.update("DELETE FROM accounts_payable WHERE purchase_order_no LIKE 'T-ADJ%'");
         // 已审核采购单：单价 10，数量 10 → 到货后 AP 应为 100
         jdbc.update("INSERT INTO raw_material_purchase (id, order_no, status, material_code, material_name, qty, unit_price, purchase_date, supplier_id, is_free) " +
-                "VALUES (9101, 'T-ADJ-A', 'APPROVED', 'T-ADJ-MAT', '调价测试料', 10, 10, 0, 1, 0)");
+                "VALUES (9101, 'T-ADJ-A', 'APPROVED', 'T-ADJ-MAT', '调价测试料', 10, 10, 0, 1, FALSE)");
     }
 
     /** 手工建到货 + 审核 → 产生 APPROVED 到货单与 AP（100 元） */

@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -26,7 +28,7 @@ public class QuotationSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS quotation (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     quote_no VARCHAR(20) NOT NULL UNIQUE,
@@ -43,12 +45,12 @@ public class QuotationSchemaInitializer implements CommandLineRunner {
                     update_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_quotation_cust ON quotation(customer_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_quotation_cust ON quotation(customer_id)");
             log.info("报价单表 quotation 就绪");
         } catch (Exception e) { log.warn("quotation 建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS quotation_item (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     quotation_id BIGINT NOT NULL,
@@ -61,16 +63,16 @@ public class QuotationSchemaInitializer implements CommandLineRunner {
                     remark VARCHAR(500)
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_quotation_item ON quotation_item(quotation_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_quotation_item ON quotation_item(quotation_id)");
             log.info("报价单明细表 quotation_item 就绪");
         } catch (Exception e) { log.warn("quotation_item 建表失败: {}", e.getMessage()); }
 
         // 客户信用额度列（幂等）
         try {
-            List<?> cols = jdbc.queryForList("PRAGMA table_info(customer)");
+            List<?> cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "customer");
             boolean has = cols.stream().anyMatch(c -> String.valueOf(((java.util.Map<?, ?>) c).get("name")).equalsIgnoreCase("credit_limit"));
             if (!has) {
-                jdbc.execute("ALTER TABLE customer ADD COLUMN credit_limit DECIMAL(14,2)");
+                SqlDdl.exec(jdbc, "ALTER TABLE customer ADD COLUMN credit_limit DECIMAL(14,2)");
                 log.info("customer 表新增 credit_limit 列");
             }
         } catch (Exception e) { log.warn("customer.credit_limit 加列失败: {}", e.getMessage()); }

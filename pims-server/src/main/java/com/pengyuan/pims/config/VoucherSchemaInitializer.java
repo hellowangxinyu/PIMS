@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -24,7 +26,7 @@ public class VoucherSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS account_subject (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     code VARCHAR(20) NOT NULL UNIQUE,
@@ -43,7 +45,7 @@ public class VoucherSchemaInitializer implements CommandLineRunner {
         } catch (Exception e) { log.warn("会计科目表建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS voucher (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     doc_no VARCHAR(20) NOT NULL UNIQUE,
@@ -67,7 +69,7 @@ public class VoucherSchemaInitializer implements CommandLineRunner {
         } catch (Exception e) { log.warn("记账凭证表建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS voucher_entry (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     voucher_id BIGINT NOT NULL,
@@ -85,7 +87,7 @@ public class VoucherSchemaInitializer implements CommandLineRunner {
         } catch (Exception e) { log.warn("凭证分录表建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS account_period (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     period VARCHAR(10) NOT NULL UNIQUE,
@@ -98,7 +100,7 @@ public class VoucherSchemaInitializer implements CommandLineRunner {
         } catch (Exception e) { log.warn("账务期间表建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS account_mapping (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     map_key VARCHAR(60) NOT NULL UNIQUE,
@@ -112,10 +114,10 @@ public class VoucherSchemaInitializer implements CommandLineRunner {
 
         // 索引：期间/状态等值查询、分录批量预取、科目余额聚合
         try {
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_voucher_period ON voucher(period)");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_voucher_source_ref ON voucher(source, ref_doc_no)");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_voucher_entry_vid ON voucher_entry(voucher_id)");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_voucher_entry_subject ON voucher_entry(subject_code)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_voucher_period ON voucher(period)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_voucher_source_ref ON voucher(source, ref_doc_no)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_voucher_entry_vid ON voucher_entry(voucher_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_voucher_entry_subject ON voucher_entry(subject_code)");
         } catch (Exception e) { log.warn("总账索引创建失败: {}", e.getMessage()); }
 
         ensureSubjects();

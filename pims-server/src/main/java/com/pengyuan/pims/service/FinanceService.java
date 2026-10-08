@@ -496,6 +496,13 @@ public class FinanceService {
     public AccountsPayable createAP(AccountsPayable ap) {
         // v5.24：单号生成+保存整体排队（WriteQueue 全局锁），防并发撞号
         return writeQueue.executeTx(() -> {
+            // v11.8（FT-03）：payableType 为库非空列，原缺校验时 DB 约束裸抛 500；补必填+枚举校验
+            if (ap.payableType == null || ap.payableType.isBlank()) {
+                throw new IllegalArgumentException("应付类型不能为空（PURCHASE 采购 / OUTSOURCE 委外 / OTHER 其他）");
+            }
+            if (!java.util.Set.of("PURCHASE", "OUTSOURCE", "OTHER").contains(ap.payableType)) {
+                throw new IllegalArgumentException("应付类型必须是 PURCHASE(采购)、OUTSOURCE(委外) 或 OTHER(其他)");
+            }
             if (ap.docNo != null && !ap.docNo.isBlank() && apRepo.existsByDocNo(ap.docNo)) {
                 throw new IllegalArgumentException("应付单号 " + ap.docNo + " 已存在");   // v6.1.4 查重
             }

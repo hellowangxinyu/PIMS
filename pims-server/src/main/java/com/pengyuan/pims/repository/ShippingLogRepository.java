@@ -16,6 +16,6 @@ public interface ShippingLogRepository extends JpaRepository<ShippingLog, Long> 
     Optional<ShippingLog> findByOutboundDocNo(String outboundDocNo);
 
     /** 取指定前缀最大单号序号（SHIP-YYYY-NNNN） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM shipping_log WHERE doc_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM shipping_log WHERE LOWER(doc_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 }

@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -23,7 +25,7 @@ public class ShippingSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS shipping_log (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     doc_no VARCHAR(20) NOT NULL UNIQUE,
@@ -41,8 +43,8 @@ public class ShippingSchemaInitializer implements CommandLineRunner {
                     update_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_shipping_order ON shipping_log(sales_order_no)");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_shipping_outbound ON shipping_log(outbound_doc_no)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_shipping_order ON shipping_log(sales_order_no)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_shipping_outbound ON shipping_log(outbound_doc_no)");
             log.info("物流运费表 shipping_log 就绪");
         } catch (Exception e) { log.warn("shipping_log 建表失败: {}", e.getMessage()); }
 
@@ -59,7 +61,7 @@ public class ShippingSchemaInitializer implements CommandLineRunner {
         for (String[] s : seeds) {
             var exists = jdbc.queryForList("SELECT id FROM dict_item WHERE type = ? AND value = ?", s[0], s[2]);
             if (exists.isEmpty()) {
-                jdbc.update("INSERT INTO dict_item (type, label, value, sort_order, enabled, create_time) VALUES (?,?,?,?,1,?)",
+                jdbc.update("INSERT INTO dict_item (type, label, value, sort_order, enabled, create_time) VALUES (?,?,?,?,TRUE,?)",
                         s[0], s[1], s[2], Integer.parseInt(s[3]), System.currentTimeMillis());
                 added++;
             }

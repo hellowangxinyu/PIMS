@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -25,7 +27,7 @@ public class AiSchemaInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        jdbc.execute("CREATE TABLE IF NOT EXISTS ai_config (key_name TEXT PRIMARY KEY, value_text TEXT)");
+        SqlDdl.exec(jdbc, "CREATE TABLE IF NOT EXISTS ai_config (key_name TEXT PRIMARY KEY, value_text TEXT)");
         log.info("AI 配置表 ai_config 已就绪");
     }
 }

@@ -42,7 +42,7 @@ List<AccountsReceivable> findByCustomerId(Long customerId);
 
     /** 按月统计应收金额（按创建时间分组）；v5.55 时间列已统一毫秒整数，裸列比较走 idx_ar_time_status（参数为 yyyy-MM-dd，折算东八区当日零点） */
     @Query(value = "SELECT strftime('%Y-%m', create_time/1000, 'unixepoch', '+8 hours') AS period, COALESCE(SUM(amount),0), COALESCE(SUM(received_amount),0) " +
-            "FROM accounts_receivable WHERE create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) GROUP BY period ORDER BY period", nativeQuery = true)
+            "FROM accounts_receivable WHERE create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) GROUP BY period ORDER BY period", nativeQuery = true)
     List<Object[]> monthlyArSince(String sinceDate);
 
     /** 账龄明细（未结清，v5.9 替代 findAll+内存过滤）：join 客户档案取名称，due_date 毫秒由 Java 转换 */
@@ -51,17 +51,17 @@ List<AccountsReceivable> findByCustomerId(Long customerId);
             "WHERE a.status != 'PAID' AND a.amount > COALESCE(a.received_amount, 0)", nativeQuery = true)
     List<Object[]> agingList();
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM accounts_receivable WHERE doc_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM accounts_receivable WHERE LOWER(doc_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
     // v7.6 应收周转：期间立账 / 累计立账（参数 yyyy-MM-dd，SQL 端折东八区零点毫秒，同 monthlyArSince 口径）
     @Query(value = "SELECT customer_id, COALESCE(SUM(amount),0) FROM accounts_receivable " +
-            "WHERE customer_id IS NOT NULL AND create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
-            "AND create_time < 1000 * (CAST(strftime('%s', ?2) AS INTEGER) - 28800) GROUP BY customer_id", nativeQuery = true)
+            "WHERE customer_id IS NOT NULL AND create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
+            "AND create_time < 1000 * (CAST(strftime('%s', ?2) AS BIGINT) - 28800) GROUP BY customer_id", nativeQuery = true)
     List<Object[]> billedByCustomer(String startDate, String endDateExclusive);
 
     @Query(value = "SELECT customer_id, COALESCE(SUM(amount),0) FROM accounts_receivable " +
-            "WHERE customer_id IS NOT NULL AND create_time < 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "WHERE customer_id IS NOT NULL AND create_time < 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY customer_id", nativeQuery = true)
     List<Object[]> cumBilledByCustomer(String dateExclusive);
 

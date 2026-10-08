@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -24,7 +26,7 @@ public class FinanceExtSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS invoice (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     doc_no VARCHAR(20) NOT NULL UNIQUE,
@@ -52,7 +54,7 @@ public class FinanceExtSchemaInitializer implements CommandLineRunner {
         } catch (Exception e) { log.warn("发票表建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS expense (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     doc_no VARCHAR(20) NOT NULL UNIQUE,
@@ -73,7 +75,7 @@ public class FinanceExtSchemaInitializer implements CommandLineRunner {
         } catch (Exception e) { log.warn("费用表建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS advance_payment (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     doc_no VARCHAR(20) NOT NULL UNIQUE,
@@ -96,12 +98,12 @@ public class FinanceExtSchemaInitializer implements CommandLineRunner {
 
         // production_order 补人工/制费列（成本核算手工补录）
         try {
-            var cols = jdbc.queryForList("PRAGMA table_info(production_order)");
+            var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "production_order");
             if (!cols.stream().anyMatch(c -> "labor_fee".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE production_order ADD COLUMN labor_fee DECIMAL(12,2) DEFAULT 0");
+                SqlDdl.exec(jdbc, "ALTER TABLE production_order ADD COLUMN labor_fee DECIMAL(12,2) DEFAULT 0");
             }
             if (!cols.stream().anyMatch(c -> "overhead_fee".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE production_order ADD COLUMN overhead_fee DECIMAL(12,2) DEFAULT 0");
+                SqlDdl.exec(jdbc, "ALTER TABLE production_order ADD COLUMN overhead_fee DECIMAL(12,2) DEFAULT 0");
             }
         } catch (Exception e) { log.warn("production_order 补成本列失败: {}", e.getMessage()); }
 
@@ -130,7 +132,7 @@ public class FinanceExtSchemaInitializer implements CommandLineRunner {
             var exists = jdbc.queryForList(
                     "SELECT id FROM dict_item WHERE type = ? AND value = ?", s[0], s[2]);
             if (exists.isEmpty()) {
-                jdbc.update("INSERT INTO dict_item (type, label, value, sort_order, enabled, create_time) VALUES (?,?,?,?,1,?)",
+                jdbc.update("INSERT INTO dict_item (type, label, value, sort_order, enabled, create_time) VALUES (?,?,?,?,TRUE,?)",
                         s[0], s[1], s[2], Integer.parseInt(s[3]), System.currentTimeMillis());
                 added++;
             }

@@ -35,19 +35,19 @@ public interface RawMaterialPurchaseRepository extends JpaRepository<RawMaterial
 
     /** 按月聚合采购金额（最近N个月）；purchase_date 存毫秒时间戳，需转东八区日期再比较/格式化 */
     @Query(value = "SELECT strftime('%Y-%m', purchase_date/1000, 'unixepoch', '+8 hours') AS period, COALESCE(SUM(total_amount),0) AS amount " +
-            "FROM raw_material_purchase WHERE purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "FROM raw_material_purchase WHERE purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "AND status != 'DRAFT' GROUP BY period ORDER BY period", nativeQuery = true)
     List<Object[]> monthlyAmountSince(String sinceDate);
 
     /** 供应商采购金额TOP10（最近N个月） */
     @Query(value = "SELECT supplier_name, COALESCE(SUM(total_amount),0) AS amount " +
-            "FROM raw_material_purchase WHERE purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) AND supplier_name IS NOT NULL " +
+            "FROM raw_material_purchase WHERE purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) AND supplier_name IS NOT NULL " +
             "GROUP BY supplier_name ORDER BY amount DESC LIMIT 10", nativeQuery = true)
     List<Object[]> topSuppliersSince(String sinceDate);
 
     /** 按物料大类聚合采购金额（最近N个月） */
     @Query(value = "SELECT category, COALESCE(SUM(total_amount),0) AS amount " +
-            "FROM raw_material_purchase WHERE purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) AND category IS NOT NULL " +
+            "FROM raw_material_purchase WHERE purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) AND category IS NOT NULL " +
             "GROUP BY category ORDER BY amount DESC", nativeQuery = true)
     List<Object[]> categoryAmountSince(String sinceDate);
 
@@ -58,7 +58,7 @@ public interface RawMaterialPurchaseRepository extends JpaRepository<RawMaterial
     @Query(value = "SELECT material_code, material_name, brand, supplier_name, unit_price, qty, total_amount, " +
             "date(purchase_date/1000, 'unixepoch', '+8 hours') AS purchase_date " +
             "FROM raw_material_purchase WHERE status != 'DRAFT' AND unit_price IS NOT NULL " +
-            "AND purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "AND purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "ORDER BY material_code, purchase_date DESC", nativeQuery = true)
     List<Object[]> priceCompareSince(String sinceDate);
 
@@ -75,7 +75,7 @@ public interface RawMaterialPurchaseRepository extends JpaRepository<RawMaterial
             "FROM raw_material_purchase WHERE status != 'DRAFT'", nativeQuery = true)
     List<Object[]> completionStats();
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(order_no, INSTR(order_no,'-')+1) AS INTEGER)) FROM raw_material_purchase WHERE order_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(order_no, INSTR(order_no,'-')+1) AS INTEGER)) FROM raw_material_purchase WHERE LOWER(order_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
 }

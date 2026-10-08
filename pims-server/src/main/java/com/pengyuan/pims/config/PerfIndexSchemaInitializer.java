@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -42,10 +44,8 @@ public class PerfIndexSchemaInitializer implements CommandLineRunner {
         int created = 0;
         for (String[] ix : indexes) {
             try {
-                Integer before = jdbc.queryForObject(
-                        "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name=?", Integer.class, ix[0]);
-                if (before == null || before == 0) {
-                    jdbc.execute(ix[2]);
+                if (!com.pengyuan.pims.common.DbMeta.indexExists(jdbc, ix[0])) {
+                    SqlDdl.exec(jdbc, ix[2]);
                     log.info("性能索引：{} 已创建（{}）", ix[0], ix[1]);
                     created++;
                 }
@@ -55,15 +55,12 @@ public class PerfIndexSchemaInitializer implements CommandLineRunner {
         }
         // 操作日志分表（按月）也补 create_time 索引
         try {
-            var tables = jdbc.queryForList(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'operation_log_%'");
+            var tables = com.pengyuan.pims.common.DbMeta.tablesLike(jdbc, "operation_log_%");
             for (var t : tables) {
                 String tn = String.valueOf(t.get("name"));
                 String idxName = "idx_" + tn + "_ctime";
-                Integer has = jdbc.queryForObject(
-                        "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name=?", Integer.class, idxName);
-                if (has == null || has == 0) {
-                    jdbc.execute("CREATE INDEX IF NOT EXISTS " + idxName + " ON " + tn + "(create_time)");
+                if (!com.pengyuan.pims.common.DbMeta.indexExists(jdbc, idxName)) {
+                    SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS " + idxName + " ON " + tn + "(create_time)");
                     created++;
                 }
             }
@@ -72,9 +69,9 @@ public class PerfIndexSchemaInitializer implements CommandLineRunner {
         }
         // v6.3 信用软拦截：sales_order 加 credit_exceeded 列（超信用确认留痕）
         try {
-            var ocols = jdbc.queryForList("PRAGMA table_info(sales_order)");
+            var ocols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "sales_order");
             if (!ocols.stream().anyMatch(c -> "credit_exceeded".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE sales_order ADD COLUMN credit_exceeded BOOLEAN DEFAULT 0");
+                SqlDdl.exec(jdbc, "ALTER TABLE sales_order ADD COLUMN credit_exceeded BOOLEAN DEFAULT 0");
                 log.info("信用软拦截：sales_order 新增 credit_exceeded 列");
             }
         } catch (Exception e) {
@@ -83,11 +80,11 @@ public class PerfIndexSchemaInitializer implements CommandLineRunner {
 
         // v6.1 安全：sys_user 加 must_change_pwd 列（强制改密标记）
         try {
-            var ucols = jdbc.queryForList("PRAGMA table_info(sys_user)");
+            var ucols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "sys_user");
             boolean hasFlag = ucols.stream().anyMatch(c -> "must_change_pwd".equals(c.get("name")));
             if (!hasFlag) {
-                jdbc.execute("ALTER TABLE sys_user ADD COLUMN must_change_pwd BOOLEAN DEFAULT 0");
-                jdbc.update("UPDATE sys_user SET must_change_pwd = 1 WHERE username IN ('admin','buyer')");
+                SqlDdl.exec(jdbc, "ALTER TABLE sys_user ADD COLUMN must_change_pwd BOOLEAN DEFAULT 0");
+                jdbc.update("UPDATE sys_user SET must_change_pwd = TRUE WHERE username IN ('admin','buyer')");
                 log.info("安全加固：sys_user 新增 must_change_pwd 列，admin/buyer 已标记强制改密");
             }
         } catch (Exception e) {

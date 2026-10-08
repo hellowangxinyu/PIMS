@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -23,7 +25,7 @@ public class CrmSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS crm_contact (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     customer_id BIGINT,
@@ -39,12 +41,12 @@ public class CrmSchemaInitializer implements CommandLineRunner {
                     update_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_crm_contact_cust ON crm_contact(customer_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_crm_contact_cust ON crm_contact(customer_id)");
             log.info("CRM 联系人表 crm_contact 就绪");
         } catch (Exception e) { log.warn("crm_contact 建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS crm_opportunity (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     title VARCHAR(100) NOT NULL,
@@ -63,12 +65,12 @@ public class CrmSchemaInitializer implements CommandLineRunner {
                     update_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_crm_opp_stage ON crm_opportunity(stage)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_crm_opp_stage ON crm_opportunity(stage)");
             log.info("CRM 商机表 crm_opportunity 就绪");
         } catch (Exception e) { log.warn("crm_opportunity 建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS crm_follow_up (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     opportunity_id BIGINT,
@@ -81,7 +83,7 @@ public class CrmSchemaInitializer implements CommandLineRunner {
                     create_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_crm_fu_opp ON crm_follow_up(opportunity_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_crm_fu_opp ON crm_follow_up(opportunity_id)");
             log.info("CRM 跟进记录表 crm_follow_up 就绪");
         } catch (Exception e) { log.warn("crm_follow_up 建表失败: {}", e.getMessage()); }
     }

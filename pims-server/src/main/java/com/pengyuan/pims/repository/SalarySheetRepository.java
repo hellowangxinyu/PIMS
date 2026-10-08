@@ -13,6 +13,6 @@ public interface SalarySheetRepository extends JpaRepository<SalarySheet, Long> 
     Optional<SalarySheet> findByPeriod(String period);
 
     /** 取指定前缀最大单号序号（SAL-YYYYMM-NNNN 按期间编序） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM salary_sheet WHERE doc_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM salary_sheet WHERE LOWER(doc_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 }

@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -18,7 +20,7 @@ public class PricePolicySchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS price_policy (
                     id integer PRIMARY KEY AUTOINCREMENT,
                     material_code VARCHAR(30),
@@ -33,7 +35,7 @@ public class PricePolicySchemaInitializer implements CommandLineRunner {
                     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_price_policy_material ON price_policy(material_code, status)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_price_policy_material ON price_policy(material_code, status)");
             log.info("价格政策表 price_policy 就绪");
         } catch (Exception e) {
             log.warn("price_policy 建表失败: {}", e.getMessage());

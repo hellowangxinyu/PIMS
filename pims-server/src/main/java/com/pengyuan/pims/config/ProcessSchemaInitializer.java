@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import com.pengyuan.pims.entity.*;
 import com.pengyuan.pims.repository.*;
 import org.slf4j.Logger;
@@ -40,7 +42,7 @@ public class ProcessSchemaInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS process_template (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 recipe_type VARCHAR(20) NOT NULL UNIQUE,
@@ -53,12 +55,12 @@ public class ProcessSchemaInitializer implements CommandLineRunner {
         """);
         // v5.65.1 存量库补列（幂等）
         try {
-            var cols = jdbc.queryForList("PRAGMA table_info(process_template)");
+            var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "process_template");
             if (cols.stream().noneMatch(c -> "created_by".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE process_template ADD COLUMN created_by VARCHAR(50)");
+                SqlDdl.exec(jdbc, "ALTER TABLE process_template ADD COLUMN created_by VARCHAR(50)");
             }
         } catch (Exception ignored) { }
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS process_stage (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 template_id BIGINT NOT NULL,
@@ -68,7 +70,7 @@ public class ProcessSchemaInitializer implements CommandLineRunner {
                 sort_order INTEGER DEFAULT 0
             )
         """);
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS process_step (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 stage_id BIGINT NOT NULL,
@@ -78,7 +80,7 @@ public class ProcessSchemaInitializer implements CommandLineRunner {
                 sort_order INTEGER DEFAULT 0
             )
         """);
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS process_qc_item (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 stage_id BIGINT NOT NULL,
@@ -100,22 +102,32 @@ public class ProcessSchemaInitializer implements CommandLineRunner {
 
     /** 幂等补列：表不存在该列时执行 ALTER TABLE ADD COLUMN */
     private void ensureColumn(String table, String column, String type) {
-        var cols = jdbc.queryForList("PRAGMA table_info(" + table + ")");
+        var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, table);
         boolean exists = cols.stream().anyMatch(m -> column.equals(m.get("name")));
         if (!exists) {
-            jdbc.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type);
+            SqlDdl.exec(jdbc, "ALTER TABLE " + table + " ADD COLUMN " + column + " " + type);
             log.info("表结构：{} 新增 {} 列", table, column);
         }
     }
 
     /** 工艺路线改造：去掉 recipe_type 唯一约束 + 加 is_default 列（SQLite 需重建表），幂等 */
     private void migrateTemplateTable() {
+        // PG 迁移 v11.9：PG 端新建的表本就不带历史唯一约束，仅需保证 is_default 列存在（原生加列）
+        if (SqlDdl.isPostgreSQL(jdbc)) {
+            boolean hasDefaultCol = com.pengyuan.pims.common.DbMeta.columns(jdbc, "process_template").stream()
+                    .anyMatch(m -> "is_default".equals(m.get("name")));
+            if (!hasDefaultCol) {
+                SqlDdl.exec(jdbc, "ALTER TABLE process_template ADD COLUMN is_default BOOLEAN DEFAULT 0");
+                log.info("工艺路线：process_template 补 is_default 列（PG）");
+            }
+            return;
+        }
         boolean hasUnique = !jdbc.queryForList(
                 "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='process_template' AND name LIKE 'sqlite_autoindex%'").isEmpty();
-        boolean hasDefaultCol = jdbc.queryForList("PRAGMA table_info(process_template)").stream()
+        boolean hasDefaultCol = com.pengyuan.pims.common.DbMeta.columns(jdbc, "process_template").stream()
                 .anyMatch(m -> "is_default".equals(m.get("name")));
         if (!hasUnique && hasDefaultCol) return;
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE process_template_new (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 recipe_type VARCHAR(20) NOT NULL,
@@ -129,8 +141,8 @@ public class ProcessSchemaInitializer implements CommandLineRunner {
         """);
         jdbc.update("INSERT INTO process_template_new (id, recipe_type, name, packing_requirement, is_default, enabled, create_time, update_time) "
                 + "SELECT id, recipe_type, name, packing_requirement, 1, enabled, create_time, update_time FROM process_template");
-        jdbc.execute("DROP TABLE process_template");
-        jdbc.execute("ALTER TABLE process_template_new RENAME TO process_template");
+        SqlDdl.exec(jdbc, "DROP TABLE process_template");
+        SqlDdl.exec(jdbc, "ALTER TABLE process_template_new RENAME TO process_template");
         log.info("工艺路线：process_template 已重建（去唯一约束，存量路线标记为默认）");
     }
 
@@ -164,7 +176,7 @@ public class ProcessSchemaInitializer implements CommandLineRunner {
         int n = jdbc.update("""
             UPDATE recipe SET process_template_id = (
                 SELECT id FROM process_template
-                WHERE recipe_type = recipe.recipe_type AND is_default = 1
+                WHERE recipe_type = recipe.recipe_type AND is_default = TRUE
                 LIMIT 1)
             WHERE process_template_id IS NULL
         """);

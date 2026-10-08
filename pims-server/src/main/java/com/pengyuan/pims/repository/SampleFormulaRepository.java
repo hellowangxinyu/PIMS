@@ -18,6 +18,6 @@ public interface SampleFormulaRepository extends JpaRepository<SampleFormula, Lo
     List<SampleFormula> findUnconverted();
 
     /** v7.7 取号：FY-日期-NNNN 前缀最大序号（并发防重，WriteQueue 锁内调用） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(formula_no, -4) AS INTEGER)) FROM sample_formula WHERE formula_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(formula_no, LENGTH(formula_no)-3, 4) AS INTEGER)) FROM sample_formula WHERE LOWER(formula_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 }

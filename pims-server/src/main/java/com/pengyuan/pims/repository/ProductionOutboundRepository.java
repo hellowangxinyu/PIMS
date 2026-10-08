@@ -29,17 +29,17 @@ public interface ProductionOutboundRepository extends JpaRepository<ProductionOu
             "(SELECT SUM(i.qty) FROM production_order_item i JOIN production_order o2 ON i.order_id = o2.id " +
             " WHERE o2.order_no = po.production_order_no AND i.material_code = po.material_code) AS standard " +
             "FROM production_outbound po " +
-            "WHERE po.status = 'CONFIRMED' AND po.create_time >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "WHERE po.status = 'CONFIRMED' AND po.create_time >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "GROUP BY po.production_order_no, po.material_code ORDER BY po.production_order_no DESC", nativeQuery = true)
     List<Object[]> usageVsStandardSince(String sinceDate);
 
     /** v5.9：关键字分页搜索（docNo/productName/materialCode/materialName/batchNo 模糊匹配） */
-    @Query("SELECT o FROM ProductionOutbound o WHERE (:kw = '' OR o.docNo LIKE %:kw% OR o.productName LIKE %:kw% OR o.materialCode LIKE %:kw% OR o.materialName LIKE %:kw% OR o.batchNo LIKE %:kw%) ORDER BY o.createTime DESC")
+    @Query("SELECT o FROM ProductionOutbound o WHERE (:kw = '' OR LOWER(o.docNo) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(o.productName) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(o.materialCode) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(o.materialName) LIKE LOWER(CONCAT('%', :kw, '%')) OR LOWER(o.batchNo) LIKE LOWER(CONCAT('%', :kw, '%'))) ORDER BY o.createTime DESC")
     org.springframework.data.domain.Page<ProductionOutbound> searchByKeyword(
             @org.springframework.data.repository.query.Param("kw") String kw,
             org.springframework.data.domain.Pageable pageable);
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM production_outbound WHERE doc_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM production_outbound WHERE LOWER(doc_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
     /**

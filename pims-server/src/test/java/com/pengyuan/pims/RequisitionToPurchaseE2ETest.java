@@ -25,10 +25,10 @@ class RequisitionToPurchaseE2ETest extends Support {
         jdbc.update("DELETE FROM purchase_order WHERE remark LIKE '%E2E%'");
         jdbc.update("DELETE FROM purchase_order_item WHERE order_id IN (SELECT id FROM purchase_order WHERE remark LIKE '%E2E%')");
         if (jdbc.queryForObject("SELECT COUNT(*) FROM supplier", Integer.class) == 0) {
-            jdbc.update("INSERT INTO supplier (id, code, name, enabled) VALUES (1, 'SUP-E2E', 'E2E供应商', 1)");
+            jdbc.update("INSERT INTO supplier (id, code, name, enabled) VALUES (1, 'SUP-E2E', 'E2E供应商', TRUE)");
         }
         if (jdbc.queryForObject("SELECT COUNT(*) FROM material WHERE code='T-E2E'", Integer.class) == 0) {
-            jdbc.update("INSERT INTO material (code, name, category, sub_category, enabled) VALUES ('T-E2E', '端到端测试料', 'A', 'AC', 1)");
+            jdbc.update("INSERT INTO material (code, name, category, sub_category, enabled) VALUES ('T-E2E', '端到端测试料', 'A', 'AC', TRUE)");
         }
         var order = new java.util.HashMap<String, Object>();
         // 直接建库最快：插一张 DRAFT 请购 + 无价明细

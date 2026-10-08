@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -24,7 +26,7 @@ public class SampleComplaintSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS sample_request (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     sample_no VARCHAR(20) NOT NULL UNIQUE,
@@ -52,12 +54,12 @@ public class SampleComplaintSchemaInitializer implements CommandLineRunner {
                     update_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_sample_cust ON sample_request(customer_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_sample_cust ON sample_request(customer_id)");
             log.info("打样表 sample_request 就绪");
         } catch (Exception e) { log.warn("sample_request 建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS customer_complaint (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     complaint_no VARCHAR(20) NOT NULL UNIQUE,
@@ -83,12 +85,12 @@ public class SampleComplaintSchemaInitializer implements CommandLineRunner {
                     update_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_complaint_cust ON customer_complaint(customer_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_complaint_cust ON customer_complaint(customer_id)");
             // v5.60 制单人：存量表补 created_by 列（新表建表 SQL 已含）
             try {
-                boolean hasBy = jdbc.queryForList("PRAGMA table_info(customer_complaint)").stream()
+                boolean hasBy = com.pengyuan.pims.common.DbMeta.columns(jdbc, "customer_complaint").stream()
                         .anyMatch(c -> "created_by".equalsIgnoreCase(String.valueOf(c.get("name"))));
-                if (!hasBy) jdbc.execute("ALTER TABLE customer_complaint ADD COLUMN created_by VARCHAR(50)");
+                if (!hasBy) SqlDdl.exec(jdbc, "ALTER TABLE customer_complaint ADD COLUMN created_by VARCHAR(50)");
             } catch (Exception ex) { log.warn("customer_complaint 补列失败: {}", ex.getMessage()); }
             log.info("客户投诉表 customer_complaint 就绪");
         } catch (Exception e) { log.warn("customer_complaint 建表失败: {}", e.getMessage()); }

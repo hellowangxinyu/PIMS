@@ -32,7 +32,7 @@ public interface FinishedProductPurchaseRepository extends JpaRepository<Finishe
 
     /** 月度成品采购金额（近N个月） */
     @Query(value = "SELECT strftime('%Y-%m', purchase_date/1000, 'unixepoch', '+8 hours') AS period, COALESCE(SUM(total_amount), 0) " +
-            "FROM finished_product_purchase WHERE purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS INTEGER) - 28800) " +
+            "FROM finished_product_purchase WHERE purchase_date >= 1000 * (CAST(strftime('%s', ?1) AS BIGINT) - 28800) " +
             "AND status != 'DRAFT' GROUP BY period ORDER BY period", nativeQuery = true)
     List<Object[]> monthlyAmountSince(String sinceDate);
 
@@ -49,7 +49,7 @@ public interface FinishedProductPurchaseRepository extends JpaRepository<Finishe
             "FROM finished_product_purchase WHERE status != 'DRAFT'", nativeQuery = true)
     List<Object[]> completionStats();
     /** v5.24：取指定前缀最大单号序号（并发防重 + 删除不错位，替代 count()+1） */
-    @Query(value = "SELECT MAX(CAST(SUBSTR(order_no, INSTR(order_no,'-')+1) AS INTEGER)) FROM finished_product_purchase WHERE order_no LIKE ?1", nativeQuery = true)
+    @Query(value = "SELECT MAX(CAST(SUBSTR(order_no, INSTR(order_no,'-')+1) AS INTEGER)) FROM finished_product_purchase WHERE LOWER(order_no) LIKE LOWER(?1)", nativeQuery = true)
     Integer findMaxSeq(String prefix);
 
 }

@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import com.pengyuan.pims.entity.LossLetterTemplate;
 import com.pengyuan.pims.repository.LossLetterTemplateRepository;
 import org.slf4j.Logger;
@@ -31,7 +33,7 @@ public class SupplierQualityTraceSchemaInitializer implements CommandLineRunner 
     @Override
     public void run(String... args) {
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS supplier_quality_trace (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     trace_no VARCHAR(20) NOT NULL UNIQUE,
@@ -65,25 +67,25 @@ public class SupplierQualityTraceSchemaInitializer implements CommandLineRunner 
                     update_time TIMESTAMP
                 )
                 """);
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_sqt_supplier ON supplier_quality_trace(supplier_id)");
-            jdbc.execute("CREATE INDEX IF NOT EXISTS idx_sqt_status ON supplier_quality_trace(status)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_sqt_supplier ON supplier_quality_trace(supplier_id)");
+            SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_sqt_status ON supplier_quality_trace(status)");
             // v5.59.2 委外反查链：存量表补 order_category 列（新表建表 SQL 已含）
             try {
-                boolean hasCol = jdbc.queryForList("PRAGMA table_info(supplier_quality_trace)").stream()
+                boolean hasCol = com.pengyuan.pims.common.DbMeta.columns(jdbc, "supplier_quality_trace").stream()
                         .anyMatch(c -> "order_category".equalsIgnoreCase(String.valueOf(c.get("name"))));
-                if (!hasCol) jdbc.execute("ALTER TABLE supplier_quality_trace ADD COLUMN order_category VARCHAR(20)");
+                if (!hasCol) SqlDdl.exec(jdbc, "ALTER TABLE supplier_quality_trace ADD COLUMN order_category VARCHAR(20)");
             } catch (Exception ex) { log.warn("order_category 补列失败: {}", ex.getMessage()); }
             // v5.60 制单人：存量表补 created_by 列
             try {
-                boolean hasBy = jdbc.queryForList("PRAGMA table_info(supplier_quality_trace)").stream()
+                boolean hasBy = com.pengyuan.pims.common.DbMeta.columns(jdbc, "supplier_quality_trace").stream()
                         .anyMatch(c -> "created_by".equalsIgnoreCase(String.valueOf(c.get("name"))));
-                if (!hasBy) jdbc.execute("ALTER TABLE supplier_quality_trace ADD COLUMN created_by VARCHAR(50)");
+                if (!hasBy) SqlDdl.exec(jdbc, "ALTER TABLE supplier_quality_trace ADD COLUMN created_by VARCHAR(50)");
             } catch (Exception ex) { log.warn("created_by 补列失败: {}", ex.getMessage()); }
             log.info("供应商质量追溯表 supplier_quality_trace 就绪");
         } catch (Exception e) { log.warn("supplier_quality_trace 建表失败: {}", e.getMessage()); }
 
         try {
-            jdbc.execute("""
+            SqlDdl.exec(jdbc, """
                 CREATE TABLE IF NOT EXISTS loss_letter_template (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name VARCHAR(50) NOT NULL,
@@ -122,7 +124,7 @@ public class SupplierQualityTraceSchemaInitializer implements CommandLineRunner 
         Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM dict_item WHERE type = ?", Integer.class, type);
         if (count != null && count > 0) return;
         for (int i = 0; i < values.length; i++) {
-            jdbc.update("INSERT INTO dict_item (type, value, label, sort_order, enabled, create_time) VALUES (?, ?, ?, ?, 1, ?)",
+            jdbc.update("INSERT INTO dict_item (type, value, label, sort_order, enabled, create_time) VALUES (?, ?, ?, ?, TRUE, ?)",
                     type, values[i], values[i], i + 1, System.currentTimeMillis());
         }
         log.info("种子数据：已初始化字典「{}」{} 项", type, values.length);

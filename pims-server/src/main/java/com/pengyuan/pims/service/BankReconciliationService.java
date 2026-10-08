@@ -60,19 +60,32 @@ public class BankReconciliationService {
             if (name == null) throw new IllegalArgumentException("账户名称不能为空");
             Object id = body.get("id");
             if (id != null && !String.valueOf(id).isBlank()) {
+                boolean enabledU = !"0".equals(strOr(body.get("enabled"), "1")) && !"false".equalsIgnoreCase(strOr(body.get("enabled"), "1"));
                 jdbc.update("UPDATE bank_account SET name=?, account_no=?, bank_name=?, opening_balance=?, enabled=? WHERE id=?",
                         name, str(body.get("accountNo")), str(body.get("bankName")),
-                        bd(body.get("openingBalance")), strOr(body.get("enabled"), "1"), Long.valueOf(String.valueOf(id)));
+                        bd(body.get("openingBalance")), enabledU, Long.valueOf(String.valueOf(id)));
             } else {
                 if (!jdbc.queryForList("SELECT id FROM bank_account WHERE name = ?", name).isEmpty()) {
                     throw new IllegalArgumentException("账户名称已存在：" + name);
                 }
+                // PG 迁移 v11.9：enabled 为布尔列，PG 不接受 '1' 字符串参数，转 Boolean
+                boolean enabled = !"0".equals(strOr(body.get("enabled"), "1")) && !"false".equalsIgnoreCase(strOr(body.get("enabled"), "1"));
                 jdbc.update("INSERT INTO bank_account (name, account_no, bank_name, opening_balance, enabled) VALUES (?,?,?,?,?)",
                         name, str(body.get("accountNo")), str(body.get("bankName")),
-                        bd(body.get("openingBalance")), strOr(body.get("enabled"), "1"));
+                        bd(body.get("openingBalance")), enabled);
             }
             return jdbc.queryForMap("SELECT * FROM bank_account WHERE name = ?", name);
         });
+    }
+
+    /** PG 迁移 v11.9：数据库日期列读侧统一解析——SQLite 文本 'YYYY-MM-DD' / PG 毫秒 bigint 双兼容 */
+    private static LocalDate parseDbDate(Object v) {
+        if (v == null) return null;
+        if (v instanceof Number n) {
+            return java.time.Instant.ofEpochMilli(n.longValue()).atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        }
+        String str = String.valueOf(v);
+        return LocalDate.parse(str.length() > 10 ? str.substring(0, 10) : str);
     }
 
     // ===== 日记账（系统收付款单） =====
@@ -178,10 +191,10 @@ public class BankReconciliationService {
                 // 仅"四要素全同"才判重复导入跳过（余额是每笔唯一的强指纹）
                 Integer dup = jdbc.queryForObject(
                         "SELECT COUNT(*) FROM bank_statement WHERE account_id = ? AND tx_date = ? AND amount = ? " +
-                        "AND (summary IS ? OR summary = ?) AND ((balance IS ? AND ? IS NULL) OR balance = ?)",
+                        // PG 迁移 v11.9：SQLite 的 IS ? 参数化形态 PG 不支持，改 IS NOT DISTINCT FROM（双方言等价，SQLite 3.39+ 支持）
+                        "AND summary IS NOT DISTINCT FROM ? AND balance IS NOT DISTINCT FROM ?",
                         Integer.class, accountId, r.get("txDate"), r.get("amount"),
-                        r.get("summary"), r.get("summary"),
-                        r.get("balance"), r.get("balance"), r.get("balance"));
+                        r.get("summary"), r.get("balance"));
                 if (dup != null && dup > 0) { skipped++; continue; }
                 jdbc.update("INSERT INTO bank_statement (account_id, tx_date, amount, balance, summary, counterparty, status, import_batch) VALUES (?,?,?,?,?,?, 'UNMATCHED', ?)",
                         accountId, r.get("txDate"), r.get("amount"), r.get("balance"), r.get("summary"), r.get("party"), batch);
@@ -223,7 +236,8 @@ public class BankReconciliationService {
             for (Map<String, Object> st : statements) {
                 BigDecimal amt = toBd(st.get("amount"));
                 String party = str(st.get("counterparty"));
-                LocalDate txDate = LocalDate.parse(String.valueOf(st.get("tx_date")).substring(0, 10));
+                // PG 迁移 v11.9：PG 端 tx_date 为毫秒 bigint（SQLite 为文本），统一解析
+                LocalDate txDate = parseDbDate(st.get("tx_date"));
                 List<Map<String, Object>> pool = amt.compareTo(BigDecimal.ZERO) > 0 ? receipts : disbs;
                 Map<String, Object> best = null;
                 int bestScore = -1;

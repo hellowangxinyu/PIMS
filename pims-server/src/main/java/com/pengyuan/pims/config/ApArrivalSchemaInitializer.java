@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -35,10 +37,10 @@ public class ApArrivalSchemaInitializer implements CommandLineRunner {
     public void run(String... args) {
         // 1. 加列
         try {
-            var cols = jdbc.queryForList("PRAGMA table_info(accounts_payable)");
+            var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "accounts_payable");
             boolean hasArrivalId = cols.stream().anyMatch(c -> "arrival_id".equals(c.get("name")));
             if (!hasArrivalId) {
-                jdbc.execute("ALTER TABLE accounts_payable ADD COLUMN arrival_id BIGINT");
+                SqlDdl.exec(jdbc, "ALTER TABLE accounts_payable ADD COLUMN arrival_id BIGINT");
                 log.info("应付表结构：accounts_payable 新增 arrival_id 列");
             }
         } catch (Exception e) {
@@ -159,7 +161,7 @@ public class ApArrivalSchemaInitializer implements CommandLineRunner {
 
     private String nextDocNo() {
         Integer maxSeq = jdbc.queryForObject(
-                "SELECT MAX(CAST(SUBSTR(doc_no, -4) AS INTEGER)) FROM accounts_payable WHERE doc_no LIKE 'AP-2026-%'",
+                "SELECT MAX(CAST(SUBSTR(doc_no, LENGTH(doc_no)-3, 4) AS INTEGER)) FROM accounts_payable WHERE doc_no LIKE 'AP-2026-%'",
                 Integer.class);
         return String.format("AP-2026-%04d", (maxSeq == null ? 0 : maxSeq) + 1);
     }

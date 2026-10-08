@@ -213,13 +213,27 @@ public class OperationLogService {
         return ChronoUnit.DAYS.between(monthEnd, LocalDate.now()) > days;
     }
 
-    /** 热数据月表（operation_log_YYYYMM，GLOB 精确匹配，避免把归档表当热表） */
+    /** 热数据月表（operation_log_YYYYMM，正则精确匹配，避免把归档表当热表） */
     private List<String> listHotTables() {
+        // PG 迁移 v11.9：GLOB 为 SQLite 方言，PG 用 ~ 正则等价
+        if (com.pengyuan.pims.common.SqlDdl.isPostgreSQL(jdbc)) {
+            return jdbc.queryForList("SELECT table_name AS name FROM information_schema.tables " +
+                            "WHERE table_schema = current_schema() AND table_type='BASE TABLE' " +
+                            "AND table_name ~ '^operation_log_[0-9]{6}$'")
+                    .stream().map(m -> String.valueOf(m.get("name"))).sorted().toList();
+        }
         return jdbc.queryForList("SELECT name FROM sqlite_master WHERE type='table' AND name GLOB 'operation_log_[0-9][0-9][0-9][0-9][0-9][0-9]'")
                 .stream().map(m -> String.valueOf(m.get("name"))).sorted().toList();
     }
 
     private List<String> listArchiveTables() {
+        // PG 迁移 v11.9：ILIKE 由 LIKE 批量替换产生，sqlite_master 换成 information_schema
+        if (com.pengyuan.pims.common.SqlDdl.isPostgreSQL(jdbc)) {
+            return jdbc.queryForList("SELECT table_name AS name FROM information_schema.tables " +
+                            "WHERE table_schema = current_schema() AND table_type='BASE TABLE' " +
+                            "AND table_name LIKE 'operation_log_archive_%'")
+                    .stream().map(m -> String.valueOf(m.get("name"))).sorted().toList();
+        }
         return jdbc.queryForList("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'operation_log_archive_%'")
                 .stream().map(m -> String.valueOf(m.get("name"))).sorted().toList();
     }
@@ -317,7 +331,7 @@ public class OperationLogService {
     private void buildWhere(StringBuilder where, List<Object> args, String username, String method,
                             String path, String module, String action, String bizNo, LocalDate start, LocalDate end) {
         if (username != null && !username.isBlank()) {
-            where.append(" AND username LIKE ?");
+            where.append(" AND LOWER(username) LIKE LOWER(?)");
             args.add("%" + username.trim() + "%");
         }
         if (method != null && !method.isBlank()) {
@@ -325,7 +339,7 @@ public class OperationLogService {
             args.add(method.trim().toUpperCase());
         }
         if (path != null && !path.isBlank()) {
-            where.append(" AND path LIKE ?");
+            where.append(" AND LOWER(path) LIKE LOWER(?)");
             args.add("%" + path.trim() + "%");
         }
         if (module != null && !module.isBlank()) {

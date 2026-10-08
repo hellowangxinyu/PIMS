@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -28,7 +30,7 @@ public class QcTemplateSchemaInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS qc_template (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name VARCHAR(100) NOT NULL,
@@ -43,12 +45,12 @@ public class QcTemplateSchemaInitializer implements CommandLineRunner {
         """);
         // v5.65.1 存量库补列（幂等）
         try {
-            var cols = jdbc.queryForList("PRAGMA table_info(qc_template)");
+            var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "qc_template");
             if (cols.stream().noneMatch(c -> "created_by".equals(c.get("name")))) {
-                jdbc.execute("ALTER TABLE qc_template ADD COLUMN created_by VARCHAR(50)");
+                SqlDdl.exec(jdbc, "ALTER TABLE qc_template ADD COLUMN created_by VARCHAR(50)");
             }
         } catch (Exception ignored) { }
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS qc_template_item (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 template_id BIGINT NOT NULL,
@@ -59,7 +61,7 @@ public class QcTemplateSchemaInitializer implements CommandLineRunner {
                 sort_order INTEGER DEFAULT 0
             )
         """);
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS quality_inspection_item (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 inspection_id BIGINT NOT NULL,
@@ -171,8 +173,9 @@ public class QcTemplateSchemaInitializer implements CommandLineRunner {
         );
 
         for (Tpl t : templates) {
-            jdbc.update("INSERT INTO qc_template (name, apply_category, is_default, enabled, remark, create_time) VALUES (?, ?, 1, 1, ?, datetime('now'))",
-                    t.name(), t.category(), "系统预置默认模板，可在模板管理页调整检测项与标准值");
+            // v11.9：create_time 改参数传毫秒（strftime 兼容函数返回 TEXT，PG 下不可参与算术）
+            jdbc.update("INSERT INTO qc_template (name, apply_category, is_default, enabled, remark, create_time) VALUES (?, ?, TRUE, TRUE, ?, ?)",
+                    t.name(), t.category(), "系统预置默认模板，可在模板管理页调整检测项与标准值", System.currentTimeMillis());
             Long templateId = jdbc.queryForObject("SELECT MAX(id) FROM qc_template", Long.class);
             int sort = 1;
             for (Item item : t.items()) {

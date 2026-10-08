@@ -15,19 +15,22 @@ spring:
       max-file-size: 20MB
       max-request-size: 25MB
 
-  # SQLite 数据源
+  # 数据源：默认 SQLite 嵌入式；PG 迁移 v11.9——生产/演练用环境变量覆盖
+  # （PIMS_DB_URL=jdbc:postgresql://127.0.0.1:5432/pims & PIMS_DB_DRIVER/PIMS_DB_DIALECT/PIMS_DB_USER/PIMS_DB_PASSWORD）
   datasource:
     # v5.28：PRAGMA 全部改走连接 URL 参数——Hikari connection-init-sql 只执行第一条语句，
     # 多行 PRAGMA 会被 SQLite 驱动静默忽略（此前 journal_mode 生效但 cache_size 等全部未生效）
-    url: jdbc:sqlite:data/pims.db?journal_mode=WAL&busy_timeout=5000&synchronous=NORMAL&foreign_keys=ON&cache_size=-64000&journal_size_limit=67108864
-    driver-class-name: org.sqlite.JDBC
+    url: ${PIMS_DB_URL:jdbc:sqlite:data/pims.db?journal_mode=WAL&busy_timeout=5000&synchronous=NORMAL&foreign_keys=ON&cache_size=-64000&journal_size_limit=67108864}
+    driver-class-name: ${PIMS_DB_DRIVER:org.sqlite.JDBC}
+    username: ${PIMS_DB_USER:}
+    password: ${PIMS_DB_PASSWORD:}
     hikari:
       # WAL 模式支持一写多读：写仍由 WriteQueue 应用层串行，多余连接供并发读使用
       maximum-pool-size: 5
 
   # JPA 配置
   jpa:
-    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    database-platform: ${PIMS_DB_DIALECT:org.hibernate.community.dialect.SQLiteDialect}
     hibernate:
       ddl-auto: none                  # 表结构由启动脚本维护，避免SQLite元数据查询超限
     show-sql: false

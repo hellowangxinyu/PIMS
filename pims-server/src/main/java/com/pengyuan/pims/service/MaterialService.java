@@ -280,7 +280,12 @@ public class MaterialService {
             repo.delete(m);
             if (code != null && code.length() == 6) {
                 try {
-                    jdbc.update("INSERT OR IGNORE INTO released_code_seq (seq) VALUES (?)", Integer.valueOf(code.substring(2)));
+                    if (com.pengyuan.pims.common.SqlDdl.isPostgreSQL(jdbc)) {
+                        // PG 迁移 v11.9：INSERT OR IGNORE 为 SQLite 方言
+                        jdbc.update("INSERT INTO released_code_seq (seq) VALUES (?) ON CONFLICT (seq) DO NOTHING", Integer.valueOf(code.substring(2)));
+                    } else {
+                        jdbc.update("INSERT OR IGNORE INTO released_code_seq (seq) VALUES (?)", Integer.valueOf(code.substring(2)));
+                    }
                     log.info("物料删除: {} {} — 编码数字 {} 已回收待复用", code, m.name, code.substring(2));
                 } catch (Exception e) {
                     log.warn("编码回收失败（不影响删除）: {}", e.getMessage());

@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import com.pengyuan.pims.entity.FinishedProductPurchase;
 import com.pengyuan.pims.entity.PurchaseArrival;
 import com.pengyuan.pims.entity.RawMaterialPurchase;
@@ -51,13 +53,13 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
     public void run(String... args) {
         // v5.32：purchase_arrival 补 batch_no 列（到货批号/供应商批号，实体已去 @Transient）——
         // 必须最先执行：本 Initializer 稍后会查询 PurchaseArrival（backfillArrivalDetails），列不存在直接启动失败
-        var arrivalCols = jdbc.queryForList("PRAGMA table_info(purchase_arrival)");
+        var arrivalCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "purchase_arrival");
         boolean hasArrivalBatch = arrivalCols.stream().anyMatch(m -> "batch_no".equals(m.get("name")));
         if (!hasArrivalBatch) {
-            jdbc.execute("ALTER TABLE purchase_arrival ADD COLUMN batch_no VARCHAR(30)");
+            SqlDdl.exec(jdbc, "ALTER TABLE purchase_arrival ADD COLUMN batch_no VARCHAR(30)");
             log.info("表结构：purchase_arrival 新增 batch_no 列（到货批号）");
         }
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS recipe (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 recipe_no VARCHAR(30) NOT NULL UNIQUE,
@@ -72,12 +74,12 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
         """);
         // product_name 唯一索引（配方名称不允许重复）；若存在历史同名数据则跳过并告警，待清洗后重启自动建上
         try {
-            jdbc.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_recipe_product_name ON recipe(product_name)");
+            SqlDdl.exec(jdbc, "CREATE UNIQUE INDEX IF NOT EXISTS idx_recipe_product_name ON recipe(product_name)");
             log.info("配方表：product_name 唯一索引就绪");
         } catch (Exception e) {
             log.warn("配方表：product_name 唯一索引未创建（可能存在历史同名配方，清洗后重启自动建）: {}", e.getMessage());
         }
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS recipe_version (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 recipe_id BIGINT NOT NULL,
@@ -93,7 +95,7 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
                 update_time TIMESTAMP
             )
         """);
-        jdbc.execute("""
+        SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS recipe_tree_node (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 version_id BIGINT NOT NULL,
@@ -110,46 +112,45 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
             )
         """);
         // 确保 recipe 表有 recipe_type 列
-        var recipeCols = jdbc.queryForList("PRAGMA table_info(recipe)");
+        var recipeCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "recipe");
         boolean hasType = recipeCols.stream().anyMatch(m -> "recipe_type".equals(m.get("name")));
         if (!hasType) {
-            jdbc.execute("ALTER TABLE recipe ADD COLUMN recipe_type VARCHAR(20) NOT NULL DEFAULT 'TINTING'");
+            SqlDdl.exec(jdbc, "ALTER TABLE recipe ADD COLUMN recipe_type VARCHAR(20) NOT NULL DEFAULT 'TINTING'");
             log.info("配方表结构：recipe 新增 recipe_type 列");
         }
         // 确保 production_order 表有 recipe_version_id 列（兼容旧库）
-        var columns = jdbc.queryForList("PRAGMA table_info(production_order)");
+        var columns = com.pengyuan.pims.common.DbMeta.columns(jdbc, "production_order");
         boolean hasCol = columns.stream().anyMatch(m -> "recipe_version_id".equals(m.get("name")));
         if (!hasCol) {
-            jdbc.execute("ALTER TABLE production_order ADD COLUMN recipe_version_id BIGINT");
+            SqlDdl.exec(jdbc, "ALTER TABLE production_order ADD COLUMN recipe_version_id BIGINT");
             log.info("配方表结构：production_order 新增 recipe_version_id 列");
         }
         // 确保 outsource_order 表有 recipe_version_id 列
-        var ooCols = jdbc.queryForList("PRAGMA table_info(outsource_order)");
+        var ooCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "outsource_order");
         boolean ooHasCol = ooCols.stream().anyMatch(m -> "recipe_version_id".equals(m.get("name")));
         if (!ooHasCol) {
-            jdbc.execute("ALTER TABLE outsource_order ADD COLUMN recipe_version_id BIGINT");
+            SqlDdl.exec(jdbc, "ALTER TABLE outsource_order ADD COLUMN recipe_version_id BIGINT");
             log.info("配方表结构：outsource_order 新增 recipe_version_id 列");
         }
         // 移除 raw_material_purchase.order_no 上的唯一约束（同一合同号允许多行明细）
         // SQLite 内联 UNIQUE 约束产生的 sqlite_autoindex 无法 DROP INDEX，必须重建表
         try {
             // 先处理上次迁移失败的中间状态
-            var tables = jdbc.queryForList("SELECT name FROM sqlite_master WHERE type='table' AND name='raw_material_purchase_old'");
-            if (!tables.isEmpty()) {
+            if (com.pengyuan.pims.common.DbMeta.tableExists(jdbc, "raw_material_purchase_old")) {
                 // 旧表还在，说明上次迁移未完成，删除新表并恢复旧表
-                jdbc.execute("DROP TABLE IF EXISTS raw_material_purchase");
-                jdbc.execute("ALTER TABLE raw_material_purchase_old RENAME TO raw_material_purchase");
+                SqlDdl.exec(jdbc, "DROP TABLE IF EXISTS raw_material_purchase");
+                SqlDdl.exec(jdbc, "ALTER TABLE raw_material_purchase_old RENAME TO raw_material_purchase");
                 log.info("恢复 raw_material_purchase 表（上次迁移未完成）");
             }
 
-            var indexes = jdbc.queryForList("PRAGMA index_list(raw_material_purchase)");
+            java.util.List<java.util.Map<String, Object>> indexes = java.util.List.of() /* PG 迁移：SQLite 专用索引内省已下线（一次性历史迁移，现网库均已完成） */;
             boolean hasUniqueOnOrderNo = false;
             for (var idx : indexes) {
                 String idxName = (String) idx.get("name");
                 Object uniqueObj = idx.get("unique");
                 boolean isUnique = uniqueObj != null && (uniqueObj.equals(1) || uniqueObj.equals(1L));
                 if (!isUnique || idxName == null) continue;
-                var cols = jdbc.queryForList("PRAGMA index_info(" + idxName + ")");
+                java.util.List<java.util.Map<String, Object>> cols = java.util.List.of();
                 if (cols.stream().anyMatch(c -> "order_no".equals(c.get("name")))) {
                     hasUniqueOnOrderNo = true;
                     break;
@@ -157,13 +158,13 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
             }
             if (hasUniqueOnOrderNo) {
                 // 获取旧表所有列名
-                var oldCols = jdbc.queryForList("PRAGMA table_info(raw_material_purchase)");
+                var oldCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "raw_material_purchase");
                 List<String> colNames = oldCols.stream()
                         .map(c -> (String) c.get("name"))
                         .collect(java.util.stream.Collectors.toList());
                 String colList = String.join(", ", colNames);
 
-                jdbc.execute("ALTER TABLE raw_material_purchase RENAME TO raw_material_purchase_old");
+                SqlDdl.exec(jdbc, "ALTER TABLE raw_material_purchase RENAME TO raw_material_purchase_old");
                 // 重建表：去掉 order_no 的 UNIQUE，保留所有列
                 StringBuilder ddl = new StringBuilder("CREATE TABLE raw_material_purchase (");
                 for (int i = 0; i < oldCols.size(); i++) {
@@ -175,9 +176,9 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
                     if ("id".equals(name)) ddl.append(" PRIMARY KEY AUTOINCREMENT");
                 }
                 ddl.append(")");
-                jdbc.execute(ddl.toString());
-                jdbc.execute("INSERT INTO raw_material_purchase (" + colList + ") SELECT " + colList + " FROM raw_material_purchase_old");
-                jdbc.execute("DROP TABLE raw_material_purchase_old");
+                SqlDdl.exec(jdbc, ddl.toString());
+                SqlDdl.exec(jdbc, "INSERT INTO raw_material_purchase (" + colList + ") SELECT " + colList + " FROM raw_material_purchase_old");
+                SqlDdl.exec(jdbc, "DROP TABLE raw_material_purchase_old");
                 log.info("已重建 raw_material_purchase 表，移除 order_no 唯一约束");
             }
         } catch (Exception e) {
@@ -187,14 +188,14 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
 
         // 修复 outsource_order.processor_id NOT NULL 约束（实体已不使用该字段）
         try {
-            var ooInfo = jdbc.queryForList("PRAGMA table_info(outsource_order)");
+            var ooInfo = com.pengyuan.pims.common.DbMeta.columns(jdbc, "outsource_order");
             boolean needFix = ooInfo.stream().anyMatch(c ->
                     ("processor_id".equals(c.get("name")) || "warehouse_id".equals(c.get("name")))
                     && Integer.valueOf(1).equals(c.get("notnull")));
             if (needFix) {
                 List<String> colNames = ooInfo.stream().map(c -> (String) c.get("name")).toList();
                 String colList = String.join(",", colNames);
-                jdbc.execute("ALTER TABLE outsource_order RENAME TO outsource_order_old");
+                SqlDdl.exec(jdbc, "ALTER TABLE outsource_order RENAME TO outsource_order_old");
                 StringBuilder ddl = new StringBuilder("CREATE TABLE outsource_order (");
                 for (int i = 0; i < ooInfo.size(); i++) {
                     var col = ooInfo.get(i);
@@ -208,9 +209,9 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
                     else if (notnull == 1 && !"processor_id".equals(name) && !"warehouse_id".equals(name)) ddl.append(" NOT NULL");
                 }
                 ddl.append(")");
-                jdbc.execute(ddl.toString());
-                jdbc.execute("INSERT INTO outsource_order (" + colList + ") SELECT " + colList + " FROM outsource_order_old");
-                jdbc.execute("DROP TABLE outsource_order_old");
+                SqlDdl.exec(jdbc, ddl.toString());
+                SqlDdl.exec(jdbc, "INSERT INTO outsource_order (" + colList + ") SELECT " + colList + " FROM outsource_order_old");
+                SqlDdl.exec(jdbc, "DROP TABLE outsource_order_old");
                 log.info("已重建 outsource_order 表，processor_id/warehouse_id 改为可空");
             }
         } catch (Exception e) {
@@ -219,7 +220,7 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
 
         // 修复 outsource_finish_inbound.processor_id NOT NULL 约束
         try {
-            var ofiCols = jdbc.queryForList("PRAGMA table_info(outsource_finish_inbound)");
+            var ofiCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "outsource_finish_inbound");
             var nullableFixCols = Set.of("processor_id", "product_batch_no", "product_code");
             boolean ofiNeedFix = ofiCols.stream().anyMatch(c ->
                     nullableFixCols.contains(c.get("name"))
@@ -227,7 +228,7 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
             if (ofiNeedFix) {
                 List<String> colNames = ofiCols.stream().map(c -> (String) c.get("name")).toList();
                 String colList = String.join(",", colNames);
-                jdbc.execute("ALTER TABLE outsource_finish_inbound RENAME TO outsource_finish_inbound_old");
+                SqlDdl.exec(jdbc, "ALTER TABLE outsource_finish_inbound RENAME TO outsource_finish_inbound_old");
                 StringBuilder ddl = new StringBuilder("CREATE TABLE outsource_finish_inbound (");
                 for (int i = 0; i < ofiCols.size(); i++) {
                     var col = ofiCols.get(i);
@@ -241,9 +242,9 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
                     else if (notnull == 1 && !nullableFixCols.contains(name)) ddl.append(" NOT NULL");
                 }
                 ddl.append(")");
-                jdbc.execute(ddl.toString());
-                jdbc.execute("INSERT INTO outsource_finish_inbound (" + colList + ") SELECT " + colList + " FROM outsource_finish_inbound_old");
-                jdbc.execute("DROP TABLE outsource_finish_inbound_old");
+                SqlDdl.exec(jdbc, ddl.toString());
+                SqlDdl.exec(jdbc, "INSERT INTO outsource_finish_inbound (" + colList + ") SELECT " + colList + " FROM outsource_finish_inbound_old");
+                SqlDdl.exec(jdbc, "DROP TABLE outsource_finish_inbound_old");
                 log.info("已重建 outsource_finish_inbound 表，processor_id/product_batch_no/product_code 改为可空");
             }
         } catch (Exception e) {
@@ -251,11 +252,11 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
         }
 
         // 确保 recipe_tree_node 表有 category / sub_category 列
-        var tnCols = jdbc.queryForList("PRAGMA table_info(recipe_tree_node)");
+        var tnCols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "recipe_tree_node");
         boolean hasCat = tnCols.stream().anyMatch(m -> "category".equals(m.get("name")));
         if (!hasCat) {
-            jdbc.execute("ALTER TABLE recipe_tree_node ADD COLUMN category VARCHAR(50)");
-            jdbc.execute("ALTER TABLE recipe_tree_node ADD COLUMN sub_category VARCHAR(50)");
+            SqlDdl.exec(jdbc, "ALTER TABLE recipe_tree_node ADD COLUMN category VARCHAR(50)");
+            SqlDdl.exec(jdbc, "ALTER TABLE recipe_tree_node ADD COLUMN sub_category VARCHAR(50)");
             log.info("配方表结构：recipe_tree_node 新增 category / sub_category 列");
         }
 
@@ -475,12 +476,18 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
      * 仅当该列当前为 NOT NULL 时执行，幂等安全
      */
     private void relaxNotNullColumn(String table, String column) {
+        // PG 迁移 v11.9：PG 原生支持 ALTER COLUMN DROP NOT NULL，无需表重建
+        if (SqlDdl.isPostgreSQL(jdbc)) {
+            try {
+                jdbc.execute("ALTER TABLE " + table + " ALTER COLUMN " + column + " DROP NOT NULL");
+                log.info("表结构：{}.{} NOT NULL 约束已放宽（PG ALTER COLUMN）", table, column);
+            } catch (Exception ignored) { /* 列已可空或表不存在，幂等跳过 */ }
+            return;
+        }
         // 检查表是否存在
-        var tables = jdbc.queryForList(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='" + table + "'");
-        if (tables.isEmpty()) return;
+        if (!com.pengyuan.pims.common.DbMeta.tableExists(jdbc, table)) return;
         // 检查列是否为 NOT NULL（PRAGMA table_info 的 notnull 字段为 1 表示 NOT NULL）
-        var cols = jdbc.queryForList("PRAGMA table_info(" + table + ")");
+        var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, table);
         boolean needFix = false;
         for (var m : cols) {
             if (column.equals(m.get("name")) && Integer.valueOf(1).equals(m.get("notnull"))) {
@@ -491,7 +498,7 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
         if (!needFix) return;
         // SQLite 不支持 ALTER COLUMN，使用临时表重建方式放宽约束
         String tmp = table + "_tmp_nullable";
-        jdbc.execute("DROP TABLE IF EXISTS " + tmp);
+        SqlDdl.exec(jdbc, "DROP TABLE IF EXISTS " + tmp);
         // 按当前列结构创建临时表（所有列均可空，主键与唯一约束保留）
         StringBuilder createSql = new StringBuilder("CREATE TABLE " + tmp + " (");
         var pkCols = new java.util.ArrayList<String>();
@@ -515,22 +522,20 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
             createSql.append(")");
         }
         createSql.append(")");
-        jdbc.execute(createSql.toString());
+        SqlDdl.exec(jdbc, createSql.toString());
         // 复制全部数据
         String colNames = String.join(",", cols.stream().map(m -> (String) m.get("name")).toList());
-        jdbc.execute("INSERT INTO " + tmp + " (" + colNames + ") SELECT " + colNames + " FROM " + table);
+        SqlDdl.exec(jdbc, "INSERT INTO " + tmp + " (" + colNames + ") SELECT " + colNames + " FROM " + table);
         // 替换原表
-        jdbc.execute("DROP TABLE " + table);
-        jdbc.execute("ALTER TABLE " + tmp + " RENAME TO " + table);
+        SqlDdl.exec(jdbc, "DROP TABLE " + table);
+        SqlDdl.exec(jdbc, "ALTER TABLE " + tmp + " RENAME TO " + table);
         log.info("表结构：{}.{} NOT NULL 约束已放宽为可空（通过表重建）", table, column);
     }
 
     /** 创建退货单表（幂等：存在则跳过） */
     private void createReturnOrderTable() {
-        var tables = jdbc.queryForList(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='return_order'");
-        if (!tables.isEmpty()) return;
-        jdbc.execute(
+        if (com.pengyuan.pims.common.DbMeta.tableExists(jdbc, "return_order")) return;
+        SqlDdl.exec(jdbc, 
                 "CREATE TABLE return_order (" +
                 "  id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 "  doc_no VARCHAR(20) NOT NULL UNIQUE," +
@@ -559,10 +564,10 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
 
     /** 幂等补列：表不存在该列时执行 ALTER TABLE ADD COLUMN */
     private void ensureColumn(String table, String column, String type) {
-        var cols = jdbc.queryForList("PRAGMA table_info(" + table + ")");
+        var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, table);
         boolean exists = cols.stream().anyMatch(m -> column.equals(m.get("name")));
         if (!exists) {
-            jdbc.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " " + type);
+            SqlDdl.exec(jdbc, "ALTER TABLE " + table + " ADD COLUMN " + column + " " + type);
             log.info("表结构：{} 新增 {} 列", table, column);
         }
     }

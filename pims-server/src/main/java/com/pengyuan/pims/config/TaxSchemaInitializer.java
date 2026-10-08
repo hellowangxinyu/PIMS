@@ -1,5 +1,7 @@
 package com.pengyuan.pims.config;
 
+import com.pengyuan.pims.common.SqlDdl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -28,8 +30,8 @@ public class TaxSchemaInitializer implements CommandLineRunner {
             Integer cnt = jdbc.queryForObject(
                     "SELECT COUNT(*) FROM dict_item WHERE type = 'tax_rate'", Integer.class);
             if (cnt == null || cnt == 0) {
-                jdbc.execute("INSERT INTO dict_item (type, label, value, sort_order, enabled, create_time) "
-                        + "VALUES ('tax_rate', '13%', '13', 1, 1, 1)");
+                SqlDdl.exec(jdbc, "INSERT INTO dict_item (type, label, value, sort_order, enabled, create_time) "
+                        + "VALUES ('tax_rate', '13%', '13', 1, TRUE, 1)");
                 log.info("税率字典：已初始化 tax_rate=13%（数据字典页可维护）");
             }
         } catch (Exception e) {
@@ -38,10 +40,10 @@ public class TaxSchemaInitializer implements CommandLineRunner {
 
         // 2) 到货表加含税单价列
         try {
-            var cols = jdbc.queryForList("PRAGMA table_info(purchase_arrival)");
+            var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "purchase_arrival");
             boolean has = cols.stream().anyMatch(c -> "unit_price".equals(c.get("name")));
             if (!has) {
-                jdbc.execute("ALTER TABLE purchase_arrival ADD COLUMN unit_price DECIMAL(14,4)");
+                SqlDdl.exec(jdbc, "ALTER TABLE purchase_arrival ADD COLUMN unit_price DECIMAL(14,4)");
                 log.info("到货表结构：purchase_arrival 新增 unit_price（含税单价）列");
             }
         } catch (Exception e) {
@@ -51,10 +53,10 @@ public class TaxSchemaInitializer implements CommandLineRunner {
         // 2.5) v5.75 税率列：采购（原料/成品）、到货、销售订单——默认 13%
         for (String t : new String[]{"raw_material_purchase", "finished_product_purchase", "purchase_arrival", "sales_order", "other_inbound"}) {
             try {
-                var cols = jdbc.queryForList("PRAGMA table_info(" + t + ")");
+                var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, t);
                 boolean has = cols.stream().anyMatch(c -> "tax_rate".equals(c.get("name")));
                 if (!has) {
-                    jdbc.execute("ALTER TABLE " + t + " ADD COLUMN tax_rate DECIMAL(5,2) DEFAULT 13");
+                    SqlDdl.exec(jdbc, "ALTER TABLE " + t + " ADD COLUMN tax_rate DECIMAL(5,2) DEFAULT 13");
                     jdbc.update("UPDATE " + t + " SET tax_rate = 13 WHERE tax_rate IS NULL");
                     log.info("税率列：{} 新增 tax_rate（默认13%）", t);
                 }
@@ -65,15 +67,15 @@ public class TaxSchemaInitializer implements CommandLineRunner {
 
         // 2.9) v5.96 到货单号列 + 存量回填
         try {
-            var acols = jdbc.queryForList("PRAGMA table_info(purchase_arrival)");
+            var acols = com.pengyuan.pims.common.DbMeta.columns(jdbc, "purchase_arrival");
             boolean hasDocNo = acols.stream().anyMatch(c -> "doc_no".equals(c.get("name")));
             if (!hasDocNo) {
-                jdbc.execute("ALTER TABLE purchase_arrival ADD COLUMN doc_no VARCHAR(30)");
+                SqlDdl.exec(jdbc, "ALTER TABLE purchase_arrival ADD COLUMN doc_no VARCHAR(30)");
                 log.info("到货表结构：purchase_arrival 新增 doc_no（到货单号）列");
             }
             // 存量回填：按 id 顺序补 ARR-20260901-0001 式编号（同天分组流水）
             var rows = jdbc.queryForList(
-                    "SELECT id, DATE(arrival_date/1000, 'unixepoch', '+8 hours') AS d FROM purchase_arrival WHERE doc_no IS NULL OR doc_no = '' ORDER BY id");
+                    "SELECT id, strftime('%Y-%m-%d', arrival_date/1000, 'unixepoch', '+8 hours') AS d FROM purchase_arrival WHERE doc_no IS NULL OR doc_no = '' ORDER BY id");
             java.util.Map<String, Integer> seq = new java.util.HashMap<>();
             for (var r : rows) {
                 String day = String.valueOf(r.get("d"));
