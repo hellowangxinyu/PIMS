@@ -1,6 +1,6 @@
 # PIMS SQLite → PostgreSQL 迁移手册（v11.9）
 
-> 状态：**迁移开发全部完成并双环境验证通过**（2026-10-08）
+> 状态：**✅ 生产已切换 PostgreSQL 并全面验证通过**（2026-10-08 14:40）；SQLite 最终备份保留 data/pims.db.final-20261008.db / .final-sqlite.bak；回滚=删除 drop-in /etc/systemd/system/pims.service.d/pg-env.conf 后重启
 > - 后端双方言改造完成：SQLite / PostgreSQL 同一份代码双跑
 > - 单元测试 21/21 绿（真实 PG 嵌入式实例）；财务接口回归 **362 项断言在 SQLite 与 PG 双环境全部全绿**
 > - 数据迁移脚本经全量演练：本地业务库 96 张表迁移 + 行数/金额核对全部通过
@@ -18,7 +18,7 @@
 | 迁移脚本 | `/opt/pims/init_pg_schema.py`（基线翻译）、`/opt/pims/migrate_sqlite_to_pg.py`（数据迁移+核对）、`/opt/pims/pg_casts.sql`（隐式 CAST，需超户） |
 | 生产 python | 迁移脚本用 `/usr/bin/python3.6`（已装 psycopg2 2.9.5；`/usr/local/bin/python3` 无 psycopg2，勿用） |
 
-## 二、正式切换 Runbook（低峰执行，预估停机 30 分钟）
+## 二、切换 Runbook（已于 2026-10-08 执行完毕，留档备查/重放）
 
 ```bash
 # === 准备（切换前一天）===
