@@ -150,22 +150,24 @@ public class OperationLogService {
     /** 幂等建表 + 兼容旧表（PRAGMA 检查缺列则 ALTER ADD）；每张表本进程内只 ensure 一次（DDL 失败不入缓存，下次重试） */
     private void ensureTable(String table) {
         if (ensuredTables.contains(table)) return;
-        jdbc.execute("CREATE TABLE IF NOT EXISTS " + table + " (" +
+        // PG 迁移 v11.9.1：DDL 走翻译器（PG 下 AUTOINCREMENT 语法不兼容）
+        com.pengyuan.pims.common.SqlDdl.exec(jdbc, "CREATE TABLE IF NOT EXISTS " + table + " (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 "username TEXT, real_name TEXT, method TEXT, path TEXT," +
                 "module TEXT, action TEXT, biz_no TEXT, detail TEXT," +
                 "params TEXT, result_code INTEGER, result_msg TEXT," +
                 "duration_ms INTEGER, ip TEXT, create_time TEXT)");
         ensureColumns(table);
-        jdbc.execute("CREATE INDEX IF NOT EXISTS idx_" + table + "_time ON " + table + "(create_time)");
-        jdbc.execute("CREATE INDEX IF NOT EXISTS idx_" + table + "_user ON " + table + "(username)");
-        jdbc.execute("CREATE INDEX IF NOT EXISTS idx_" + table + "_module ON " + table + "(module)");
+        com.pengyuan.pims.common.SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_" + table + "_time ON " + table + "(create_time)");
+        com.pengyuan.pims.common.SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_" + table + "_user ON " + table + "(username)");
+        com.pengyuan.pims.common.SqlDdl.exec(jdbc, "CREATE INDEX IF NOT EXISTS idx_" + table + "_module ON " + table + "(module)");
         ensuredTables.add(table);
     }
 
     /** v5.61 补列（module/action/biz_no/detail）：存量表缺哪列补哪列（跨月 UNION 查询要求列对齐，所有热表启动时统一补） */
     private void ensureColumns(String table) {
-        List<String> cols = jdbc.queryForList("PRAGMA table_info(" + table + ")")
+        // PG 迁移 v11.9.1：PRAGMA 为 SQLite 方言，走 DbMeta.columns（information_schema 等价）
+        List<String> cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, table)
                 .stream().map(c -> String.valueOf(c.get("name"))).toList();
         for (String col : List.of("module", "action", "biz_no", "detail")) {
             if (!cols.contains(col)) jdbc.execute("ALTER TABLE " + table + " ADD COLUMN " + col + " TEXT");

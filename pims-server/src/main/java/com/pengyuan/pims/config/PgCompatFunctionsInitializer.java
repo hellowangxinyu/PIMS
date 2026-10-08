@@ -205,6 +205,20 @@ jdbc.execute("""
                             ELSE state || delim || val END
             $$ LANGUAGE sql
             """);
+        // 单参数重载（SQLite GROUP_CONCAT(x) 默认逗号分隔形态，库存批次视图库位名聚合使用）
+        jdbc.execute("""
+            CREATE OR REPLACE FUNCTION group_concat_sfunc1(state TEXT, val TEXT) RETURNS TEXT AS $$
+                SELECT CASE WHEN state IS NULL THEN val
+                            WHEN val IS NULL THEN state
+                            ELSE state || ',' || val END
+            $$ LANGUAGE sql
+            """);
+        try { jdbc.execute("DROP AGGREGATE IF EXISTS group_concat(TEXT)"); } catch (Exception ignored) { }
+        jdbc.execute("""
+            CREATE AGGREGATE group_concat(TEXT) (SFUNC = group_concat_sfunc1, STYPE = TEXT)
+            """);
+        // PG 无 CREATE OR REPLACE AGGREGATE——同库重启会撞已存在，先 DROP 保幂等
+        try { jdbc.execute("DROP AGGREGATE IF EXISTS group_concat(TEXT, TEXT)"); } catch (Exception ignored) { }
         jdbc.execute("""
             CREATE AGGREGATE group_concat(TEXT, TEXT) (SFUNC = group_concat_sfunc, STYPE = TEXT)
             """);

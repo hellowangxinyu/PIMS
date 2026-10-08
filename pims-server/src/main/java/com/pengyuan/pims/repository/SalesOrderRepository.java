@@ -37,13 +37,16 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
      * v9.5（ATP 轻量版）：各物料"已订未发"=已确认销售订单明细量 − 该单已确认出库量（物料级聚合，只剩正数）。
      * 短量关闭(CLOSED)订单不占需求（余量属有意不再发货）。
      */
-    @org.springframework.data.jpa.repository.Query(value = "SELECT i.material_code, " +
-            "SUM(i.qty) - COALESCE((SELECT SUM(so.qty) FROM sales_outbound so " +
-            "WHERE so.sales_order_no = o.order_no AND so.material_code = i.material_code AND so.status = 'CONFIRMED'), 0) " +
+    @org.springframework.data.jpa.repository.Query(value = "SELECT t.material_code, SUM(t.qty - t.shipped) FROM (" +
+            // v11.9.1 PG 严格 GROUP BY：相关子查询引用外层非分组列（o.order_no）在聚合内非法——
+            // 子查询下沉到内部未聚合上下文逐行求值，语义与 SQLite 版完全一致（逐行扣该单已发量）
+            "SELECT i.material_code, i.qty, " +
+            "COALESCE((SELECT SUM(so.qty) FROM sales_outbound so " +
+            "WHERE so.sales_order_no = o.order_no AND so.material_code = i.material_code AND so.status = 'CONFIRMED'), 0) AS shipped " +
             "FROM sales_order_item i JOIN sales_order o ON i.order_id = o.id " +
-            "WHERE o.status = 'CONFIRMED' AND i.qty IS NOT NULL " +
-            "GROUP BY i.material_code HAVING SUM(i.qty) - COALESCE((SELECT SUM(so.qty) FROM sales_outbound so " +
-            "WHERE so.sales_order_no = o.order_no AND so.material_code = i.material_code AND so.status = 'CONFIRMED'), 0) > 0",
+            "WHERE o.status = 'CONFIRMED' AND i.qty IS NOT NULL" +
+            ") AS t " +
+            "GROUP BY t.material_code HAVING SUM(t.qty - t.shipped) > 0",
             nativeQuery = true)
     java.util.List<Object[]> openDemandByMaterial();
 }

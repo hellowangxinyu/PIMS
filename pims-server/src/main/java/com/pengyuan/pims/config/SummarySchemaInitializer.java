@@ -770,8 +770,13 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             END $$ LANGUAGE plpgsql
             """.formatted(name, body));
         jdbc.execute("DROP TRIGGER IF EXISTS %s ON %s".formatted(name, table));
-        jdbc.execute("CREATE TRIGGER %s AFTER INSERT OR UPDATE ON %s FOR EACH ROW EXECUTE FUNCTION %s_fn()"
-                .formatted(name, table, name));
+        // v11.9.1 修复：按名字后缀绑定单一事件——此前统一绑 INSERT OR UPDATE，
+        // insert/update 两个触发器同时触发导致汇总双倍累计（启动校验自动重建掩盖了偏差）
+        // _usage 为库存异动用量触发器（SQLite 版仅 AFTER INSERT），UPDATE 时不得重复累计
+        String event = name.endsWith("_insert") || name.endsWith("_usage") ? "INSERT"
+                : name.endsWith("_update") ? "UPDATE" : "INSERT OR UPDATE";
+        jdbc.execute("CREATE TRIGGER %s AFTER %s ON %s FOR EACH ROW EXECUTE FUNCTION %s_fn()"
+                .formatted(name, event, table, name));
     }
 
 
