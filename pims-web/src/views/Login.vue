@@ -694,7 +694,7 @@
           <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
         </div>
 
-        <div class="footer-text">© 2026 广东芃远新材料公司</div>
+        <div class="footer-text">© 2026 广东芃远新材料公司 · {{ APP_VERSION }}</div>
       </div>
     </main>
   </div>
@@ -705,6 +705,7 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../api'
+import { APP_VERSION } from '../utils/version'
 import { RIDDLES } from '../data/riddles'
 import { isMobile } from '../composables/useIsMobile'
 

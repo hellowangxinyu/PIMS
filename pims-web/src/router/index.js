@@ -126,7 +126,7 @@ router.beforeEach((to, from, next) => {
     try { perms = JSON.parse(user).permissions || [] } catch { /* 坏数据按无权限处理 */ }
     if (!perms.includes(need)) {
       import('element-plus').then(({ ElMessage }) => ElMessage.warning(`无权访问该页面（需要 ${need} 权限）`))
-      next(from.path && from.path !== to.path && from.path !== '/' ? from.path : '/dashboard')
+      next(from.path && from.path !== to.path && from.path !== '/' ? from.path : '/')
       return
     }
   }

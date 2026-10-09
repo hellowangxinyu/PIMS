@@ -61,6 +61,7 @@
             <div class="user-role">{{ user?.role }}</div>
           </div>
         </div>
+        <div class="ver-tag">{{ APP_VERSION }}</div>
       </div>
     </aside>
 
@@ -106,6 +107,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { HomeFilled, Operation, List, Box, TrendCharts, Connection, User, Key, Collection, Notebook, Folder, ShoppingCart, SetUp, Setting, ArrowDown, DataAnalysis, Checked, Money, Van, Avatar, Ticket, House, MagicStick, Document, Upload, Download, ShoppingTrolley, Position, RefreshLeft, Search, Memo, Coin, WalletFilled, Wallet, Odometer, PieChart, Histogram, DataLine, Files, Link, Bell, AlarmClock, CircleCheck, Stopwatch, CreditCard, Aim, Brush, Warning, Calendar, Tickets, Stamp, Grid, Suitcase, OfficeBuilding, PriceTag } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
+import { APP_VERSION } from '../utils/version'
 
 // 下拉关闭且未选择时还原预览
 
@@ -662,6 +664,13 @@ async function logout() {
 
 .user-name { font-size: 13px; color: var(--pims-sidebar-text); font-weight: 500; }
 .user-role { font-size: 11px; color: var(--pims-sidebar-text-muted); margin-top: 1px; }
+
+/* 版本号：构建时注入（vite.config.js appVersion），发版后肉眼核对服务器版本 */
+.ver-tag {
+  margin-top: 6px; padding: 0 10px;
+  font-size: 10px; color: var(--pims-sidebar-text-dim);
+  letter-spacing: 0.3px;
+}
 
 /* ===== 主内容区 ===== */
 .main-area {
