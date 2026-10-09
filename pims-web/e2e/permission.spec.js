@@ -6,8 +6,8 @@ const LOW_PASS = process.env.PIMS_LOW_PASS
 
 async function login(page, user, pass) {
   await page.goto('/login')
-  await page.getByLabel('用户名').fill(user)
-  await page.getByLabel('密码').fill(pass)
+  await page.getByLabel('用户名', { exact: true }).fill(user)
+  await page.getByLabel('密码', { exact: true }).fill(pass)
   await page.locator('.login-btn').click()
   await expect(page.locator('.user-name')).toBeVisible()
 }
@@ -26,3 +26,4 @@ test.describe('权限直输拦截', () => {
     await expect(page.locator('.el-message').last()).toContainText('sales:read')
   })
 })
+

@@ -15,8 +15,8 @@ test.describe('登录与版本链路', () => {
 
   test('登录成功 → 首页可见 → 侧边栏版本串符合 vX.Y · hash 格式', async ({ page }) => {
     await page.goto('/login')
-    await page.getByLabel('用户名').fill(USER)
-    await page.getByLabel('密码').fill(PASS)
+    await page.getByLabel('用户名', { exact: true }).fill(USER)
+    await page.getByLabel('密码', { exact: true }).fill(PASS)
     await page.locator('.login-btn').click()
 
     // 登录后落首页：侧边栏用户卡片出现（密码错误则停留登录页，此断言自然失败）
@@ -28,3 +28,4 @@ test.describe('登录与版本链路', () => {
     await expect(ver).toContainText(/v\d+\.\d+ · [0-9a-f]{7}/)
   })
 })
+
