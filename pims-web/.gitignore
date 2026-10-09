@@ -1,0 +1,3 @@
+# Playwright 运行残留（每次跑都会变，不入库）
+test-results/
+playwright-report/
