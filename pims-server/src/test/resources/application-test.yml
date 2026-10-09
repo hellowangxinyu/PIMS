@@ -1,7 +1,8 @@
 # v8.8 测试专属配置：静默日志 + 关闭定时任务
 # v9.3（P2-10 审计）：DDL 导出改指 target/（未跟踪）——原直写 git 跟踪的 db/baseline-schema.sql，
 # 测试中途失败留半截脏基线、直接 mvn test（不先删）会追加重复。
-# 提交版基线由 scripts/run-tests.bat 在测试成功后从 target/ 拷贝刷新（空库自举 --init-db 用）
+# 提交版基线由 scripts/run-tests.bat 在测试成功后从 target/ 拷贝刷新——
+# v12.0 起该基线是空 PG 库自举（BaselineSchemaInitializer）的建表源，刷新后须回归验证
 spring:
   task:
     scheduling:

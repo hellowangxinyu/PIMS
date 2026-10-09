@@ -217,26 +217,16 @@ public class OperationLogService {
 
     /** 热数据月表（operation_log_YYYYMM，正则精确匹配，避免把归档表当热表） */
     private List<String> listHotTables() {
-        // PG 迁移 v11.9：GLOB 为 SQLite 方言，PG 用 ~ 正则等价
-        if (com.pengyuan.pims.common.SqlDdl.isPostgreSQL(jdbc)) {
-            return jdbc.queryForList("SELECT table_name AS name FROM information_schema.tables " +
-                            "WHERE table_schema = current_schema() AND table_type='BASE TABLE' " +
-                            "AND table_name ~ '^operation_log_[0-9]{6}$'")
-                    .stream().map(m -> String.valueOf(m.get("name"))).sorted().toList();
-        }
-        return jdbc.queryForList("SELECT name FROM sqlite_master WHERE type='table' AND name GLOB 'operation_log_[0-9][0-9][0-9][0-9][0-9][0-9]'")
+        return jdbc.queryForList("SELECT table_name AS name FROM information_schema.tables " +
+                        "WHERE table_schema = current_schema() AND table_type='BASE TABLE' " +
+                        "AND table_name ~ '^operation_log_[0-9]{6}$'")
                 .stream().map(m -> String.valueOf(m.get("name"))).sorted().toList();
     }
 
     private List<String> listArchiveTables() {
-        // PG 迁移 v11.9：ILIKE 由 LIKE 批量替换产生，sqlite_master 换成 information_schema
-        if (com.pengyuan.pims.common.SqlDdl.isPostgreSQL(jdbc)) {
-            return jdbc.queryForList("SELECT table_name AS name FROM information_schema.tables " +
-                            "WHERE table_schema = current_schema() AND table_type='BASE TABLE' " +
-                            "AND table_name LIKE 'operation_log_archive_%'")
-                    .stream().map(m -> String.valueOf(m.get("name"))).sorted().toList();
-        }
-        return jdbc.queryForList("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'operation_log_archive_%'")
+        return jdbc.queryForList("SELECT table_name AS name FROM information_schema.tables " +
+                        "WHERE table_schema = current_schema() AND table_type='BASE TABLE' " +
+                        "AND table_name LIKE 'operation_log_archive_%'")
                 .stream().map(m -> String.valueOf(m.get("name"))).sorted().toList();
     }
 

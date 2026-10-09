@@ -525,10 +525,9 @@ public class AiService {
         };
     }
 
-    /** 列出所有业务表及字段（sqlite_master + PRAGMA table_info） */
+    /** 列出所有业务表及字段（information_schema，PG 系统表不在 current_schema 内天然排除） */
     private String listTables() throws Exception {
-        List<Map<String, Object>> tables = jdbc.queryForList(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
+        List<Map<String, Object>> tables = com.pengyuan.pims.common.DbMeta.allTables(jdbc);
         List<Map<String, Object>> schema = new ArrayList<>();
         for (Map<String, Object> t : tables) {
             String tableName = String.valueOf(t.get("name"));

@@ -15,7 +15,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * 必须最先执行：其他 Initializer（如 RecipeSchemaInitializer 迁移）启动期即用 JPA 查 purchase_arrival，加列必须先于一切 JPA 查询。
  */
 @Configuration
-@org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
+// v12.0：HIGHEST_PRECEDENCE+2——BaselineSchemaInitializer(+1) 空库自举之后，保证 ALTER 的表必已存在
+@org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE + 2)
 public class TaxSchemaInitializer implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(TaxSchemaInitializer.class);

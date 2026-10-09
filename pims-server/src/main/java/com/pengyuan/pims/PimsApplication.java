@@ -9,10 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class PimsApplication {
 
     public static void main(String[] args) {
-        // v8.10.1：--init-db 空库自举（jar 内置基线 DDL，无需 sqlite3 CLI）；v8.10.2 改 contains 适配任意参数顺序
-        if (java.util.Arrays.asList(args).contains("--init-db")) {
-            BaselineInit.initIfNeeded();
-        }
+        // v12.0：PG 为唯一数据库，空库由 SchemaInitializer 启动时自动建表，--init-db 自举已下线
         SpringApplication.run(PimsApplication.class, args);
     }
 }

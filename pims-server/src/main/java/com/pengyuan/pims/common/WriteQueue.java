@@ -10,8 +10,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 /**
- * 全局写锁 —— SQLite 写并发保护
- * 所有写操作排队执行，3-5 人并发下几乎无感知
+ * 全局写锁 —— 应用层写串行化（历史原因：SQLite 单写者保护；v12.0 起 PG 有行锁，
+ * 保留它作为写一致性保险，3-5 人并发下几乎无感知；如未来写并发成瓶颈再评估拆除）
  */
 @Component
 public class WriteQueue {

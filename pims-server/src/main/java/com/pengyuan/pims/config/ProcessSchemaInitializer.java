@@ -110,40 +110,14 @@ public class ProcessSchemaInitializer implements CommandLineRunner {
         }
     }
 
-    /** 工艺路线改造：去掉 recipe_type 唯一约束 + 加 is_default 列（SQLite 需重建表），幂等 */
+    /** 工艺路线改造：PG 端新建的表本就不带历史唯一约束，仅需保证 is_default 列存在（原生加列），幂等 */
     private void migrateTemplateTable() {
-        // PG 迁移 v11.9：PG 端新建的表本就不带历史唯一约束，仅需保证 is_default 列存在（原生加列）
-        if (SqlDdl.isPostgreSQL(jdbc)) {
-            boolean hasDefaultCol = com.pengyuan.pims.common.DbMeta.columns(jdbc, "process_template").stream()
-                    .anyMatch(m -> "is_default".equals(m.get("name")));
-            if (!hasDefaultCol) {
-                SqlDdl.exec(jdbc, "ALTER TABLE process_template ADD COLUMN is_default BOOLEAN DEFAULT 0");
-                log.info("工艺路线：process_template 补 is_default 列（PG）");
-            }
-            return;
-        }
-        boolean hasUnique = !jdbc.queryForList(
-                "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='process_template' AND name LIKE 'sqlite_autoindex%'").isEmpty();
         boolean hasDefaultCol = com.pengyuan.pims.common.DbMeta.columns(jdbc, "process_template").stream()
                 .anyMatch(m -> "is_default".equals(m.get("name")));
-        if (!hasUnique && hasDefaultCol) return;
-        SqlDdl.exec(jdbc, """
-            CREATE TABLE process_template_new (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                recipe_type VARCHAR(20) NOT NULL,
-                name VARCHAR(50) NOT NULL,
-                packing_requirement VARCHAR(1000),
-                is_default BOOLEAN DEFAULT 0,
-                enabled BOOLEAN DEFAULT 1,
-                create_time TIMESTAMP,
-                update_time TIMESTAMP
-            )
-        """);
-        jdbc.update("INSERT INTO process_template_new (id, recipe_type, name, packing_requirement, is_default, enabled, create_time, update_time) "
-                + "SELECT id, recipe_type, name, packing_requirement, 1, enabled, create_time, update_time FROM process_template");
-        SqlDdl.exec(jdbc, "DROP TABLE process_template");
-        SqlDdl.exec(jdbc, "ALTER TABLE process_template_new RENAME TO process_template");
-        log.info("工艺路线：process_template 已重建（去唯一约束，存量路线标记为默认）");
+        if (!hasDefaultCol) {
+            SqlDdl.exec(jdbc, "ALTER TABLE process_template ADD COLUMN is_default BOOLEAN DEFAULT 0");
+            log.info("工艺路线：process_template 补 is_default 列（PG）");
+        }
     }
 
     /** 每类型没有任何路线时才种子创建默认路线（用户数据至上，绝不覆盖已存在路线） */

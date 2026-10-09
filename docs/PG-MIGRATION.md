@@ -1,10 +1,14 @@
-# PIMS SQLite → PostgreSQL 迁移手册（v11.9）
+# PIMS SQLite → PostgreSQL 迁移手册（v11.9 → v12.0 全面切换完成）
 
-> 状态：**✅ 生产已切换 PostgreSQL 并全面验证通过**（2026-10-08 14:40）；SQLite 最终备份保留 data/pims.db.final-20261008.db / .final-sqlite.bak；回滚=删除 drop-in /etc/systemd/system/pims.service.d/pg-env.conf 后重启
-> - 后端双方言改造完成：SQLite / PostgreSQL 同一份代码双跑
-> - 单元测试 21/21 绿（真实 PG 嵌入式实例）；财务接口回归 **362 项断言在 SQLite 与 PG 双环境全部全绿**
-> - 数据迁移脚本经全量演练：本地业务库 96 张表迁移 + 行数/金额核对全部通过
-> - 生产 PG16 已安装并运行（**尚未切换**，PIMS 仍跑 SQLite）
+> 状态：**✅ v12.0 代码层全面切换 PostgreSQL，SQLite 彻底摘除**（2026-10-09）
+> - pom 移除 sqlite-jdbc / hibernate-community-dialects；application.yml 默认数据源即 PG
+> - DbMeta 只留 information_schema 路径；SqlDdl 改为无条件 PG 归一化（新增基线形态 `id integer`→IDENTITY 规则）
+> - SummarySchemaInitializer 摘 SQLite 触发器/WAL/VACUUM 分支（912→640 行）；BackupService 只留 pg_dump -Fc 分支
+> - 删除 BaselineInit/--init-db、CodeSeqMigrationInitializer、MaterialCodeMigrationInitializer（SQLite 一次性迁移器）
+> - 新增 BaselineSchemaInitializer：空 PG 库启动自举（baseline-schema.sql 经 SqlDdl 翻译逐句执行，91 条 0 跳过）
+> - 测试 21/21 绿（嵌入式 PG）；本地真 PG16.15（D:\pgsql16 便携版）空库冷启动 + 登录 + 改密 + 报表/财务/库存接口冒烟全过
+> - 历史：生产于 2026-10-08 14:40 切换 PG 并验证通过（Runbook 见第二节）；SQLite 最终备份保留 data/pims.db.final-20261008.db / .final-sqlite.bak
+> - 回滚（仅历史参考）：删除 drop-in /etc/systemd/system/pims.service.d/pg-env.conf 后重启——v12.0 起代码不再支持 SQLite，回滚需用 v11.9.1 jar
 
 ---
 

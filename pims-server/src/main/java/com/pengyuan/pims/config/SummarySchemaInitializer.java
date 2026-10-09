@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +14,7 @@ import java.time.LocalDate;
 /**
  * 汇总表触发器 & 索引初始化器
  * 应用启动时自动：
- * 1. 创建 SQLite 触发器（业务表写入时自动维护汇总数据）
+ * 1. 创建 PG 触发器（业务表写入时自动维护汇总数据，plpgsql 函数形态）
  * 2. 创建查询加速索引
  * 3. 回填历史数据到汇总表（幂等，已有数据不重复插入）
  * 4. 确保财务汇总行存在
@@ -60,47 +59,18 @@ public class SummarySchemaInitializer implements CommandLineRunner {
 
         // v4.8：归档 2 年前的库存异动（追溯查询会兼容归档表）
         archiveOldMovements();
-        // v4.8：WAL checkpoint 收缩 + 月度 VACUUM 碎片回收
-        maintenance();
+        // v12.0：PG 由 autovacuum 自动维护，原 WAL/VACUUM 维护整段下线
 
         // v5.6：幂等补录"货到付款"付款类型（DataInitializer 仅在字典为空时初始化，存量库需补录）
         ensurePaymentTermsDict();
     }
 
     /**
-     * v5.55 时间戳格式归一化：历史库 create_time/update_time 混存「毫秒整数 / 字符串(yyyy-MM-dd HH:mm:ss)」
-     * （旧版 JPA 写字符串、现版写毫秒），报表查询被迫把列包进 date() 做双格式兼容，索引全部失效。
-     * 通用扫描所有业务表的时间列，字符串行按北京时间墙钟折算为毫秒。幂等：整数/NULL 不动、不可解析跳过并告警。
-     * operation_log* 月表 create_time 是刻意的文本设计，排除。
+     * v5.55 时间戳归一化（历史遗留，v12.0 已下线）：
+     * PG 端经 LocalDateTimeMillisConverter 写入的永远是毫秒整数，无历史混存问题。
      */
     private void normalizeTimestampColumns() {
-        // PG 迁移 v11.9：PG 端经 LocalDateTimeMillisConverter 写入的永远是毫秒整数，无历史混存问题，整段跳过
-        if (SqlDdl.isPostgreSQL(jdbc)) return;
-        var tables = jdbc.queryForList(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'operation_log%' AND name NOT LIKE 'sqlite_%'");
-        int totalFixed = 0;
-        for (var t : tables) {
-            String table = String.valueOf(t.get("name"));
-            for (var c : com.pengyuan.pims.common.DbMeta.columns(jdbc, table)) {
-                String col = String.valueOf(c.get("name"));
-                if (!"create_time".equals(col) && !"update_time".equals(col)) continue;
-                int updated = jdbc.update("UPDATE " + table + " SET " + col +
-                        " = 1000 * (CAST(strftime('%s', " + col + ") AS BIGINT) - 28800)" +
-                        " WHERE typeof(" + col + ") = 'text' AND strftime('%s', " + col + ") IS NOT NULL");
-                if (updated > 0) {
-                    log.info("时间戳归一化: {}.{} {} 行 text → 毫秒", table, col, updated);
-                    totalFixed += updated;
-                }
-                Integer bad = jdbc.queryForObject("SELECT COUNT(*) FROM " + table +
-                        " WHERE typeof(" + col + ") = 'text'", Integer.class);
-                if (bad != null && bad > 0) {
-                    log.warn("时间戳归一化: {}.{} 有 {} 行不可解析的 text 时间值未转换，请人工核查", table, col, bad);
-                }
-            }
-        }
-        if (totalFixed > 0) {
-            log.info("时间戳归一化完成: 共 {} 行转为毫秒整数（此后报表查询不再函数包列，可走索引）", totalFixed);
-        }
+        // PG 唯一数据库：毫秒口径由转换器全局保证，无需归一化
     }
 
     /**
@@ -177,8 +147,6 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             SqlDdl.exec(jdbc, "DROP INDEX IF EXISTS uk_stat_material_usage");
         }
         SqlDdl.exec(jdbc, "CREATE UNIQUE INDEX IF NOT EXISTS uk_stat_material_usage ON stat_material_usage(material_code, period, warehouse_id)");
-        // 运维标记表（VACUUM 周期等）
-        SqlDdl.exec(jdbc, "CREATE TABLE IF NOT EXISTS sys_maintenance (key_name TEXT PRIMARY KEY, value_text TEXT)");
         // 库存异动归档表（结构与 inventory_movement 一致，供追溯查询 UNION 兼容）
         SqlDdl.exec(jdbc, """
             CREATE TABLE IF NOT EXISTS inventory_movement_archive (
@@ -211,9 +179,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
         String cutoff = LocalDate.now().minusYears(1).toString();
         // v8.0（P0-12）：SELECT * 改显式列名——两表列序已实测不一致（movement 第2列 batch_no、archive 第2列 doc_type），
         // SELECT * 首次触发（2027-08）即全列错位写入且源行被删，是确定性数据事故。列名对齐 InventoryMovementArchiveService。
-        // PG 迁移 v11.9：INSERT OR REPLACE 为 SQLite 方言，PG 走 ON CONFLICT DO NOTHING（幂等等价）
-        String upsert = SqlDdl.isPostgreSQL(jdbc)
-                ? """
+        String upsert = """
             INSERT INTO inventory_movement_archive (id, doc_type, doc_no, material_code, batch_no,
                 warehouse_id, location_id, direction, qty, qty_before, qty_after, ownership_type, operator, remark, create_time)
             SELECT id, doc_type, doc_no, material_code, batch_no,
@@ -221,14 +187,6 @@ public class SummarySchemaInitializer implements CommandLineRunner {
             FROM inventory_movement
             WHERE date(create_time / 1000, 'unixepoch', '+8 hours') < ?
             ON CONFLICT (id) DO NOTHING
-            """
-                : """
-            INSERT OR REPLACE INTO inventory_movement_archive (id, doc_type, doc_no, material_code, batch_no,
-                warehouse_id, location_id, direction, qty, qty_before, qty_after, ownership_type, operator, remark, create_time)
-            SELECT id, doc_type, doc_no, material_code, batch_no,
-                warehouse_id, location_id, direction, qty, qty_before, qty_after, ownership_type, operator, remark, create_time
-            FROM inventory_movement
-            WHERE date(create_time / 1000, 'unixepoch', '+8 hours') < ?
             """;
         int moved = jdbc.update(upsert, cutoff);
         if (moved > 0) {
@@ -237,38 +195,6 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                 WHERE date(create_time / 1000, 'unixepoch', '+8 hours') < ?
                 """, cutoff);
             log.info("历史库存异动归档: {} 行移至 inventory_movement_archive（早于 {}）", moved, cutoff);
-        }
-    }
-
-    /**
-     * 启动维护：WAL checkpoint 截断（防止 WAL 无限膨胀）+ 月度 VACUUM（回收删除产生的碎片页）。
-     * VACUUM 条件：库文件 ≥ 50MB 且距上次执行超过 30 天（库小时自动跳过，避免每次启动全量重写文件）。
-     */
-    private void maintenance() {
-        // PG 迁移 v11.9：WAL checkpoint / VACUUM / pragma_page_count 均为 SQLite 专用；PG 由 autovacuum 自动维护，整段跳过
-        if (SqlDdl.isPostgreSQL(jdbc)) return;
-        try {
-            SqlDdl.exec(jdbc, "PRAGMA wal_checkpoint(TRUNCATE)");
-        } catch (Exception e) {
-            log.warn("WAL checkpoint 失败: {}", e.getMessage());
-        }
-        try {
-            Long pages = jdbc.queryForObject("SELECT page_count FROM pragma_page_count", Long.class);
-            Long pageSize = jdbc.queryForObject("SELECT page_size FROM pragma_page_size", Long.class);
-            long sizeMB = (pages == null ? 0 : pages) * (pageSize == null ? 4096 : pageSize) / 1024 / 1024;
-            String lastVacuum = null;
-            try {
-                lastVacuum = jdbc.queryForObject("SELECT value_text FROM sys_maintenance WHERE key_name = 'last_vacuum'", String.class);
-            } catch (EmptyResultDataAccessException ignored) { /* 首次运行无记录 */ }
-            if (sizeMB >= 50 && (lastVacuum == null || lastVacuum.compareTo(LocalDate.now().minusMonths(1).toString()) < 0)) {
-                SqlDdl.exec(jdbc, "VACUUM");
-                jdbc.update("INSERT INTO sys_maintenance (key_name, value_text) VALUES (?, ?) " +
-                                "ON CONFLICT(key_name) DO UPDATE SET value_text = excluded.value_text",
-                        "last_vacuum", LocalDate.now().toString());
-                log.info("VACUUM 完成: 库文件 {} MB", sizeMB);
-            }
-        } catch (Exception e) {
-            log.warn("VACUUM 检查跳过: {}", e.getMessage());
         }
     }
 
@@ -303,277 +229,11 @@ public class SummarySchemaInitializer implements CommandLineRunner {
     // ==================== 触发器 ====================
 
     private void createTriggers() {
-        // PG 迁移 v11.9：SQLite 触发器语法（BEGIN..END/WHEN/rowid）与 PG 不兼容，PG 端走 plpgsql 函数+触发器
-        if (SqlDdl.isPostgreSQL(jdbc)) {
-            createPgTriggers();
-            return;
-        }
-        // 汇总表唯一索引（ON CONFLICT 依赖）
-        SqlDdl.exec(jdbc, "CREATE UNIQUE INDEX IF NOT EXISTS uk_stat_order_monthly ON stat_order_monthly(period, order_type)");
-
-        // ---------- 采购订单 ----------
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_po_insert");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_po_insert AFTER INSERT ON purchase_order
-            WHEN NEW.status != 'DRAFT'
-            BEGIN
-                INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'PURCHASE', 1, COALESCE(NEW.total_amount, 0))
-                ON CONFLICT(period, order_type) DO UPDATE SET
-                    order_count = order_count + 1,
-                    total_amount = total_amount + COALESCE(NEW.total_amount, 0);
-            END
-        """);
-
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_po_update");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_po_update AFTER UPDATE ON purchase_order
-            BEGIN
-                -- 状态从DRAFT变为有效：计数+1，金额加入
-                UPDATE stat_order_monthly SET
-                    order_count = order_count + 1,
-                    total_amount = total_amount + COALESCE(NEW.total_amount, 0)
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PURCHASE'
-                AND OLD.status = 'DRAFT' AND NEW.status != 'DRAFT';
-
-                -- 状态从有效变为DRAFT：计数-1，金额减去
-                UPDATE stat_order_monthly SET
-                    order_count = order_count - 1,
-                    total_amount = total_amount - COALESCE(OLD.total_amount, 0)
-                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PURCHASE'
-                AND OLD.status != 'DRAFT' AND NEW.status = 'DRAFT';
-
-                -- 金额变化（状态未变且非DRAFT）
-                UPDATE stat_order_monthly SET
-                    total_amount = total_amount + (COALESCE(NEW.total_amount, 0) - COALESCE(OLD.total_amount, 0))
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PURCHASE'
-                AND OLD.status = NEW.status AND NEW.status != 'DRAFT'
-                AND COALESCE(NEW.total_amount, 0) != COALESCE(OLD.total_amount, 0);
-            END
-        """);
-
-        // ---------- 销售订单 ----------
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_so_insert");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_so_insert AFTER INSERT ON sales_order
-            WHEN NEW.status != 'DRAFT'
-            BEGIN
-                INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'SALES', 1, COALESCE(NEW.total_amount, 0))
-                ON CONFLICT(period, order_type) DO UPDATE SET
-                    order_count = order_count + 1,
-                    total_amount = total_amount + COALESCE(NEW.total_amount, 0);
-            END
-        """);
-
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_so_update");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_so_update AFTER UPDATE ON sales_order
-            BEGIN
-                UPDATE stat_order_monthly SET
-                    order_count = order_count + 1,
-                    total_amount = total_amount + COALESCE(NEW.total_amount, 0)
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'SALES'
-                AND OLD.status = 'DRAFT' AND NEW.status != 'DRAFT';
-
-                UPDATE stat_order_monthly SET
-                    order_count = order_count - 1,
-                    total_amount = total_amount - COALESCE(OLD.total_amount, 0)
-                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'SALES'
-                AND OLD.status != 'DRAFT' AND NEW.status = 'DRAFT';
-
-                UPDATE stat_order_monthly SET
-                    total_amount = total_amount + (COALESCE(NEW.total_amount, 0) - COALESCE(OLD.total_amount, 0))
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'SALES'
-                AND OLD.status = NEW.status AND NEW.status != 'DRAFT'
-                AND COALESCE(NEW.total_amount, 0) != COALESCE(OLD.total_amount, 0);
-            END
-        """);
-
-        // ---------- 委外工单（金额字段为 processing_fee） ----------
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_oo_insert");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_oo_insert AFTER INSERT ON outsource_order
-            WHEN NEW.status != 'DRAFT'
-            BEGIN
-                INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'OUTSOURCE', 1, COALESCE(NEW.processing_fee, 0))
-                ON CONFLICT(period, order_type) DO UPDATE SET
-                    order_count = order_count + 1,
-                    total_amount = total_amount + COALESCE(NEW.processing_fee, 0);
-            END
-        """);
-
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_oo_update");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_oo_update AFTER UPDATE ON outsource_order
-            BEGIN
-                UPDATE stat_order_monthly SET
-                    order_count = order_count + 1,
-                    total_amount = total_amount + COALESCE(NEW.processing_fee, 0)
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'OUTSOURCE'
-                AND OLD.status = 'DRAFT' AND NEW.status != 'DRAFT';
-
-                UPDATE stat_order_monthly SET
-                    order_count = order_count - 1,
-                    total_amount = total_amount - COALESCE(OLD.processing_fee, 0)
-                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'OUTSOURCE'
-                AND OLD.status != 'DRAFT' AND NEW.status = 'DRAFT';
-
-                UPDATE stat_order_monthly SET
-                    total_amount = total_amount + (COALESCE(NEW.processing_fee, 0) - COALESCE(OLD.processing_fee, 0))
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'OUTSOURCE'
-                AND OLD.status = NEW.status AND NEW.status != 'DRAFT'
-                AND COALESCE(NEW.processing_fee, 0) != COALESCE(OLD.processing_fee, 0);
-            END
-        """);
-
-        // ---------- 财务：应收 ----------
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_ar_insert");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_ar_insert AFTER INSERT ON accounts_receivable
-            BEGIN
-                UPDATE stat_finance_summary SET
-                    ar_total = ar_total + COALESCE(NEW.amount, 0),
-                    ar_received = ar_received + COALESCE(NEW.received_amount, 0),
-                    update_time = datetime('now', '+8 hours')
-                WHERE id = 1;
-            END
-        """);
-
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_ar_update");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_ar_update AFTER UPDATE ON accounts_receivable
-            BEGIN
-                UPDATE stat_finance_summary SET
-                    ar_total = ar_total + (COALESCE(NEW.amount, 0) - COALESCE(OLD.amount, 0)),
-                    ar_received = ar_received + (COALESCE(NEW.received_amount, 0) - COALESCE(OLD.received_amount, 0)),
-                    update_time = datetime('now', '+8 hours')
-                WHERE id = 1;
-            END
-        """);
-
-        // ---------- 财务：应付 ----------
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_ap_insert");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_ap_insert AFTER INSERT ON accounts_payable
-            BEGIN
-                UPDATE stat_finance_summary SET
-                    ap_total = ap_total + COALESCE(NEW.amount, 0),
-                    ap_paid = ap_paid + COALESCE(NEW.paid_amount, 0),
-                    update_time = datetime('now', '+8 hours')
-                WHERE id = 1;
-            END
-        """);
-
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_ap_update");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_ap_update AFTER UPDATE ON accounts_payable
-            BEGIN
-                UPDATE stat_finance_summary SET
-                    ap_total = ap_total + (COALESCE(NEW.amount, 0) - COALESCE(OLD.amount, 0)),
-                    ap_paid = ap_paid + (COALESCE(NEW.paid_amount, 0) - COALESCE(OLD.paid_amount, 0)),
-                    update_time = datetime('now', '+8 hours')
-                WHERE id = 1;
-            END
-        """);
-
-        // ---------- 生产订单 ----------
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_mo_insert");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_mo_insert AFTER INSERT ON production_order
-            WHEN NEW.status != 'DRAFT'
-            BEGIN
-                INSERT INTO stat_order_monthly (period, order_type, order_count, total_amount)
-                VALUES (strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours'), 'PRODUCTION', 1, COALESCE(NEW.batch_qty, 0))
-                ON CONFLICT(period, order_type) DO UPDATE SET
-                    order_count = order_count + 1,
-                    total_amount = total_amount + COALESCE(NEW.batch_qty, 0);
-            END
-        """);
-
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_mo_update");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_mo_update AFTER UPDATE ON production_order
-            BEGIN
-                UPDATE stat_order_monthly SET
-                    order_count = order_count + 1,
-                    total_amount = total_amount + COALESCE(NEW.batch_qty, 0)
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PRODUCTION'
-                AND OLD.status = 'DRAFT' AND NEW.status != 'DRAFT';
-
-                UPDATE stat_order_monthly SET
-                    order_count = order_count - 1,
-                    total_amount = total_amount - COALESCE(OLD.batch_qty, 0)
-                WHERE period = strftime('%Y-%m', CAST(OLD.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PRODUCTION'
-                AND OLD.status != 'DRAFT' AND NEW.status = 'DRAFT';
-
-                UPDATE stat_order_monthly SET
-                    total_amount = total_amount + (COALESCE(NEW.batch_qty, 0) - COALESCE(OLD.batch_qty, 0))
-                WHERE period = strftime('%Y-%m', CAST(NEW.create_time AS INTEGER)/1000, 'unixepoch', '+8 hours') AND order_type = 'PRODUCTION'
-                AND OLD.status = NEW.status AND NEW.status != 'DRAFT'
-                AND COALESCE(NEW.batch_qty, 0) != COALESCE(OLD.batch_qty, 0);
-            END
-        """);
-
-        // ---------- 库存异动 ----------
-        SqlDdl.exec(jdbc, "CREATE UNIQUE INDEX IF NOT EXISTS uk_stat_inv_daily ON stat_inventory_daily(stat_date, material_code, warehouse_id)");
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_movement_insert");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_movement_insert AFTER INSERT ON inventory_movement
-            BEGIN
-                INSERT INTO stat_inventory_daily (stat_date, material_code, warehouse_id, in_qty, out_qty, in_amount)
-                VALUES (
-                    COALESCE(date(CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours'), date('now', '+8 hours')),
-                    NEW.material_code,
-                    NEW.warehouse_id,
-                    CASE WHEN NEW.direction = 'IN' THEN NEW.qty ELSE 0 END,
-                    CASE WHEN NEW.direction = 'OUT' THEN ABS(NEW.qty) ELSE 0 END,
-                    0
-                )
-                ON CONFLICT(stat_date, material_code, warehouse_id) DO UPDATE SET
-                    in_qty = in_qty + CASE WHEN NEW.direction = 'IN' THEN NEW.qty ELSE 0 END,
-                    out_qty = out_qty + CASE WHEN NEW.direction = 'OUT' THEN ABS(NEW.qty) ELSE 0 END;
-            END
-        """);
-
-        // ---------- v4.8 物料用量月度汇总（低库存预警数据源） ----------
-        // 口径与低库存预警报表一致：出库用量 = PRODUCTION_OUT/OUTSOURCE_OUT/OTHER_OUT/SALES_OUT（调拨、盘盈亏不计入）
-        // v6.8 口径补充：REWORK_OUT 返工出库不计入——已耗料再利用（消耗已在首次领料计入），隔离库存不计可用，分子分母一致
-        // v5.34：增加仓库维度（material_code, period, warehouse_id），低库存预警按仓库计算
-        // usage_days 按「该物料该仓库该月有出库记录的去重天数」维护：同月同日同仓第二条记录不再 +1
-        SqlDdl.exec(jdbc, "DROP TRIGGER IF EXISTS trg_movement_usage");
-        SqlDdl.exec(jdbc, """
-            CREATE TRIGGER trg_movement_usage AFTER INSERT ON inventory_movement
-            WHEN NEW.direction = 'OUT' AND NEW.doc_type IN ('PRODUCTION_OUT','OUTSOURCE_OUT','OTHER_OUT','SALES_OUT')
-            BEGIN
-                INSERT INTO stat_material_usage (material_code, period, warehouse_id, out_qty, usage_days)
-                VALUES (
-                    NEW.material_code,
-                    COALESCE(strftime('%Y-%m', CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours'), strftime('%Y-%m', 'now', '+8 hours')),
-                    COALESCE(NEW.warehouse_id, ''),
-                    ABS(NEW.qty),
-                    1
-                )
-                ON CONFLICT(material_code, period, warehouse_id) DO UPDATE SET
-                    out_qty = out_qty + ABS(NEW.qty),
-                    usage_days = usage_days + CASE WHEN EXISTS (
-                        SELECT 1 FROM inventory_movement m2
-                        WHERE m2.material_code = NEW.material_code
-                          AND COALESCE(m2.warehouse_id, '') = COALESCE(NEW.warehouse_id, '')
-                          AND m2.direction = 'OUT'
-                          AND m2.doc_type IN ('PRODUCTION_OUT','OUTSOURCE_OUT','OTHER_OUT','SALES_OUT')
-                          AND date(CAST(m2.create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours')
-                              = date(CAST(NEW.create_time AS INTEGER) / 1000, 'unixepoch', '+8 hours')
-                          AND m2.rowid != NEW.rowid
-                    ) THEN 0 ELSE 1 END;
-            END
-        """);
-
-        log.info("已创建 14 个 SQLite 触发器（订单×8 + 财务×4 + 库存×2）");
+        // v12.0：PG 为唯一数据库，统一走 plpgsql 函数+触发器
+        createPgTriggers();
     }
 
-    // ==================== PG 迁移 v11.9：PostgreSQL 触发器（plpgsql 函数形态） ====================
+    // ==================== PostgreSQL 触发器（plpgsql 函数形态） ====================
 
     private void createPgTriggers() {
         SqlDdl.exec(jdbc, "CREATE UNIQUE INDEX IF NOT EXISTS uk_stat_order_monthly ON stat_order_monthly(period, order_type)");
@@ -757,7 +417,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
                         ) THEN 0 ELSE 1 END;
                 END IF;""");
 
-        log.info("已创建 14 个 PostgreSQL 触发器（plpgsql 函数形态，口径与 SQLite 版一致）");
+        log.info("已创建 14 个 PostgreSQL 触发器（plpgsql 函数形态）");
     }
 
     /** PG 触发器统一创建：函数体（plpgsql）+ AFTER 行级触发器绑定，幂等（CREATE OR REPLACE） */
@@ -772,7 +432,7 @@ public class SummarySchemaInitializer implements CommandLineRunner {
         jdbc.execute("DROP TRIGGER IF EXISTS %s ON %s".formatted(name, table));
         // v11.9.1 修复：按名字后缀绑定单一事件——此前统一绑 INSERT OR UPDATE，
         // insert/update 两个触发器同时触发导致汇总双倍累计（启动校验自动重建掩盖了偏差）
-        // _usage 为库存异动用量触发器（SQLite 版仅 AFTER INSERT），UPDATE 时不得重复累计
+        // _usage 为库存异动用量触发器（仅 AFTER INSERT），UPDATE 时不得重复累计
         String event = name.endsWith("_insert") || name.endsWith("_usage") ? "INSERT"
                 : name.endsWith("_update") ? "UPDATE" : "INSERT OR UPDATE";
         jdbc.execute("CREATE TRIGGER %s AFTER %s ON %s FOR EACH ROW EXECUTE FUNCTION %s_fn()"
@@ -864,9 +524,8 @@ public class SummarySchemaInitializer implements CommandLineRunner {
     private void ensureFinanceRow() {
         Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM stat_finance_summary", Integer.class);
         if (count == null || count == 0) {
-            String nowExpr = SqlDdl.isPostgreSQL(jdbc) ? "now_ms()" : "datetime('now','+8 hours')";
             jdbc.update("INSERT INTO stat_finance_summary (id, ar_total, ar_received, ap_total, ap_paid, update_time) " +
-                    "VALUES (1, 0, 0, 0, 0, " + nowExpr + ")");
+                    "VALUES (1, 0, 0, 0, 0, now_ms())");
         }
     }
 
@@ -970,16 +629,15 @@ public class SummarySchemaInitializer implements CommandLineRunner {
         backfillMaterialUsage();
 
         // 回填财务汇总
-        String nowExpr = SqlDdl.isPostgreSQL(jdbc) ? "now_ms()" : "datetime('now', '+8 hours')";
         jdbc.update("""
             UPDATE stat_finance_summary SET
                 ar_total = (SELECT COALESCE(SUM(amount), 0) FROM accounts_receivable),
                 ar_received = (SELECT COALESCE(SUM(received_amount), 0) FROM accounts_receivable),
                 ap_total = (SELECT COALESCE(SUM(amount), 0) FROM accounts_payable),
                 ap_paid = (SELECT COALESCE(SUM(paid_amount), 0) FROM accounts_payable),
-                update_time = @NOW_EXPR@
+                update_time = now_ms()
             WHERE id = 1
-        """.replace("@NOW_EXPR@", nowExpr));
+            """);
 
         log.info("历史数据回填完成");
     }

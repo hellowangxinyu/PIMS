@@ -9,14 +9,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * PG 迁移 v11.9：PostgreSQL 兼容函数初始化器（仅 PG 环境执行）。
+ * v12.0：PostgreSQL 兼容函数初始化器（PG 为唯一数据库，启动必建）。
  *
- * 背景：全项目原生 SQL 大量使用 SQLite 的 strftime/date/datetime/julianday（103+ 处，
+ * 背景：全项目原生 SQL 大量使用 strftime/date/datetime/julianday（103+ 处，
  * 17 个文件）。在 PG 中创建同名兼容函数，语义对齐「毫秒时间戳 + 'unixepoch' + '+8 hours'」
  * 的北京时间墙钟口径，使这些 SQL 零改动运行。
  *
  * 注意：'+8 hours' 的实现 = (to_timestamp(secs) AT TIME ZONE 'UTC') + interval '8 hours'，
- * 即 UTC 秒数直接加 8 小时得到北京墙钟，与 SQLite 语义完全一致（不依赖会话时区）。
+ * 即 UTC 秒数直接加 8 小时得到北京墙钟（不依赖会话时区）。
  */
 @Component
 @Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)   // 必须先于一切建表器：翻译后的 DDL 默认值可能引用 now_ms()
@@ -31,8 +31,6 @@ public class PgCompatFunctionsInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (!SqlDdl.isPostgreSQL(jdbc)) return;
-
         // 当前毫秒（翻译后 DDL 的 DEFAULT 当前时间）
         jdbc.execute("""
             CREATE OR REPLACE FUNCTION now_ms() RETURNS BIGINT AS $$

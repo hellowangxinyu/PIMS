@@ -472,64 +472,13 @@ public class RecipeSchemaInitializer implements CommandLineRunner {
     }
 
     /**
-     * 将指定列的 NOT NULL 约束放宽为可空（SQLite 不支持 ALTER COLUMN，需重建表）
-     * 仅当该列当前为 NOT NULL 时执行，幂等安全
+     * 将指定列的 NOT NULL 约束放宽为可空（PG 原生 ALTER COLUMN DROP NOT NULL，幂等安全）
      */
     private void relaxNotNullColumn(String table, String column) {
-        // PG 迁移 v11.9：PG 原生支持 ALTER COLUMN DROP NOT NULL，无需表重建
-        if (SqlDdl.isPostgreSQL(jdbc)) {
-            try {
-                jdbc.execute("ALTER TABLE " + table + " ALTER COLUMN " + column + " DROP NOT NULL");
-                log.info("表结构：{}.{} NOT NULL 约束已放宽（PG ALTER COLUMN）", table, column);
-            } catch (Exception ignored) { /* 列已可空或表不存在，幂等跳过 */ }
-            return;
-        }
-        // 检查表是否存在
-        if (!com.pengyuan.pims.common.DbMeta.tableExists(jdbc, table)) return;
-        // 检查列是否为 NOT NULL（PRAGMA table_info 的 notnull 字段为 1 表示 NOT NULL）
-        var cols = com.pengyuan.pims.common.DbMeta.columns(jdbc, table);
-        boolean needFix = false;
-        for (var m : cols) {
-            if (column.equals(m.get("name")) && Integer.valueOf(1).equals(m.get("notnull"))) {
-                needFix = true;
-                break;
-            }
-        }
-        if (!needFix) return;
-        // SQLite 不支持 ALTER COLUMN，使用临时表重建方式放宽约束
-        String tmp = table + "_tmp_nullable";
-        SqlDdl.exec(jdbc, "DROP TABLE IF EXISTS " + tmp);
-        // 按当前列结构创建临时表（所有列均可空，主键与唯一约束保留）
-        StringBuilder createSql = new StringBuilder("CREATE TABLE " + tmp + " (");
-        var pkCols = new java.util.ArrayList<String>();
-        for (int i = 0; i < cols.size(); i++) {
-            var m = cols.get(i);
-            String name = (String) m.get("name");
-            String type = (String) m.get("type");
-            int notnull = ((Number) m.get("notnull")).intValue();
-            String dflt = (String) m.get("dflt_value");
-            int pk = ((Number) m.get("pk")).intValue();
-            if (i > 0) createSql.append(", ");
-            createSql.append(name).append(" ").append(type != null && !type.isEmpty() ? type : "");
-            // 目标列放宽为可空；其他列保留原 NOT NULL
-            if (notnull == 1 && !column.equals(name)) createSql.append(" NOT NULL");
-            if (dflt != null) createSql.append(" DEFAULT ").append(dflt);
-            if (pk > 0) pkCols.add(name);
-        }
-        if (!pkCols.isEmpty()) {
-            createSql.append(", PRIMARY KEY (");
-            createSql.append(String.join(",", pkCols));
-            createSql.append(")");
-        }
-        createSql.append(")");
-        SqlDdl.exec(jdbc, createSql.toString());
-        // 复制全部数据
-        String colNames = String.join(",", cols.stream().map(m -> (String) m.get("name")).toList());
-        SqlDdl.exec(jdbc, "INSERT INTO " + tmp + " (" + colNames + ") SELECT " + colNames + " FROM " + table);
-        // 替换原表
-        SqlDdl.exec(jdbc, "DROP TABLE " + table);
-        SqlDdl.exec(jdbc, "ALTER TABLE " + tmp + " RENAME TO " + table);
-        log.info("表结构：{}.{} NOT NULL 约束已放宽为可空（通过表重建）", table, column);
+        try {
+            jdbc.execute("ALTER TABLE " + table + " ALTER COLUMN " + column + " DROP NOT NULL");
+            log.info("表结构：{}.{} NOT NULL 约束已放宽（PG ALTER COLUMN）", table, column);
+        } catch (Exception ignored) { /* 列已可空或表不存在，幂等跳过 */ }
     }
 
     /** 创建退货单表（幂等：存在则跳过） */
